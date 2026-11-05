@@ -8,7 +8,7 @@ Touchscreen guitar practice app built for a Raspberry Pi 3 Model B and a 7-inch 
 - Practice dashboard and timer.
 - Song library with imported chord PDFs and local MP3 playback.
 - Original/backing track selection, volume and mute.
-- PDF zoom, reading view and manually marked sections that follow playback.
+- PDF zoom, reading view and manually marked sections that follow playback. Follow turns on automatically whenever playback starts or resumes for a song with cues. You can turn it off or scroll manually during playback.
 - A/B loops, playback speed, notes, song editing and deletion.
 - Tap PDF chord names for diagrams and alternative shapes; song chord list and manual lookup.
 - English/Hebrew touch keyboard.

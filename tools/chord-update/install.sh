@@ -24,7 +24,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest()!=allowed['after']:raise SystemExit('Incomplete update: '+name)
  target=p/name
  value=hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None
- if value not in (allowed['before'],allowed['after']):raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
+ if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
 sudo apt-get install -y poppler-utils

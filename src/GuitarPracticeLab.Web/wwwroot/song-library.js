@@ -256,7 +256,7 @@ function selectSong(item, autoplay = false) {
   $('seek').value = 0; $('seek').max = Math.max(1, song.duration);
   $('clock').textContent = `0:00 / ${clock(song.duration)}`;
   $('readerClock').textContent = $('toolsClock').textContent = $('clock').textContent;
-  status(song.hasAudio ? 'Ready. Scroll the PDF and mark sections to enable following.' : 'PDF imported. Tap Add MP3 to pair a recording.');
+  status(song.hasAudio ? (song.cues.length ? 'Ready. Follow turns on when playback starts.' : 'Ready. Scroll the PDF and mark sections to enable following.') : 'PDF imported. Tap Add MP3 to pair a recording.');
   renderPage(); update();
 }
 async function saveSettings(settings) {
@@ -552,7 +552,7 @@ $('saveCue').onclick = () => operation(async () => {
     ? $('cueName').value.trim() || `Section ${song.cues.length + 1}` : $('cuePart').value;
   const next = [...song.cues.filter(cue => Math.abs(cue.time - pendingCue.time) >= 0.25), pendingCue];
   await saveSettings({ cues: next }); activeCue = null; pendingCue = null;
-  close('markDialog'); renderCues(); status('Cue saved. Tap Follow on to follow the song.');
+  close('markDialog'); renderCues(); status('Cue saved. Follow turns on when playback starts.');
 });
 $('notesButton').onclick = () => {
   close('toolsDialog');
@@ -607,7 +607,11 @@ function setReaderMode(value) {
 }
 $('readerToggle').onclick = () => setReaderMode(!readerMode);
 document.body.classList.toggle('reader', readerMode);
-audio.addEventListener('play', update); audio.addEventListener('pause', update);
+audio.addEventListener('play', () => {
+  setFollow(Boolean(song?.cues.length));
+  tick();
+});
+audio.addEventListener('pause', update);
 audio.addEventListener('loadedmetadata', () => { audio.preservesPitch = true; tick(); });
 audio.addEventListener('ended', () => {
   if (looping && loopA !== null) { audio.currentTime = loopA; audio.play().catch(message); }

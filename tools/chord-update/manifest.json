@@ -17,7 +17,10 @@
   },
   "wwwroot/song-library.js": {
     "before": "a0938ddb69262e4591b77423289f028d58f98af24f0cfab2d089570634f58f9e",
-    "after": "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970"
+    "after": "1ee11e5c07e7ac2d598d27d7eb5ac7d574ac0f6233f7e4b9d2f8069648b46b31",
+    "compatible": [
+      "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970"
+    ]
   },
   "wwwroot/chord-shapes.js": {
     "before": null,
