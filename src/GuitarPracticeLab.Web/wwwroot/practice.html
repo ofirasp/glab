@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guitar Practice Lab</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:#eef3ff;font:16px system-ui}
+main{max-width:900px;margin:auto;padding:14px}
+header{display:flex;align-items:center;gap:14px;height:42px}
+h1{font-size:22px;margin:0} small{color:#aebbd0}
+nav{display:flex;gap:8px;margin:12px 0}
+button{border:0;border-radius:12px;background:#293950;color:#fff;
+font:600 18px system-ui;min-height:52px;padding:10px 18px;touch-action:manipulation}
+button.active{background:#3478ed}
+button:disabled{opacity:.5}
+section{background:#192639;border-radius:16px;padding:16px;text-align:center}
+[hidden]{display:none!important}
+.note{font-size:68px;font-weight:800;line-height:1.1}
+.muted{color:#afbed2}
+.row{display:flex;justify-content:center;gap:8px;margin:12px 0;flex-wrap:wrap}
+.strings button{flex:1;padding:10px;min-width:65px}
+.track{height:16px;background:linear-gradient(90deg,#dd927a,#6cd3a1,#dd927a);
+border-radius:10px;position:relative;margin:18px 8px 8px}
+#needle{position:absolute;left:50%;top:-5px;height:26px;width:5px;
+background:white;transform:translateX(-50%);transition:left .15s}
+#tempo{font-size:64px;font-weight:800}
+input[type=range]{width:90%;height:36px;accent-color:#65a4ff}
+#pulse{display:inline-block;width:22px;height:22px;border-radius:50%;
+background:#40536b;margin-right:12px}
+#status{min-height:24px;color:#aebbd0}
+</style>
+
+<style id="screen-fit">
+html,body{width:100%;height:100%;margin:0;overflow:hidden}
+main{
+  width:100%;max-width:900px;height:100dvh;
+  padding:10px;margin:auto;
+  display:grid;
+  grid-template-rows:40px 48px minmax(0,1fr)24px;
+  gap:8px;
+}
+header{height:40px;padding-right:110px;white-space:nowrap}
+h1{font-size:21px}
+header small{font-size:12px}
+nav{margin:0;gap:8px}
+button{min-height:48px;font-size:18px;padding:8px 14px}
+section{min-height:0;padding:12px}
+#tuner{
+  display:grid;
+  grid-template-rows:minmax(44px,1fr)20px 16px 22px 48px 48px;
+  gap:8px;align-items:center;
+}
+.note{font-size:60px;line-height:1}
+.track{height:16px;margin:0 8px}
+.row{margin:0;flex-wrap:nowrap;gap:8px}
+.strings button{min-width:0}
+#tuner>.row:last-child button{flex:1;white-space:nowrap;font-size:17px}
+#status{
+  margin:0;min-height:0;font-size:12px;line-height:24px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#metro{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:space-evenly;
+}
+#tempo{font-size:60px}
+#metro p{margin:4px 0}
+</style>
+
+
+<style>
+#practice{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:space-evenly;gap:6px;
+}
+#remaining{font-size:64px;font-weight:800;line-height:1}
+#practiceToday{font-size:18px}
+#practiceMessage{font-size:13px;color:#afbed2;text-align:center}
+#practice .row{width:100%}
+#practice button{flex:1}
+nav button{font-size:17px}
+</style>
+
+</head>
+<body>
+<main>
+<header><h1>Guitar Practice Lab</h1><small>Microphone pending</small></header>
+<nav>
+<button id="tunerTab" class="active">Tuner demo</button>
+<button id="metroTab">Metronome</button><button id="practiceTab">Practice</button>
+<button id="wavUpload">Load WAV</button><button id="songLibraryLink" onclick="location.href='/song-library.html'">Songs</button>
+</nav>
+
+<section id="tuner">
+<div class="note" id="note">E2</div>
+<div class="muted" id="freq">82.41 Hz · reference</div>
+<div class="track"><span id="needle"></span></div>
+<div id="tuning">Simulated: in tune</div>
+<div class="row strings" id="strings"></div>
+<div class="row">
+<button id="flat">← Flatter</button>
+<button id="center">In tune</button>
+<button id="sharp">Sharper →</button>
+<button id="tone">Play tone</button><button id="analyze">Analyze</button>
+</div>
+</section>
+
+<section id="metro" hidden>
+<div><span id="pulse"></span><span id="tempo">80</span> BPM</div>
+<input id="slider" aria-label="Tempo" type="range" min="40" max="220" value="80">
+<div class="row">
+<button id="minus">−5</button>
+<button id="start">Start</button>
+<button id="plus">+5</button>
+</div>
+<p class="muted">4 beats per bar · accented first beat</p>
+</section>
+
+<section id="practice" hidden>
+  <div class="row">
+    <button data-minutes="5">5 min</button>
+    <button data-minutes="10" class="active">10 min</button>
+    <button data-minutes="20">20 min</button>
+  </div>
+  <div id="remaining" role="timer">10:00</div>
+  <div class="row">
+    <button id="timerStart">Start</button>
+    <button id="timerFinish" disabled>Finish &amp; save</button>
+  </div>
+  <div id="practiceToday">Today: 0 min</div>
+  <div id="practiceMessage">Choose a duration and tap Start.</div>
+</section>
+
+<p id="status" role="status">Demo input only. Reference tones use the Pi’s audio output.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const names=['E2','A2','D3','G3','B3','E4'];
+const freqs=[82.4069,110,146.8324,195.9977,246.9417,329.6276];
+let selected=0,cents=0,ctx,toneOsc,toneGain,toneTimer;
+let running=false,timer,nextBeat=0,beat=0;
+const flashes=new Set();
+
+async function audio(){
+  ctx??=new AudioContext();
+  await ctx.resume();
+}
+function sound(freq,start,duration,volume){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.frequency.value=freq;
+  g.gain.setValueAtTime(0,start);
+  g.gain.linearRampToValueAtTime(volume,start+.005);
+  g.gain.exponentialRampToValueAtTime(.001,start+duration);
+  o.connect(g).connect(ctx.destination);
+  o.start(start);o.stop(start+duration+.02);
+}
+function stopTone(){
+  clearTimeout(toneTimer);
+  if(toneOsc){
+    const o=toneOsc;
+    toneGain.gain.setTargetAtTime(0,ctx.currentTime,.015);
+    o.stop(ctx.currentTime+.1);
+    toneOsc=null;
+  }
+  $('tone').textContent='Play tone';
+}
+function update(){
+  $('note').textContent=names[selected];
+  $('freq').textContent=freqs[selected].toFixed(2)+' Hz · reference';
+  $('needle').style.left=(50+cents)+'%';
+  $('tuning').textContent='Simulated: '+(Math.abs(cents)<=5?'in tune':
+    cents<0?'flat — tune up ↑':'sharp — tune down ↓')+' ('+cents+' cents)';
+  [...$('strings').children].forEach((b,i)=>b.classList.toggle('active',i===selected));
+}
+names.forEach((name,i)=>{
+  const b=document.createElement('button');b.textContent=name;
+  b.onclick=()=>{stopTone();selected=i;cents=0;update()};
+  $('strings').append(b);
+});
+$('flat').onclick=()=>{cents=Math.max(-45,cents-5);update()};
+$('sharp').onclick=()=>{cents=Math.min(45,cents+5);update()};
+$('center').onclick=()=>{cents=0;update()};
+
+function stopMetro(){
+  running=false;clearInterval(timer);
+  flashes.forEach(clearTimeout);flashes.clear();
+  $('pulse').style.background='#40536b';
+  $('start').textContent='Start';
+}
+function schedule(){
+  while(nextBeat<ctx.currentTime+.12){
+    const t=nextBeat,accent=beat===0;
+    sound(accent?1200:800,t,.045,.15);
+    const id=setTimeout(()=>{
+      flashes.delete(id);
+      $('pulse').style.background=accent?'#65a4ff':'#6cd3a1';
+      const off=setTimeout(()=>{
+        flashes.delete(off);$('pulse').style.background='#40536b';
+      },80);
+      flashes.add(off);
+    },Math.max(0,(t-ctx.currentTime)*1000));
+    flashes.add(id);
+    nextBeat+=60/Number($('slider').value);beat=(beat+1)%4;
+  }
+}
+function tempo(value){
+  $('slider').value=Math.max(40,Math.min(220,Number(value)));
+  $('tempo').textContent=$('slider').value;
+}
+$('slider').oninput=()=>tempo($('slider').value);
+$('minus').onclick=()=>tempo(Number($('slider').value)-5);
+$('plus').onclick=()=>tempo(Number($('slider').value)+5);
+$('start').onclick=async()=>{
+  try{
+    if(running){stopMetro();return}
+    stopTone();await audio();
+    running=true;beat=0;nextBeat=ctx.currentTime+.05;
+    $('start').textContent='Stop';schedule();timer=setInterval(schedule,25);
+  }catch(e){$('status').textContent='Audio error: '+e.message}
+};
+$('tone').onclick=async()=>{
+  try{
+    if(toneOsc){stopTone();return}
+    stopMetro();await audio();
+    toneOsc=ctx.createOscillator();toneGain=ctx.createGain();
+    toneOsc.frequency.value=freqs[selected];
+    toneGain.gain.setValueAtTime(0,ctx.currentTime);
+    toneGain.gain.linearRampToValueAtTime(.08,ctx.currentTime+.03);
+    toneOsc.connect(toneGain).connect(ctx.destination);toneOsc.start();
+    $('tone').textContent='Stop tone';toneTimer=setTimeout(stopTone,4000);
+  }catch(e){$('status').textContent='Audio error: '+e.message}
+};
+function tab(metro){
+  stopTone();stopMetro();
+  $('tuner').hidden=metro;$('metro').hidden=!metro;
+  $('tunerTab').classList.toggle('active',!metro);
+  $('metroTab').classList.toggle('active',metro);
+}
+$('tunerTab').onclick=()=>tab(false);
+$('metroTab').onclick=()=>tab(true);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){stopTone();stopMetro()}
+});
+update();
+</script>
+
+<script>
+(()=>{
+  const get=id=>document.getElementById(id);
+  const key='guitar-practice-sessions-v1';
+  let sessions=[],storageOK=true;
+  try{
+    const saved=JSON.parse(localStorage.getItem(key)||'[]');
+    if(!Array.isArray(saved)) throw new Error('Invalid log');
+    sessions=saved;
+  }catch(e){
+    storageOK=false;
+    get('practiceMessage').textContent='Saved log unavailable. Sessions cannot be saved.';
+  }
+
+  let duration=600000,elapsed=0,started=null;
+  const day=date=>date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+  const used=()=>elapsed+(started===null?0:Date.now()-started);
+
+  function today(){
+    const now=day(new Date());
+    const items=sessions.filter(s=>day(new Date(s.finished))===now);
+    const minutes=items.reduce((sum,s)=>sum+s.seconds,0)/60;
+    get('practiceToday').textContent=
+      'Today: '+minutes.toFixed(1)+' min · '+items.length+' sessions';
+  }
+  function draw(){
+    const seconds=Math.max(0,Math.ceil((duration-used())/1000));
+    get('remaining').textContent=
+      String(Math.floor(seconds/60)).padStart(2,'0')+':'+
+      String(seconds%60).padStart(2,'0');
+    get('timerStart').textContent=started!==null?'Pause':elapsed>0?'Resume':'Start';
+    get('timerFinish').disabled=used()<=0;
+    document.querySelectorAll('[data-minutes]').forEach(b=>{
+      b.disabled=started!==null||elapsed>0;
+    });
+  }
+  function finish(){
+    const milliseconds=Math.min(duration,used());
+    if(milliseconds<=0)return;
+    if(started!==null){elapsed=milliseconds;started=null}
+    else elapsed=milliseconds;
+    draw();
+
+    if(!storageOK){
+      get('practiceMessage').textContent='Storage unavailable. Session remains paused.';
+      return;
+    }
+    const entry={finished:new Date().toISOString(),seconds:milliseconds/1000};
+    const next=[...sessions,entry];
+    try{localStorage.setItem(key,JSON.stringify(next))}
+    catch(e){
+      get('practiceMessage').textContent='Could not save. Session remains paused; try Finish again.';
+      return;
+    }
+    sessions=next;elapsed=0;
+    get('practiceMessage').textContent=
+      'Saved '+(milliseconds/60000).toFixed(1)+' minutes. Ready for another session.';
+    today();draw();
+  }
+
+  document.querySelectorAll('[data-minutes]').forEach(b=>{
+    b.onclick=()=>{
+      duration=Number(b.dataset.minutes)*60000;
+      document.querySelectorAll('[data-minutes]').forEach(x=>
+        x.classList.toggle('active',x===b));
+      draw();
+    };
+  });
+  get('timerStart').onclick=()=>{
+    if(started!==null){elapsed=used();started=null}
+    else started=Date.now();
+    draw();
+  };
+  get('timerFinish').onclick=finish;
+
+  get('practiceTab').onclick=()=>{
+    stopTone();stopMetro();
+    get('tuner').hidden=true;get('metro').hidden=true;
+    get('practice').hidden=false;
+    get('tunerTab').classList.remove('active');
+    get('metroTab').classList.remove('active');
+    get('practiceTab').classList.add('active');
+    today();draw();
+  };
+  get('tunerTab').onclick=()=>{
+    get('practice').hidden=true;
+    get('practiceTab').classList.remove('active');tab(false);
+  };
+  get('metroTab').onclick=()=>{
+    get('practice').hidden=true;
+    get('practiceTab').classList.remove('active');tab(true);
+  };
+
+  setInterval(()=>{
+    if(started!==null&&used()>=duration)finish();
+    draw();
+  },250);
+  today();draw();
+})();
+</script>
+
+
+<script>
+document.getElementById('analyze').onclick=async()=>{
+  const button=document.getElementById('analyze');
+  const stringIndex=selected,offset=cents;
+  button.disabled=true;
+  button.textContent='Testing…';
+  try{
+    const response=await fetch(
+      '/api/pitch-test/'+stringIndex+'/'+offset,
+      {cache:'no-store',signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw new Error('Server returned '+response.status);
+    const result=await response.json();
+    if(result.frequency===null)throw new Error('No pitch detected');
+    if(selected!==stringIndex||cents!==offset){
+      document.getElementById('status').textContent=
+        'Selection changed during analysis. Tap Analyze again.';
+      return;
+    }
+    document.getElementById('freq').textContent=
+      result.frequency.toFixed(2)+' Hz · measured by C#';
+    const tuning=Math.abs(result.cents)<=5?'in tune':
+      result.cents<0?'flat — tune up ↑':'sharp — tune down ↓';
+    document.getElementById('tuning').textContent=
+      'Test audio: '+tuning+' ('+result.cents.toFixed(1)+' cents)';
+    document.getElementById('needle').style.left=
+      (50+Math.max(-45,Math.min(45,result.cents)))+'%';
+    document.getElementById('status').textContent=
+      'C# analyzed generated '+result.note+' audio in '+
+      result.analysisMs.toFixed(1)+' ms. Microphone is not in use.';
+  }catch(error){
+    document.getElementById('status').textContent=
+      'Analysis failed: '+error.message;
+  }finally{
+    button.disabled=false;button.textContent='Analyze';
+  }
+};
+</script>
+
+
+<input id="wavFile" type="file" accept=".wav,audio/wav" hidden>
+<script>
+(()=>{
+  const el=id=>document.getElementById(id);
+  el('wavUpload').onclick=()=>el('wavFile').click();
+  el('wavFile').onchange=async()=>{
+    const file=el('wavFile').files[0];
+    if(!file)return;
+    stopTone();stopMetro();
+    el('practice').hidden=true;
+    el('practiceTab').classList.remove('active');
+    tab(false);
+    el('wavUpload').disabled=true;
+    el('status').textContent='Analyzing '+file.name+'…';
+    try{
+      if(file.size>8*1024*1024)throw new Error('Maximum file size is 8 MB.');
+      const response=await fetch('/api/analyze-wav',{
+        method:'POST',headers:{'Content-Type':'audio/wav'},body:file,
+        signal:AbortSignal.timeout(60000)
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.message||'Upload failed');
+      if(!result.detected){
+        el('note').textContent='—';
+        el('freq').textContent='No clear pitch';
+        el('tuning').textContent='WAV analysis';
+        el('needle').style.left='50%';
+        el('status').textContent=result.message;
+        return;
+      }
+      el('note').textContent=result.note;
+      el('freq').textContent=result.frequency.toFixed(2)+' Hz · WAV recording';
+      el('tuning').textContent='Measured: '+result.cents.toFixed(1)+' cents';
+      el('needle').style.left=(50+Math.max(-45,Math.min(45,result.cents)))+'%';
+      [...el('strings').children].forEach(b=>b.classList.remove('active'));
+      el('status').textContent=file.name+' · analyzed near '+
+        result.analyzedAtSeconds.toFixed(1)+' seconds · single-note estimate';
+    }catch(error){
+      el('status').textContent='WAV analysis: '+error.message;
+    }finally{
+      el('wavUpload').disabled=false;el('wavFile').value='';
+    }
+  };
+})();
+</script>
+
+<script src="/touch-keyboard.js" defer></script>
+</body>
+</html>

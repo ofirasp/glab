@@ -1,0 +1,30 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Guitar Practice Lab</PageTitle>
+
+<iframe src="/practice.html" title="Guitar Practice Lab"
+        style="position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000"></iframe>
+
+<button @onclick="ReturnToDesktop"
+        style="position:fixed;right:12px;top:10px;z-index:1001;
+               min-height:44px;padding:8px 14px;border:1px solid #8193ad;
+               border-radius:10px;background:#293950;color:white;font-size:15px">
+    Desktop
+</button>
+
+@code {
+    private void ReturnToDesktop()
+    {
+        var command = new System.Diagnostics.ProcessStartInfo("pkill");
+        command.ArgumentList.Add("-f");
+        command.ArgumentList.Add("[g]uitar-lab-browser");
+        command.UseShellExecute = false;
+        using var process = System.Diagnostics.Process.Start(command);
+    }
+}
+
+<style id="outer-screen-fit">
+html,body{margin:0;height:100%;overflow:hidden}
+iframe{display:block}
+</style>

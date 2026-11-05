@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Songs · Guitar Practice Lab</title>
+<link rel="stylesheet" href="song-library.css">
+<script src="song-library.js" defer></script>
+<script src="/touch-keyboard.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <strong>Songs</strong>
+  <button id="libraryButton">Library</button>
+  <button id="readerToggle" aria-pressed="false">Read PDF</button>
+  <button id="toolsButton">Tools</button>
+  <a href="practice.html" class="button">Dashboard</a>
+</header>
+<main class="split">
+  <section class="sheet" aria-label="Chord sheet">
+    <div class="pagebar">
+      <button id="previous" aria-label="Previous page" disabled>‹</button>
+      <span id="pageNumber">No PDF selected</span>
+      <button id="next" aria-label="Next page" disabled>›</button>
+      <button id="zoomOut" aria-label="Zoom out" disabled>−</button>
+      <button id="zoomIn" aria-label="Zoom in" disabled>+</button>
+    </div>
+    <div id="pdfViewport" tabindex="0" aria-label="Scroll chord sheet">
+      <div id="emptySheet">Import a chord PDF<br><small>Then attach its MP3 recording.</small></div>
+      <img id="pdfImage" alt="Selected chord sheet page" hidden>
+      <span id="pageLoading" hidden>Loading page…</span>
+    </div>
+    <div class="cuebar">
+      <button id="follow" aria-pressed="false" disabled>Follow off</button>
+      <button id="markCue" disabled>Mark here</button>
+      <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
+    </div>
+    <div class="readerbar" id="readerBar">
+      <button id="readerBack" disabled>−5s</button>
+      <button id="readerPlay" class="primary" disabled>Play</button>
+      <button id="readerForward" disabled>+5s</button>
+      <span id="readerClock">0:00 / 0:00</span>
+      <button id="readerLoop" aria-pressed="false" disabled>Loop off</button>
+      <button id="readerTrack" disabled>Original</button>
+      <button id="readerTools">Tools</button>
+    </div>
+    <div class="volumecontrols reader-volume" aria-label="Song volume">
+      <button id="readerMute" aria-label="Mute song" aria-pressed="false">Mute</button>
+      <input id="readerVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Reader song volume">
+      <output id="readerVolumeValue" for="readerVolume">100%</output>
+    </div>
+  </section>
+  <section class="companion" aria-label="Play along controls">
+    <div class="songheading"><button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button><h1 id="songTitle">Choose a song</h1></div>
+    <div id="audioEmpty" class="hint">Your PDF and audio stay on this Pi. Add an MP3 to start practising.</div>
+    <div class="transport">
+      <button id="back" disabled>−5s</button>
+      <button id="play" class="primary" disabled>Play</button>
+      <button id="forward" disabled>+5s</button>
+    </div>
+    <div class="timeline">
+      <input id="seek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Song position" disabled>
+      <div class="spread"><span id="clock">0:00 / 0:00</span><span id="speedLabel">1×</span></div>
+    </div>
+    <div class="volumecontrols " aria-label="Song volume">
+      <button id="songMute" aria-label="Mute song" aria-pressed="false">Mute</button>
+      <input id="songVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Song volume">
+      <output id="songVolumeValue" for="songVolume">100%</output>
+    </div>
+    <div class="loopcard">
+      <span id="loopTimes">A — · B —</span>
+      <div class="loopbuttons"><button id="loop" aria-pressed="false" disabled>Loop off</button><button id="loopTools">Set A/B</button></div>
+    </div>
+    <div class="sectioncard"><span class="eyebrow">CURRENT SECTION</span><strong id="currentSection">No cue yet</strong><small id="nextSection">Move the PDF to a section, then tap Mark here.</small></div>
+  </section>
+</main>
+<footer id="status" role="status">Loading library…</footer>
+<audio id="audio" preload="metadata"></audio>
+<input id="audioFile" type="file" accept=".mp3,audio/mpeg" multiple hidden>
+<input id="backingFile" type="file" accept=".mp3,audio/mpeg" hidden>
+
+<dialog id="toolsDialog">
+  <div class="dialoghead"><h2>Song tools</h2><button data-close="toolsDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <div class="toolactions"><button id="importButton">Import PDF</button><button id="audioButton" disabled>Add MP3</button><button id="notesButton" disabled>Song notes</button></div>
+    <div class="toolactions"><button id="replacePdfButton" disabled>Replace PDF</button><button id="deleteSongButton" class="danger" disabled>Delete song</button></div>
+    <div class="toolactions"><button id="originalTrack" aria-pressed="true" disabled>Original</button><button id="backingTrack" aria-pressed="false" disabled>Backing</button><button id="addBacking" disabled>Add backing MP3</button></div>
+    <p id="backingHint" class="hint">Create a backing from the exact original MP3 with the Mac helper, then attach it here. PDF cues are shared by both versions.</p>
+    <label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label>
+    <div class="toolactions"><button id="setA" disabled>Set A here</button><button id="setB" disabled>Set B here</button><button id="clearLoop" disabled>Clear A/B</button></div>
+    <p id="toolsLoopTimes" class="hint">A — · B —</p>
+    <p class="hint">Use −5s / +5s or the song position slider to find a passage. Set A at its start, B at its end, then turn Loop on.</p>
+    <p class="hint">Zoom stays at your chosen size while Follow moves between saved passages. Read PDF gives the sheet the full screen width.</p>
+  </div>
+  <div class="dialogfoot"><button id="toolsPlay" class="primary" disabled>Play</button><span id="toolsClock">0:00 / 0:00</span></div>
+</dialog>
+
+<dialog id="replacePdfDialog">
+  <div class="dialoghead"><h2>Replace PDF</h2><button data-close="replacePdfDialog">Cancel</button></div>
+  <div class="dialogbody stack"><strong id="replaceSongTitle"></strong>
+    <label>New chord sheet <input id="replacementPdf" type="file" accept=".pdf,application/pdf"></label>
+    <p class="hint">The song title, original MP3, backing track and notes stay. A different PDF clears Follow cues because its pages may have changed. Selecting the exact same PDF keeps the cues.</p>
+  </div>
+  <div class="dialogfoot"><button id="confirmReplacePdf" class="primary">Replace PDF</button></div>
+</dialog>
+<dialog id="deleteSongDialog">
+  <div class="dialoghead"><h2>Delete this song?</h2><button data-close="deleteSongDialog">Cancel</button></div>
+  <div class="dialogbody stack"><strong id="deleteSongTitle"></strong><p id="deleteSongDetails"></p>
+    <p class="hint">This removes this entry and its attached PDF, audio, notes and cues from the library. Other entries and files in recordings stay. A recovery copy is kept on the Pi.</p>
+  </div>
+  <div class="dialogfoot"><button id="confirmDeleteSong" class="danger">Delete song</button><button data-close="deleteSongDialog">Keep song</button></div>
+</dialog>
+<dialog id="libraryDialog">
+  <div class="dialoghead"><h2>Song library</h2><button data-close="libraryDialog">Close</button></div>
+  <div class="dialogbody"><input id="search" type="search" placeholder="Find a song…" aria-label="Find a song"><div id="songList"></div></div>
+  <div class="dialogfoot"><button id="libraryImport" class="primary">Import PDF</button><span id="libraryCount"></span></div>
+</dialog>
+<dialog id="importDialog">
+  <div class="dialoghead"><h2>Import a song</h2><button data-close="importDialog">Cancel</button></div>
+  <div class="dialogbody stack">
+    <label>Chord sheets <input id="pdfFiles" type="file" accept=".pdf,application/pdf" multiple></label>
+    <label>Original MP3 + matching backing (optional, for one PDF) <input id="importAudio" type="file" accept=".mp3,audio/mpeg" multiple></label>
+    <p class="hint">On the Pi, a matching -backing.mp3 in the recordings folder is attached automatically when you choose -original.mp3. From a Mac, select both MP3 files together.</p>
+    <p class="hint">You can import several PDFs together and attach each recording later. PDFs: up to 20 MB / 100 pages. MP3: up to 100 MB / two hours.</p>
+    <p id="importStatus" role="status"></p>
+  </div>
+  <div class="dialogfoot"><button id="doImport" class="primary">Import</button></div>
+</dialog>
+<dialog id="cueDialog">
+  <div class="dialoghead"><h2>Song cues</h2><button data-close="cueDialog">Close</button></div>
+  <div class="dialogbody"><p class="hint">A cue links the current recording time to a position on the PDF. Tap a cue to jump there; your reading zoom is preserved.</p><div id="cueList"></div></div>
+  <div class="dialogfoot"><button id="cueMark" class="primary">Mark current position</button></div>
+</dialog>
+<dialog id="markDialog">
+  <div class="dialoghead"><h2>Mark this section</h2><button data-close="markDialog">Cancel</button></div>
+  <div class="dialogbody stack"><p id="markSummary"></p><label>Section <select id="cuePart"><option>Verse</option><option>Chorus</option><option>Bridge</option><option>Intro</option><option>Outro</option><option value="custom">Custom…</option></select></label><label id="customCueLabel" hidden>Custom section name <input id="cueName" maxlength="80" placeholder="Verse 2, Solo…"></label><p class="hint">Pause the song and scroll the PDF to the start of the section before marking it. Follow will keep that page position at your chosen zoom.</p></div>
+  <div class="dialogfoot"><button id="saveCue" class="primary">Save cue</button></div>
+</dialog>
+<dialog id="notesDialog">
+  <div class="dialoghead"><h2>Song notes</h2><button data-close="notesDialog">Cancel</button></div>
+  <div class="dialogbody stack"><label>Song title <input id="titleInput" maxlength="160"></label><label>Capo, tuning and practice notes <textarea id="notesInput" maxlength="10000" rows="5" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></label><p class="hint">Notes are reminders, not automatic tuning or capo detection.</p></div>
+  <div class="dialogfoot"><button id="saveNotes" class="primary">Save notes</button></div>
+</dialog>
+</body>
+</html>
