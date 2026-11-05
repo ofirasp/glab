@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Songs · Guitar Practice Lab</title>
 <link rel="stylesheet" href="song-library.css">
+<script src="chord-shapes.js" defer></script>
+<script src="chord-viewer.js" defer></script>
 <script src="song-library.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 </head>
@@ -27,12 +29,13 @@
     </div>
     <div id="pdfViewport" tabindex="0" aria-label="Scroll chord sheet">
       <div id="emptySheet">Import a chord PDF<br><small>Then attach its MP3 recording.</small></div>
-      <img id="pdfImage" alt="Selected chord sheet page" hidden>
+      <div id="pdfSurface"><img id="pdfImage" alt="Selected chord sheet page" hidden><div id="chordTargets"></div></div>
       <span id="pageLoading" hidden>Loading page…</span>
     </div>
     <div class="cuebar">
       <button id="follow" aria-pressed="false" disabled>Follow off</button>
       <button id="markCue" disabled>Mark here</button>
+      <button id="chordListButton" disabled>Chords</button>
       <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
     </div>
     <div class="readerbar" id="readerBar">
@@ -140,6 +143,27 @@
   <div class="dialoghead"><h2>Song notes</h2><button data-close="notesDialog">Cancel</button></div>
   <div class="dialogbody stack"><label>Song title <input id="titleInput" maxlength="160"></label><label>Capo, tuning and practice notes <textarea id="notesInput" maxlength="10000" rows="5" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></label><p class="hint">Notes are reminders, not automatic tuning or capo detection.</p></div>
   <div class="dialogfoot"><button id="saveNotes" class="primary">Save notes</button></div>
+</dialog>
+<dialog id="chordsDialog">
+  <div class="dialoghead"><h2>Song chords</h2><button data-close="chordsDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <p id="chordScanStatus" class="hint">Choose a song first.</p>
+    <div id="songChordList" class="chordlist"></div>
+    <form id="chordLookupForm"><label>Look up a chord <input id="chordLookup" maxlength="18" placeholder="Am, F#m7, C/G…" autocomplete="off"></label><button type="submit">Show shape</button></form>
+  </div><div class="dialogfoot"><span class="hint">Tap a chord on the PDF or choose it here.</span></div>
+</dialog>
+<dialog id="chordDialog" aria-labelledby="chordName">
+  <div class="dialoghead"><h2 id="chordName">Chord</h2><button data-close="chordDialog">Close</button></div>
+  <div class="dialogbody chordbody">
+    <div id="chordDiagram" aria-live="polite"></div>
+    <div class="chordsettings stack">
+      <label>Guitar tuning <select id="chordTuning"><option value="unknown">Choose tuning…</option><option value="standard">Standard · E A D G B E</option><option value="other">Other tuning</option></select></label>
+      <label>Capo <select id="chordCapo"></select></label>
+      <p id="chordExplanation" class="hint"></p>
+      <p class="hint">Shapes follow the chord names as written. Frets are relative to the capo. Song notes do not set tuning automatically.</p>
+    </div>
+  </div>
+  <div class="dialogfoot"><button id="previousChordShape">‹ Previous</button><span id="chordShapeCount"></span><button id="nextChordShape">Next ›</button></div>
 </dialog>
 </body>
 </html>

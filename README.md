@@ -10,6 +10,7 @@ Touchscreen guitar practice app built for a Raspberry Pi 3 Model B and a 7-inch 
 - Original/backing track selection, volume and mute.
 - PDF zoom, reading view and manually marked sections that follow playback.
 - A/B loops, playback speed, notes, song editing and deletion.
+- Tap PDF chord names for diagrams and alternative shapes; song chord list and manual lookup.
 - English/Hebrew touch keyboard.
 
 This repository contains the source copied from the Pi, plus the Mac backing-track helpers and Pi kiosk startup tools. Recordings, chord PDFs, personal library data, generated media and build output are excluded.
@@ -27,7 +28,7 @@ From the repository root:
 
 ```bash
 dotnet restore src/GuitarPracticeLab.Web/GuitarPracticeLab.Web.csproj
-dotnet run --project src/GuitarPracticeLab.Web --no-launch-profile --urls http://127.0.0.1:5080
+dotnet run --project src/GuitarPracticeLab.Web --no-launch-profile --urls http://127.0.0.1:5080 --environment Development
 ```
 
 Open `http://127.0.0.1:5080/`. The app is used over HTTP locally. The copied source still includes the template HTTPS redirection middleware; without a configured HTTPS port it can log a warning while serving HTTP.
@@ -61,3 +62,18 @@ PDF following uses saved manual positions and timings. It does not automatically
 Development hardware: Raspberry Pi 3 Model B, 32-bit Raspberry Pi OS Trixie, 7-inch touch display, wired audio. Capture hardware is needed for microphone input. The source targets .NET 10; use the Linux ARM distribution on the 32-bit Pi.
 
 The app has no account/login layer and can modify local song-library files. Keep it on the Pi or a trusted private network; do not expose it directly to the internet.
+
+## Chord diagrams
+
+Tap an underlined chord in the PDF, or tap **Chords**. Choose the guitar tuning before displaying a shape. This version supports standard E A D G B E tuning only; selecting other tuning hides the diagrams. Capo and preferred shapes are remembered per song in that browser. Frets are relative to the selected capo and chord names are interpreted as written, without automatic transposition.
+
+Text PDFs are detected with Poppler's `pdftotext`. Scanned pages, split glyphs and some PDF font encodings may not expose chord text; manual lookup remains available. Detection can include chord-like words and uncommon spellings may have no diagram. Generated compact voicings are checked against chord tones and the requested bass; fingering comfort still depends on the player. No OCR or alternate-tuning shape library is included.
+
+Existing Pi installations can run `bash tools/chord-update/install.sh` from a checkout copied to the Pi. It checks source compatibility, backs up changed files, builds before replacing the running deployment and restores the previous version if startup fails. It does not change song data. Reopen the browser after installation.
+
+Checks:
+
+```bash
+node tests/chord-shapes.test.cjs
+dotnet run --project tests/PdfChordChecks
+```

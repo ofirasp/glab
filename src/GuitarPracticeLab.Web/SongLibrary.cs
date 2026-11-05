@@ -239,6 +239,20 @@ public static class SongLibrary
             if (string.IsNullOrEmpty(file)) throw new FileNotFoundException("This audio version has not been attached yet.");
             return Task.FromResult<IResult>(Results.File(Path.Combine(Folder(id), file), "audio/mpeg", enableRangeProcessing: true));
         }));
+        api.MapGet("/{id:guid}/chords", (Guid id) => Guard(async () =>
+        {
+            var song = Read(id);
+            var cache = Path.Combine(Folder(id), "chords-v1-" + Path.GetFileNameWithoutExtension(song.PdfFile) + ".json");
+            if (!File.Exists(cache))
+            {
+                string xml = await Run("pdftotext", "-bbox-layout", Path.Combine(Folder(id), song.PdfFile), "-");
+                var pages = PdfChords.Parse(xml);
+                var temporary = cache + ".tmp";
+                await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(pages, Json));
+                File.Move(temporary, cache, true);
+            }
+            return Results.File(cache, "application/json");
+        }));
         api.MapGet("/{id:guid}/page/{page:int}", (Guid id, int page) => Guard(async () =>
         {
             var song = Read(id);

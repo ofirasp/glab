@@ -1,0 +1,30 @@
+{
+  "SongLibrary.cs": {
+    "before": "e7f08e16a19cf19452ef89de45d404b192649cb95a8cc025646b0ccf22c27dba",
+    "after": "27c63869d8c975af733f51fba73970a2d488422b935c855252e75b013af60f64"
+  },
+  "PdfChords.cs": {
+    "before": null,
+    "after": "1829e915917e9d308a53429ba69f544c4b13b5845dcb3ebe06a5c1e48cb5b13e"
+  },
+  "wwwroot/song-library.html": {
+    "before": "22727d4dd74be112f32fbc8a4e59cfe268d05a8b8eaab13d04023ac8cf9bf4a6",
+    "after": "7b16ac004ae15c4915c43575be8c2b62438fe48be2540cdbbc5ceceb0af2581f"
+  },
+  "wwwroot/song-library.css": {
+    "before": "bdfee7948b4a92533368fe8def6cde1498de153c2cfacbdc01b8fb1636db1da3",
+    "after": "bc3dcd35c698172446f2a84e0fedda7ae35e515d0c07a31065a1c487d3d9c143"
+  },
+  "wwwroot/song-library.js": {
+    "before": "a0938ddb69262e4591b77423289f028d58f98af24f0cfab2d089570634f58f9e",
+    "after": "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970"
+  },
+  "wwwroot/chord-shapes.js": {
+    "before": null,
+    "after": "6287012ac40834806419343b9dd4bd3dca61d82183485bfaf78e23160a37e62d"
+  },
+  "wwwroot/chord-viewer.js": {
+    "before": null,
+    "after": "2dc7c4abe106f1ae7c01efd119cc89a4807733c9f6cc3ba73b79851397e53f7e"
+  }
+}

@@ -101,6 +101,7 @@ async function operation(action) {
   }
 }
 function update() {
+  $('chordListButton').disabled = busy || !song;
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
   for (const id of ['audioButton', 'notesButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
@@ -174,6 +175,7 @@ async function renderPage(number = page, position = 0, pageAnchor = null) {
   page = Math.max(1, Math.min(song.pages, number));
   const token = ++pageToken;
   pageReady = false;
+  window.GuitarChordViewer?.clearPage();
   $('pageLoading').hidden = false;
   update();
   try {
@@ -200,6 +202,7 @@ async function renderPage(number = page, position = 0, pageAnchor = null) {
       restorePosition(position, pageAnchor, horizontal);
       if (oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
       pageReady = true;
+      window.GuitarChordViewer?.showPage({ id: song.id, version: song.updated, page });
     } catch (error) { URL.revokeObjectURL(url); throw error; }
   } catch (error) { if (token === pageToken) message(error); }
   finally { if (token === pageToken) { $('pageLoading').hidden = true; update(); } }
@@ -238,6 +241,7 @@ function selectSong(item, autoplay = false) {
   switchToken++; switchingTrack = false; audioVariant = 'original';
   audio.pause(); audio.removeAttribute('src'); audio.load();
   song = structuredClone(item);
+  window.GuitarChordViewer?.reset(song.id);
   page = 1; zoom = preferredZoom; loopA = loopB = null; looping = false;
   setFollow(false);
   $('currentSection').textContent = 'No cue yet';
@@ -474,6 +478,7 @@ $('confirmDeleteSong').onclick = () => operation(async () => {
   switchToken++; switchingTrack = false;
   audio.pause(); audio.removeAttribute('src'); audio.load();
   pageToken++; pageReady = false; pendingCue = null; song = null;
+  window.GuitarChordViewer?.reset(null);
   page = 1; audioVariant = 'original'; loopA = loopB = null; looping = false;
   setFollow(false);
   const image = $('pdfImage');
@@ -528,7 +533,8 @@ function changeZoom(delta) {
   update();
 }
 $('zoomIn').onclick = () => changeZoom(0.25); $('zoomOut').onclick = () => changeZoom(-0.25);
-for (const event of ['pointerdown', 'wheel', 'keydown']) $('pdfViewport').addEventListener(event, () => {
+for (const event of ['pointerdown', 'wheel', 'keydown']) $('pdfViewport').addEventListener(event, input => {
+  if (input.type === 'pointerdown' && input.target.closest('.chordtarget')) return;
   if (following) { setFollow(false); status('Manual PDF navigation. Tap Follow on to resume cues.'); }
 }, { passive: true });
 $('follow').onclick = () => {

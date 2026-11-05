@@ -89,3 +89,21 @@ button.danger{background:#592a32;border-color:#c36a79;color:#fff}
 .reader-volume{display:none}
 body.reader .sheet{grid-template-rows:40px minmax(0,1fr)42px 48px 42px}
 body.reader .reader-volume{display:grid;padding:0 8px;border-top:1px solid #40546e;grid-template-columns:76px minmax(0,1fr) 40px}
+
+/* Chord targets scale with the PDF image without changing Follow coordinates. */
+#pdfSurface{position:relative;min-width:100%}
+#chordTargets{position:absolute;left:0;top:0;pointer-events:none}
+.chordtarget{position:absolute;pointer-events:auto;min-height:0;padding:0;border:0;border-radius:3px;background:#2985f01a;box-shadow:inset 0 -2px #2471cc99;color:transparent;touch-action:pan-x pan-y}
+.chordtarget:active,.chordtarget:focus-visible{background:#2985f055;outline:2px solid #1b62ab}
+.chordlist{display:flex;gap:8px;flex-wrap:wrap}
+.chordlist button{min-width:65px;min-height:44px}
+#chordLookupForm{display:flex;gap:8px;align-items:flex-end}
+#chordLookupForm label{flex:1}
+#chordDialog{width:min(640px,calc(100vw - 20px))}
+.chordbody{display:grid;grid-template-columns:minmax(190px,1fr) minmax(160px,1fr);gap:18px;align-items:start}
+#chordDiagram{height:100%;min-height:185px;text-align:center;display:flex;align-items:center;justify-content:center}
+#chordDiagram svg{display:block;width:100%;max-width:260px;max-height:100%}
+.chordsettings{gap:10px}.chordsettings select{display:block;width:100%}
+#chordShapeCount{text-align:center;font-size:13px}
+#chordDialog .dialogfoot button{min-width:110px}
+@media(max-width:480px){.chordbody{grid-template-columns:1fr}.chordsettings{font-size:12px}}
