@@ -171,3 +171,19 @@ installing this update. This capture feature runs only in the dedicated Pi lesso
 browser, using a small extension with tabs/storage permissions; it remembers tab
 titles and addresses for the current browser session, without reading page content,
 cookies or passwords. Ordinary Mac lesson popups still use manual link entry.
+
+Practice now includes **Follow the Notes** and **Play Along**. Both offer all
+12 keys in major and minor pentatonic scales, with a standard-tuning fretboard
+and root-note markers. Follow the Notes has ascending, descending and up/down
+sequences, a four-beat count-in, tempo controls, optional reference notes and
+manual stepping. Targets advance on the beat; these exercises do not use the
+microphone or score accuracy. Play Along offers a generated root/fifth groove
+that follows the selected key, attached song-library backing tracks, or an
+audio file selected on the current device (not uploaded). Imported recordings
+are not analysed or transposed: choose their matching scale/key yourself.
+Volume, mute, pause, reset and recording looping work without a keyboard.
+Playback pauses when the page is hidden. Recording tempo remains unchanged.
+
+Checks: `node tests/scales.test.cjs` and the Playwright touchscreen/audio test
+`node tests/scale-practice-ui.test.cjs`. UI tests use a generated WAV and a
+fixture library; real Pi speaker playback has not been verified here.

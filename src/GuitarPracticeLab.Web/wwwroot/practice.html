@@ -120,7 +120,7 @@ nav button{font-size:17px}
 </section>
 
 <section id="practice" hidden>
-  <button id="oneMinuteChanges">1 Minute Changes</button>
+  <div class="row"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Follow the Notes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button></div>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>
@@ -461,5 +461,6 @@ document.getElementById('analyze').onclick=async()=>{
 <script src="/one-minute-changes.js" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
+<script>if(new URLSearchParams(location.search).get('tab')==='practice')document.getElementById('practiceTab').click();</script>
 </body>
 </html>

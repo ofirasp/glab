@@ -54,10 +54,11 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "6da2bcf5a05b63efa8702cbd2a07b539218b61975985af3a8bafd8a32177af3d",
+    "after": "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
-      "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9"
+      "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
+      "6da2bcf5a05b63efa8702cbd2a07b539218b61975985af3a8bafd8a32177af3d"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -130,5 +131,21 @@
   "Desktop/LessonCapture/worker.js": {
     "before": null,
     "after": "8bae0402982b03f4c463db833ce6a41a2ef4bf058a73bfb60811169cddc0c887"
+  },
+  "wwwroot/scales.js": {
+    "before": null,
+    "after": "befb80f29d5044e3cf9215aabf3f34ae50073a4079fac9099b1a47937b77d12f"
+  },
+  "wwwroot/scale-practice.html": {
+    "before": null,
+    "after": "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d"
+  },
+  "wwwroot/scale-practice.css": {
+    "before": null,
+    "after": "79a3f11cee3ed4f75526b91b8920d3581e144d0c8e8543f86ab59891566046b5"
+  },
+  "wwwroot/scale-practice.js": {
+    "before": null,
+    "after": "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e"
   }
 }
