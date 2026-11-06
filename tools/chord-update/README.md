@@ -38,3 +38,11 @@ Then double-click `Update Guitar Practice Lab.command`. It contains the complete
 update payload; no separate ZIP needs to be downloaded. This updates either the
 original Pi source or the previous chord-popup version, while rejecting unknown
 local edits. Reopen the Pi browser after installation.
+
+The cumulative update now includes **Practice → 1 Minute Changes**. A connected
+Pi microphone and ALSA capture permissions are needed. Confirm standard tuning
+with no capo; use headphones and a quiet room. Completed sixty-second results
+save on the Pi under `~/GuitarPracticeLab/chord-practice`, outside publishing.
+Detection is experimental and must be checked against your real guitar/microphone.
+Synthetic tests and a full simulated capture round passed; real Pi microphone
+accuracy has not been measured in this session.

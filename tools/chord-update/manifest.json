@@ -29,5 +29,33 @@
   "wwwroot/chord-viewer.js": {
     "before": null,
     "after": "2dc7c4abe106f1ae7c01efd119cc89a4807733c9f6cc3ba73b79851397e53f7e"
+  },
+  "Program.cs": {
+    "before": "c1e38c312f6a7a5867a61d088472be8a6aa75f5e2c4f0ca68399575afd3b8cc5",
+    "after": "b36dff8220237eef28c956e3036da176958ba598188f88365faf5c7d4d161c1a"
+  },
+  "ChordDetector.cs": {
+    "before": null,
+    "after": "3f72e7f423ee2f5f96116c864afae7b7b2144fdeeffacd7a7ce8aad989829844"
+  },
+  "ChordPractice.cs": {
+    "before": null,
+    "after": "d55a9495acd2617e46854ef6ef17ff96ec40e42859e6a3aa81838897dfc0b936"
+  },
+  "wwwroot/practice.html": {
+    "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
+    "after": "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804"
+  },
+  "wwwroot/chord-diagram.js": {
+    "before": null,
+    "after": "0931b551ad42897ed1ba62ed614aa358b57cfe29470a374b865ef6f8a004cdeb"
+  },
+  "wwwroot/one-minute-changes.css": {
+    "before": null,
+    "after": "3209e6637c865e9466927632db06bbd9f7d8296ed1b4720a861e51e12ecf94b3"
+  },
+  "wwwroot/one-minute-changes.js": {
+    "before": null,
+    "after": "00dae06c09f12fa93c6d7b3b381ebc6683f51a3190d65f9a91b631ef45faf3c0"
   }
 }

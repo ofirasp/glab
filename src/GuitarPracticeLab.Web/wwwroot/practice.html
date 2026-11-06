@@ -86,7 +86,7 @@ nav button{font-size:17px}
 </head>
 <body>
 <main>
-<header><h1>Guitar Practice Lab</h1><small>Microphone pending</small></header>
+<header><h1>Guitar Practice Lab</h1><small id="inputStatus">Tuner demo · WAV analysis</small></header>
 <nav>
 <button id="tunerTab" class="active">Tuner demo</button>
 <button id="metroTab">Metronome</button><button id="practiceTab">Practice</button>
@@ -119,6 +119,7 @@ nav button{font-size:17px}
 </section>
 
 <section id="practice" hidden>
+  <button id="oneMinuteChanges">1 Minute Changes</button>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>
@@ -132,6 +133,22 @@ nav button{font-size:17px}
   <div id="practiceToday">Today: 0 min</div>
   <div id="practiceMessage">Choose a duration and tap Start.</div>
 </section>
+
+<section id="chordChanges" hidden aria-label="1 Minute Changes">
+  <div class="changeshead"><button id="changesBack">‹ Practice</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
+  <div class="changesbody">
+    <div class="changesplay"><strong id="changesTarget">Play C</strong><div id="changesDiagram"></div><span id="changesNext">Then G</span></div>
+    <div class="changessetup">
+      <div class="changespair"><label>First chord<select id="changesFirst"></select></label><label>Second chord<select id="changesSecond"></select></label></div>
+      <div class="changespair"><label>Microphone<select id="changesDevice"><option>default</option></select></label><label>Room<select id="changesSensitivity"><option value="0.0015">Quiet</option><option value="0.003" selected>Normal</option><option value="0.007">Noisy</option></select></label></div>
+      <label class="changesconfirm"><input id="changesTuning" type="checkbox"> Standard tuning, no capo</label>
+      <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="changesHistory">Results</button><button id="changesRetry" hidden>Retry save</button></div>
+      <meter id="changesLevel" min="0" max="0.1" value="0" aria-label="Microphone level"></meter>
+      <div id="changesMessage" role="status">Choose two chords. Each detected chord counts once, then the target changes.</div>
+    </div>
+  </div>
+</section>
+<dialog id="changesResults"><div class="changesresulthead"><h2>1 Minute Changes · Results</h2><button id="changesCloseResults">Close</button></div><div id="changesResultsList"></div></dialog>
 
 <p id="status" role="status">Demo input only. Reference tones use the Pi’s audio output.</p>
 </main>
@@ -282,6 +299,7 @@ update();
       b.disabled=started!==null||elapsed>0;
     });
   }
+  document.addEventListener('guitar-exercise-open',()=>{if(started!==null){elapsed=used();started=null;draw();}});
   function finish(){
     const milliseconds=Math.min(duration,used());
     if(milliseconds<=0)return;
@@ -433,6 +451,10 @@ document.getElementById('analyze').onclick=async()=>{
 })();
 </script>
 
+<link rel="stylesheet" href="/one-minute-changes.css">
+<script src="/chord-shapes.js" defer></script>
+<script src="/chord-diagram.js" defer></script>
+<script src="/one-minute-changes.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 </body>
 </html>

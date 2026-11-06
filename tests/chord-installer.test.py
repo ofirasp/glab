@@ -15,7 +15,10 @@ for mode in ('success','previous-update','build-failure','startup-failure','loca
   for name,hashes in manifest.items():
    if mode=='previous-update' or hashes['before'] is not None:
     version='b15eb82' if mode=='previous-update' else baseline
-    value=subprocess.check_output(['git','-C',str(repo),'show',version+':src/GuitarPracticeLab.Web/'+name])
+    copy=subprocess.run(['git','-C',str(repo),'show',version+':src/GuitarPracticeLab.Web/'+name],capture_output=True)
+    if copy.returncode and hashes['before'] is None:continue
+    assert copy.returncode==0,(name,copy.stderr)
+    value=copy.stdout
     if mode!='previous-update':assert hashlib.sha256(value).hexdigest()==hashes['before']
     f=project/name;f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(value);originals[name]=value
   if mode=='local-change':

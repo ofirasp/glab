@@ -28,7 +28,7 @@ encoded=Path(sys.argv[1]).read_text().split('\\n__GPL_PAYLOAD__\\n',1)[1]
 Path(sys.argv[2]).write_bytes(base64.b64decode(encoded))
 PAYLOAD_PY
 remote="GuitarPracticeLab/updates/app-$(date +%Y%m%d-%H%M%S)-$$"
-echo 'Guitar Practice Lab update: automatic Follow and chord diagrams.'
+echo 'Guitar Practice Lab update: 1 Minute Changes, automatic Follow and chord diagrams.'
 echo 'Enter the Pi SSH password when asked. Sudo may ask separately.'
 ssh -M -S "$socket" -o ControlPersist=120 -o ServerAliveInterval=30 -fnN "$target"
 ssh -S "$socket" "$target" "mkdir -p '$remote'"

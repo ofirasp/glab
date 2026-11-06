@@ -27,7 +27,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
-sudo apt-get install -y poppler-utils
+sudo apt-get install -y poppler-utils alsa-utils
 mkdir -p "$backup/source" "$stage"
 python3 - <<'PY'
 import json,os,shutil
@@ -90,5 +90,5 @@ for attempt in $(seq 1 60); do
 done
 [ "$ready" = 1 ] || { echo 'App did not become ready.'; exit 1; }
 echo "Installed. Backup: $backup"
-echo 'Close and reopen the app browser. In Songs, tap an underlined chord or Chords.'
+echo 'Close and reopen the app browser. Practice → 1 Minute Changes uses the Pi microphone.'
 echo 'Choose your guitar tuning in the popup. Standard tuning is supported; alternate-tuning diagrams stay hidden.'

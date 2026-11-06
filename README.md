@@ -77,3 +77,42 @@ Checks:
 node tests/chord-shapes.test.cjs
 dotnet run --project tests/PdfChordChecks
 ```
+
+## 1 Minute Changes
+
+Open **Practice → 1 Minute Changes**, choose two different chord names, select the
+Pi's microphone and confirm **standard tuning, no capo**. Start connects to the
+microphone; the sixty-second countdown begins only when audio is available.
+Play the displayed chord cleanly and let it ring. A stable match counts once and
+switches to the other target. Holding/restrumming the previous chord does not add
+points. At sixty seconds, the round ends and saves automatically on the Pi.
+
+The score reports **correct chords played** and **changes** (one fewer than the
+number of chords, since the first chord is not a change). Results includes recent
+scores for each pair. Cancelled rounds are not saved. Switching away from the
+exercise or hiding the browser cancels an active round. A failed save keeps the
+result available for **Retry save** and blocks another start until saved.
+
+This is experimental polyphonic recognition, not a guarantee that every string
+was fingered correctly. It uses harmonic note fitting and compares the two chosen
+chords. Extended chords may omit their perfect fifth. Equivalent note sets such
+as Am7/C6 are rejected because this detector cannot reliably distinguish them.
+Similar chords, tuning, room noise, guitar timbre and microphone position affect
+accuracy. Use clean acoustic guitar sound and headphones; speaker playback can
+be mistaken for your instrument. No recording is retained.
+
+A USB microphone connected to the **Pi** and `alsa-utils` are required. Audio is
+captured by the Pi service with ALSA (`arecord`), so this also works when viewing
+the app from a Mac over HTTP; the Mac microphone is not used. If default capture
+fails, choose the USB microphone's `plughw:CARD=...,DEV=...` entry. The service user
+must have permission to access the capture device. The app never starts a fake
+round or counts demo input when capture is unavailable.
+
+Results live outside the published app at `~/GuitarPracticeLab/chord-practice/results.json`.
+Override the directory with `GUITAR_CHORD_PRACTICE`. Back it up with your library.
+At most the latest 100 results are returned to the UI; the storage file retains
+all completed results. Raw microphone samples are processed in memory only.
+
+Detector checks: `dotnet run --project tests/ChordPracticeChecks`. The test uses
+synthetic guitar-like harmonics and does not establish real microphone accuracy.
+The browser exercise test is `tests/one-minute-ui.test.cjs` and requires Playwright.
