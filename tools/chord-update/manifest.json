@@ -81,11 +81,17 @@
   },
   "Lessons.cs": {
     "before": null,
-    "after": "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568"
+    "after": "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52",
+    "compatible": [
+      "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568"
+    ]
   },
   "Desktop/lesson-browser.py": {
     "before": null,
-    "after": "284ad298c4502135275a98298d8a42353f5d5e1a3e8c97bc64dcc4371c9907f5"
+    "after": "e5b3783b59ed9c7f69b471da19b131461e3aa9e0b4b405d49e0aa377a1a6f10a",
+    "compatible": [
+      "284ad298c4502135275a98298d8a42353f5d5e1a3e8c97bc64dcc4371c9907f5"
+    ]
   },
   "wwwroot/lesson-links.js": {
     "before": null,
@@ -105,10 +111,24 @@
   },
   "wwwroot/lesson-return.html": {
     "before": null,
-    "after": "b693c893f5d31ff529e2112aadc5e40e58a97ca843389c37cd57f08d9a94a8e6"
+    "after": "5902a452d3f0f29bcf68f2cb5f245532c684b582a04d15195766e11eaa95bff2",
+    "compatible": [
+      "b693c893f5d31ff529e2112aadc5e40e58a97ca843389c37cd57f08d9a94a8e6"
+    ]
   },
   "wwwroot/lesson-return.js": {
     "before": null,
-    "after": "e6c0767d6d64795ed38020e0f0102583e453d393ea25f2459822efac65a5a750"
+    "after": "1ae928d079b68cc177448d425222f66db5ea7d0c2fdcc4d328d53df941037f19",
+    "compatible": [
+      "e6c0767d6d64795ed38020e0f0102583e453d393ea25f2459822efac65a5a750"
+    ]
+  },
+  "Desktop/LessonCapture/manifest.json": {
+    "before": null,
+    "after": "c77cc1fd9b4e9433e7ef0e6735e531a39f38cde851844de39320a063a07ac358"
+  },
+  "Desktop/LessonCapture/worker.js": {
+    "before": null,
+    "after": "8bae0402982b03f4c463db833ce6a41a2ef4bf058a73bfb60811169cddc0c887"
   }
 }

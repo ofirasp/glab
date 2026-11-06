@@ -13,7 +13,7 @@ public static class Lessons
         public Guid Id{get;set;}=Guid.NewGuid();public string Title{get;set;}="";public string Url{get;set;}="";public string Notes{get;set;}="";
         public bool Archived{get;set;}public DateTimeOffset Updated{get;set;}=DateTimeOffset.UtcNow;
     }
-    public sealed record Edit(string Title,string Url,string Notes="");
+    public sealed record Edit(string Title,string Url,string Notes="",bool PreserveExisting=false);
     public sealed record OpenRequest(string Url);
     public static string ValidateUrl(string? value,bool allowEmpty=false) {
         string text=(value??"").Trim();if(allowEmpty&&text.Length==0)return "";
@@ -31,6 +31,11 @@ public static class Lessons
             double heartbeat=root.GetProperty("heartbeat").GetDouble();if(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()/1000.0-heartbeat>6)return false;
             running=root.GetProperty("running").GetBoolean();error=root.GetProperty("error").GetString()??"";return root.GetProperty("available").GetBoolean();
         }catch(Exception e)when(e is IOException||e is JsonException||e is KeyNotFoundException||e is UnauthorizedAccessException){return false;}
+    }
+    static string? CaptureId(){
+        try{using var doc=JsonDocument.Parse(File.ReadAllText(Path.Combine(Bridge,"status.json")));
+            return doc.RootElement.TryGetProperty("captureId",out var id)&&id.GetString() is string value&&System.Text.RegularExpressions.Regex.IsMatch(value,@"^[a-p]{32}$")?value:null;
+        }catch(Exception e)when(e is IOException||e is JsonException||e is UnauthorizedAccessException){return null;}
     }
     static void Command(string action,string url=""){
         Directory.CreateDirectory(Bridge);var temp=Path.Combine(Bridge,"request.json.tmp");
@@ -54,6 +59,7 @@ public static class Lessons
         api.MapPost("",(Edit edit)=>{
             string url=ValidateUrl(edit.Url);if(string.IsNullOrWhiteSpace(edit.Title)||edit.Title.Trim().Length>160||(edit.Notes??"").Length>10000)throw new ArgumentException("Add a title up to 160 characters and notes up to 10,000 characters.");
             var rows=Read();var item=rows.FirstOrDefault(l=>l.Url==url);
+            if(item is not null&&edit.PreserveExisting){item.Archived=false;item.Updated=DateTimeOffset.UtcNow;Save(rows);return Results.Ok(item);}
             if(item is null){item=new();rows.Add(item);}item.Title=edit.Title.Trim();item.Url=url;item.Notes=edit.Notes??"";item.Archived=false;item.Updated=DateTimeOffset.UtcNow;Save(rows);return Results.Ok(item);
         });
         api.MapPut("/{id:guid}",(Guid id,Edit edit)=>{
@@ -65,7 +71,7 @@ public static class Lessons
         api.MapDelete("/{id:guid}",(Guid id)=>{var rows=Read();var item=rows.FirstOrDefault(l=>l.Id==id)??throw new FileNotFoundException();item.Archived=true;Save(rows);return Results.Ok(new{removed=true});});
         api.MapPost("/{id:guid}/restore",(Guid id)=>{var rows=Read();var item=rows.FirstOrDefault(l=>l.Id==id)??throw new FileNotFoundException();item.Archived=false;Save(rows);return Results.Ok(item);});
         api.MapGet("/browser",(HttpContext context)=>{
-            bool available=Available(out bool running,out string error);return Results.Ok(new{available=Local(context)&&available,running=Local(context)&&running,error=Local(context)?error:""});
+            bool available=Available(out bool running,out string error);return Results.Ok(new{available=Local(context)&&available,running=Local(context)&&running,error=Local(context)?error:"",captureId=Local(context)&&available?CaptureId():null});
         });
         api.MapPost("/browser/open",(HttpContext context,OpenRequest request)=>{
             if(!Local(context))return Results.Json(new{message="Use this computer's browser to watch lessons."},statusCode:403);

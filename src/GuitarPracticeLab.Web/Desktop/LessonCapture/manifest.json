@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Guitar Practice Lab \u00b7 Save lesson",
+  "version": "1.0.0",
+  "description": "Remembers the last lesson tab so the local Practice return screen can save its link.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLqUa+UkaJTe8IKhwOnlTyo4uw4b7u3nkVYm8b9Q3GcQYX6JM6+J9Ic289f5Gcfxg/QzohhHJAh9eYnGQoAS6n4Mv59ZNmmbubpS1VyF05+Hmb8M6F7Dlr95jQKKNnofHHtAvckZHfpckaoC8XxmKWzjS/cxrwHkF8Hz4FPr+gkEVpP9LzKRJ1W6U4edeyQGJBMsHN7t46RGqvAHeV1AUcfqVeONjrrzdJTYHJqq08FtnxRh2AA8ZCb47kp+V/mqZAUE53NDOPw0pHrmsvIiVesfBt5/ImKLFQJZxk5NUJVSw0uWIhaM+Y20HleGiZte7P/XcpCLuf4mJDmh5rJ3KwIDAQAB",
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "worker.js"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://127.0.0.1/*",
+      "http://localhost/*"
+    ]
+  },
+  "minimum_chrome_version": "102"
+}

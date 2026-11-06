@@ -2,7 +2,7 @@
 """Runs in the Pi desktop session, never the web-service session.
 A dedicated Chromium profile keeps its windows separate from the practice kiosk.
 """
-import fcntl,json,logging,os,shutil,signal,subprocess,time
+import base64,fcntl,hashlib,json,logging,os,shutil,signal,subprocess,time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -15,7 +15,17 @@ class Browser:
   self.profile=Path.home()/'.config/guitar-lab-lessons'
   self.executable=shutil.which('chromium') or shutil.which('chromium-browser')
   self.process=None;self.launcher=launcher;self.error='';self.seen=None
-  self.url=os.environ.get('GPL_APP_URL','http://127.0.0.1:5080').rstrip('/')+'/lesson-return.html'
+  self.app_url=os.environ.get('GPL_APP_URL','http://127.0.0.1:5080').rstrip('/')
+  self.url=self.app_url+'/lesson-return.html'
+  self.extension=self.root/'capture-extension';self.prepare_extension()
+ def prepare_extension(self):
+  source=Path(__file__).with_name('LessonCapture')
+  self.extension.mkdir(exist_ok=True,mode=0o700)
+  for name in ('manifest.json','worker.js'):shutil.copy2(source/name,self.extension/name)
+  (self.extension/'config.js').write_text('const GUITAR_LESSON_CONFIG='+json.dumps({'appUrl':self.app_url})+';\n')
+  manifest=json.loads((self.extension/'manifest.json').read_text())
+  digest=hashlib.sha256(base64.b64decode(manifest['key'])).hexdigest()[:32]
+  self.extension_id=''.join(chr(ord('a')+int(c,16)) for c in digest)
  def running(self):return self.process is not None and self.process.poll() is None
  def close(self):
   if self.running():
@@ -31,13 +41,13 @@ class Browser:
   url=command.get('url','');parsed=urlparse(url)
   if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or any(ord(c)<32 for c in url):raise ValueError('Invalid lesson link.')
   if not self.executable:raise RuntimeError('Chromium is not installed.')
-  base=[self.executable,'--user-data-dir='+str(self.profile),'--no-first-run','--no-default-browser-check']
+  base=[self.executable,'--user-data-dir='+str(self.profile),'--no-first-run','--no-default-browser-check','--load-extension='+str(self.extension)]
   if self.running():self.launcher(base+['--new-tab',url],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   else:self.process=self.launcher(base+['--start-maximized','--new-window',self.url,url],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   self.error=''
  def status(self):
   target=self.root/'status.json';temp=self.root/'status.tmp'
-  temp.write_text(json.dumps({'heartbeat':time.time(),'available':bool(self.executable),'running':self.running(),'error':self.error}));temp.replace(target)
+  temp.write_text(json.dumps({'heartbeat':time.time(),'available':bool(self.executable),'running':self.running(),'error':self.error,'captureId':self.extension_id}));temp.replace(target)
  def run(self):
   lock=(self.root/'agent.lock').open('a')
   try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)

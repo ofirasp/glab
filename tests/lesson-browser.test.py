@@ -19,6 +19,9 @@ with tempfile.TemporaryDirectory() as folder:
  assert '--kiosk' not in calls[0].args and '--start-maximized' in calls[0].args
  assert calls[0].args[-2].endswith('/lesson-return.html') and calls[0].args[-1]=='https://www.justinguitar.com/songs'
  assert any(a.endswith('guitar-lab-lessons') for a in calls[0].args)
+ assert '--load-extension='+str(b.extension) in calls[0].args
+ assert b.extension_id=='ciedakdbnfoochodacpbimbjchmmnpfj'
+ assert (b.extension/'config.js').exists()
  b.handle(command('1','open','https://example.com'));assert len(calls)==1
  b.handle(command('2','open','https://www.guitarzero2hero.com/songs'));assert len(calls)==2 and '--new-tab' in calls[1].args
  original=b.process;b.handle(command('3','close'));assert original.ended and b.process is None

@@ -53,3 +53,13 @@ lesson sites in a dedicated Chromium window; its **← Practice** tab contains a
 large Return button. Existing kiosk startup scripts are unchanged. Closing the
 lesson browser reveals the original app window. On a Mac, close the ordinary
 lesson popup to return. Saved links and per-song lesson URLs stay on the Pi.
+
+Save a lesson without a keyboard: browse to the actual lesson in the Pi lesson
+browser, tap its **← Practice** tab, then **Save current lesson**. The preview
+shows the current lesson title and address. Tap **Return to Practice** to return
+to the app; the link appears in Lessons → Saved lessons. Saving again preserves
+existing notes and titles without duplicating the link. Restart the Pi once after
+installing this update. This capture feature runs only in the dedicated Pi lesson
+browser, using a small extension with tabs/storage permissions; it remembers tab
+titles and addresses for the current browser session, without reading page content,
+cookies or passwords. Ordinary Mac lesson popups still use manual link entry.

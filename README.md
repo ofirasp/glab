@@ -161,3 +161,13 @@ Checks: `dotnet run --project tests/LessonUrlChecks`,
 `python3 tests/lesson-browser.test.py`, and `tests/lessons-ui.test.cjs` with
 Playwright against an isolated app. The desktop helper is tested with fake
 browser processes; native Pi desktop/video playback has not been verified here.
+
+Save a lesson without a keyboard: browse to the actual lesson in the Pi lesson
+browser, tap its **← Practice** tab, then **Save current lesson**. The preview
+shows the current lesson title and address. Tap **Return to Practice** to return
+to the app; the link appears in Lessons → Saved lessons. Saving again preserves
+existing notes and titles without duplicating the link. Restart the Pi once after
+installing this update. This capture feature runs only in the dedicated Pi lesson
+browser, using a small extension with tabs/storage permissions; it remembers tab
+titles and addresses for the current browser session, without reading page content,
+cookies or passwords. Ordinary Mac lesson popups still use manual link entry.
