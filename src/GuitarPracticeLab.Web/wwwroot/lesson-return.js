@@ -1,0 +1,1 @@
+document.getElementById('returnPractice').onclick=async()=>{const status=document.getElementById('returnStatus');status.textContent='Returning to practice…';try{const response=await fetch('/api/lessons/browser/return',{method:'POST'});if(!response.ok)throw Error('Could not close this lesson window. Use its normal Close button.');}catch(e){status.textContent=e.message;}};

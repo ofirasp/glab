@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="song-library.css">
 <script src="chord-shapes.js" defer></script>
 <script src="chord-viewer.js" defer></script>
+<script src="/lesson-links.js" defer></script>
 <script src="song-library.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 </head>
@@ -16,6 +17,7 @@
   <button id="libraryButton">Library</button>
   <button id="readerToggle" aria-pressed="false">Read PDF</button>
   <button id="toolsButton">Tools</button>
+  <button id="lessonsButton">Lessons</button>
   <a href="practice.html" class="button">Dashboard</a>
 </header>
 <main class="split">
@@ -35,6 +37,7 @@
     <div class="cuebar">
       <button id="follow" aria-pressed="false" disabled>Follow off</button>
       <button id="markCue" disabled>Mark here</button>
+      <button id="watchLesson" disabled>Add lesson</button>
       <button id="chordListButton" disabled>Chords</button>
       <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
     </div>
@@ -141,7 +144,7 @@
 </dialog>
 <dialog id="notesDialog">
   <div class="dialoghead"><h2>Song notes</h2><button data-close="notesDialog">Cancel</button></div>
-  <div class="dialogbody stack"><label>Song title <input id="titleInput" maxlength="160"></label><label>Capo, tuning and practice notes <textarea id="notesInput" maxlength="10000" rows="5" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></label><p class="hint">Notes are reminders, not automatic tuning or capo detection.</p></div>
+  <div class="dialogbody stack"><label>Song title <input id="titleInput" maxlength="160"></label><label>Lesson link <input id="songLessonUrl" type="url" maxlength="2048" placeholder="https://…"></label><label>Capo, tuning and practice notes <textarea id="notesInput" maxlength="10000" rows="5" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></label><p class="hint">Notes are reminders, not automatic tuning or capo detection.</p></div>
   <div class="dialogfoot"><button id="saveNotes" class="primary">Save notes</button></div>
 </dialog>
 <dialog id="chordsDialog">

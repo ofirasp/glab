@@ -5,10 +5,11 @@ repo=Path(__file__).resolve().parents[1]
 manifest=json.loads((repo/'tools/chord-update/manifest.json').read_text())
 # Before-images are provided from the original source commit by the test caller.
 baseline=os.environ.get('GPL_TEST_BASELINE','b53790d')
-for mode in ('success','previous-update','build-failure','startup-failure','local-change'):
+for mode in ('success','previous-update','build-failure','startup-failure','desktop-failure','local-change'):
  with tempfile.TemporaryDirectory(prefix='glab-installer-') as temp:
   root=Path(temp);lab=root/'lab';project=lab/'GuitarPracticeLab.Web';published=lab/'published';bins=root/'bin'
   project.mkdir(parents=True);published.mkdir();bins.mkdir()
+  autostart=root/'autostart';autostart.mkdir();entry=autostart/'guitar-lab-lessons.desktop';entry.write_text('previous desktop entry')
   (project/'GuitarPracticeLab.Web.csproj').write_text('<Project/>')
   (published/'previous.txt').write_text('previous running app')
   originals={}
@@ -32,14 +33,18 @@ while [ "$#" -gt 0 ]; do
 done'''}
   for name,body in commands.items():
    f=bins/name;f.write_text('#!/bin/bash\n'+body+'\n');f.chmod(0o755)
-  env=os.environ.copy();env.update(GPL_LAB_ROOT=str(lab),DOTNET_ROOT=str(bins),GPL_TEST_MODE=mode,PATH=str(bins)+':'+env['PATH'])
+  if mode=='desktop-failure':
+   blocked=root/'blocked';blocked.write_text('not a directory')
+  env=os.environ.copy();env.update(GPL_LAB_ROOT=str(lab),GPL_AUTOSTART_DIR=str(blocked if mode=='desktop-failure' else autostart),DOTNET_ROOT=str(bins),GPL_TEST_MODE=mode,PATH=str(bins)+':'+env['PATH'])
   result=subprocess.run(['bash',str(repo/'tools/chord-update/install.sh')],env=env,capture_output=True,text=True)
   assert (result.returncode==0)==(mode in ('success','previous-update')),(mode,result.stdout,result.stderr)
   if mode in ('success','previous-update'):
    assert (published/'new.txt').exists()
+   assert 'Desktop/lesson-browser.py' in entry.read_text()
    for name,hashes in manifest.items():assert hashlib.sha256((project/name).read_bytes()).hexdigest()==hashes['after']
   else:
    assert (published/'previous.txt').read_text()=='previous running app'
+   assert entry.read_text()=='previous desktop entry'
    for name,hashes in manifest.items():
     if name in originals:assert (project/name).read_bytes()==originals[name],(mode,name)
     else:assert not (project/name).exists(),(mode,name)

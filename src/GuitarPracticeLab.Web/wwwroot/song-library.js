@@ -77,8 +77,8 @@ function message(error) {
     alert.scrollIntoView({ block: 'nearest' });
   }
 }
-function open(id) { if (!$(id).open) $(id).showModal(); }
-function close(id) { $(id).close(); }
+function openDialog(id) { if (!$(id).open) $(id).showModal(); }
+function closeDialog(id) { $(id).close(); }
 async function request(path = '', options = {}) {
   const response = await fetch(api + path, options);
   const json = await response.json().catch(() => ({}));
@@ -101,7 +101,8 @@ async function operation(action) {
   }
 }
 function update() {
-  $('chordListButton').disabled = busy || !song;
+  $('chordListButton').disabled = $('watchLesson').disabled = busy || !song;
+  $('watchLesson').textContent = song?.lessonUrl ? 'Watch lesson ↗' : 'Add lesson';
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
   for (const id of ['audioButton', 'notesButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
@@ -247,7 +248,7 @@ function selectSong(item, autoplay = false) {
   $('currentSection').textContent = 'No cue yet';
   $('nextSection').textContent = 'Move the PDF to a section, then tap Mark here.';
   try { localStorage.setItem('guitar-last-song', song.id); } catch {}
-  close('libraryDialog');
+  closeDialog('libraryDialog');
   if (song.hasAudio) {
     audio.src = `${api}/${song.id}/audio?v=${encodeURIComponent(song.updated)}`;
     audio.playbackRate = Number($('speed').value);
@@ -368,7 +369,7 @@ function mark() {
   $('cuePart').value = 'Verse'; $('customCueLabel').hidden = true;
   $('cueName').value = '';
   $('markSummary').textContent = `${clock(pendingCue.time)} · PDF page ${page} · ${Math.round(zoom * 100)}% zoom`;
-  open('markDialog');
+  openDialog('markDialog');
 }
 function renderCues() {
   const list = $('cueList'); list.replaceChildren();
@@ -380,7 +381,7 @@ function renderCues() {
       if (busy) return;
       audio.currentTime = cue.time; activeCue = null;
       seekPdf(cue);
-      close('cueDialog');
+      closeDialog('cueDialog');
     };
     const remove = document.createElement('button'); remove.textContent = '×';
     remove.setAttribute('aria-label', `Remove ${cue.label} cue`);
@@ -416,14 +417,14 @@ function tick() {
   }
 }
 document.querySelectorAll('[data-close]').forEach(button => {
-  button.onclick = () => { if (!busy) close(button.dataset.close); };
+  button.onclick = () => { if (!busy) closeDialog(button.dataset.close); };
 });
 document.querySelectorAll('dialog').forEach(dialog => {
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 });
-$('libraryButton').onclick = () => { renderLibrary(); open('libraryDialog'); };
+$('libraryButton').onclick = () => { renderLibrary(); openDialog('libraryDialog'); };
 $('search').oninput = renderLibrary;
-function importDialog() { close('libraryDialog'); close('toolsDialog'); $('importStatus').textContent = ''; open('importDialog'); }
+function importDialog() { closeDialog('libraryDialog'); closeDialog('toolsDialog'); $('importStatus').textContent = ''; openDialog('importDialog'); }
 $('importButton').onclick = importDialog; $('libraryImport').onclick = importDialog;
 $('doImport').onclick = () => operation(async () => {
   const files = [...$('pdfFiles').files], selection = audioSelection($('importAudio').files);
@@ -440,14 +441,14 @@ $('doImport').onclick = () => operation(async () => {
     last = await uploadAudioSelection(last.id, selection);
   }
   await refreshLibrary();
-  close('importDialog'); $('pdfFiles').value = ''; $('importAudio').value = '';
+  closeDialog('importDialog'); $('pdfFiles').value = ''; $('importAudio').value = '';
   selectSong(last); status(audioSavedStatus(last, 'Imported and saved on this Pi.'));
 });
 $('replacePdfButton').onclick = () => {
-  close('toolsDialog');
+  closeDialog('toolsDialog');
   $('replacementPdf').value = '';
   $('replaceSongTitle').textContent = song.title;
-  open('replacePdfDialog');
+  openDialog('replacePdfDialog');
 };
 $('confirmReplacePdf').onclick = () => operation(async () => {
   const file = $('replacementPdf').files[0];
@@ -461,16 +462,16 @@ $('confirmReplacePdf').onclick = () => operation(async () => {
   });
   await refreshLibrary();
   selectSong(updated);
-  close('replacePdfDialog'); $('replacementPdf').value = '';
+  closeDialog('replacePdfDialog'); $('replacementPdf').value = '';
   status(previousCues && !updated.cues.length
     ? 'PDF replaced. Audio and notes kept. Mark Follow positions for the new PDF.'
     : 'PDF saved. Audio and notes kept.');
 });
 $('deleteSongButton').onclick = () => {
-  close('toolsDialog');
+  closeDialog('toolsDialog');
   $('deleteSongTitle').textContent = song.title;
   $('deleteSongDetails').textContent = `${song.pages} pages · ${song.audioName || 'No MP3'} · ${song.cues.length} cues`;
-  open('deleteSongDialog');
+  openDialog('deleteSongDialog');
 };
 $('confirmDeleteSong').onclick = () => operation(async () => {
   const title = song.title;
@@ -490,12 +491,12 @@ $('confirmDeleteSong').onclick = () => operation(async () => {
   $('currentSection').textContent = 'No cue yet';
   $('nextSection').textContent = 'Choose a song to continue.';
   try { localStorage.removeItem('guitar-last-song'); } catch {}
-  close('deleteSongDialog');
+  closeDialog('deleteSongDialog');
   await refreshLibrary();
-  $('search').value = ''; renderLibrary(); open('libraryDialog');
+  $('search').value = ''; renderLibrary(); openDialog('libraryDialog');
   status(`Deleted “${title}” from the library.`);
 });
-$('audioButton').onclick = () => { close('toolsDialog'); $('audioFile').click(); };
+$('audioButton').onclick = () => { closeDialog('toolsDialog'); $('audioFile').click(); };
 $('audioFile').onchange = () => operation(async () => {
   const selection = audioSelection($('audioFile').files); if (!selection || !song) return;
   if (song.hasAudio && !confirm('A different original recording clears timing cues and its backing link. Reattaching the exact same file preserves them. Continue?')) return;
@@ -505,7 +506,7 @@ $('audioFile').onchange = () => operation(async () => {
   status(audioSavedStatus(updated, 'MP3 saved.'));
   $('audioFile').value = '';
 });
-$('addBacking').onclick = () => { close('toolsDialog'); $('backingFile').click(); };
+$('addBacking').onclick = () => { closeDialog('toolsDialog'); $('backingFile').click(); };
 $('backingFile').onchange = () => operation(async () => {
   const file = $('backingFile').files[0];
   if (!file || !song?.hasAudio) return;
@@ -542,7 +543,7 @@ $('follow').onclick = () => {
   setFollow(!following); tick();
 };
 $('markCue').onclick = mark; $('cueMark').onclick = mark;
-$('cuesButton').onclick = () => { renderCues(); open('cueDialog'); };
+$('cuesButton').onclick = () => { renderCues(); openDialog('cueDialog'); };
 $('cuePart').onchange = () => {
   $('customCueLabel').hidden = $('cuePart').value !== 'custom';
 };
@@ -552,15 +553,15 @@ $('saveCue').onclick = () => operation(async () => {
     ? $('cueName').value.trim() || `Section ${song.cues.length + 1}` : $('cuePart').value;
   const next = [...song.cues.filter(cue => Math.abs(cue.time - pendingCue.time) >= 0.25), pendingCue];
   await saveSettings({ cues: next }); activeCue = null; pendingCue = null;
-  close('markDialog'); renderCues(); status('Cue saved. Follow turns on when playback starts.');
+  closeDialog('markDialog'); renderCues(); status('Cue saved. Follow turns on when playback starts.');
 });
 $('notesButton').onclick = () => {
-  close('toolsDialog');
-  $('titleInput').value = song.title; $('notesInput').value = song.notes; open('notesDialog');
+  closeDialog('toolsDialog');
+  $('titleInput').value = song.title; $('notesInput').value = song.notes; $('songLessonUrl').value = song.lessonUrl || ''; openDialog('notesDialog');
 };
 $('saveNotes').onclick = () => operation(async () => {
-  await saveSettings({ title: $('titleInput').value, notes: $('notesInput').value });
-  close('notesDialog'); status('Song notes saved on this Pi.');
+  await saveSettings({ title: $('titleInput').value, notes: $('notesInput').value, lessonUrl: $('songLessonUrl').value.trim() });
+  closeDialog('notesDialog'); status('Song notes saved on this Pi.');
 });
 $('play').onclick = () => {
   if (audio.paused) audio.play().catch(message); else audio.pause();
@@ -587,7 +588,7 @@ $('loop').onclick = () => {
   if (looping && (audio.currentTime < loopA || audio.currentTime >= loopB)) audio.currentTime = loopA;
   activeCue = null; update(); tick();
 };
-function showTools() { open('toolsDialog'); }
+function showTools() { openDialog('toolsDialog'); }
 $('toolsButton').onclick = $('readerTools').onclick = $('loopTools').onclick = showTools;
 $('readerPlay').onclick = $('toolsPlay').onclick = $('play').onclick;
 $('readerBack').onclick = $('back').onclick;
@@ -623,5 +624,14 @@ update();
 refreshLibrary().then(() => {
   let last; try { last = localStorage.getItem('guitar-last-song'); } catch {}
   const item = songs.find(s => s.id === last);
-  if (item) selectSong(item); else { status('Choose a song or import a PDF.'); open('libraryDialog'); }
-}).catch(error => { message(error); open('libraryDialog'); });
+  if (item) selectSong(item); else { status('Choose a song or import a PDF.'); openDialog('libraryDialog'); }
+}).catch(error => { message(error); openDialog('libraryDialog'); });
+
+$('watchLesson').onclick = () => {
+  if (!song) return;
+  if (song.lessonUrl) LessonLinks.open(song.lessonUrl, status);
+  else $('notesButton').onclick();
+};
+$('lessonsButton').onclick = () => {
+  audio.pause(); location.href = '/lessons.html' + (song ? '?song=' + encodeURIComponent(song.id) : '');
+};

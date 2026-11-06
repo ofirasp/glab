@@ -1,7 +1,10 @@
 {
   "SongLibrary.cs": {
     "before": "e7f08e16a19cf19452ef89de45d404b192649cb95a8cc025646b0ccf22c27dba",
-    "after": "27c63869d8c975af733f51fba73970a2d488422b935c855252e75b013af60f64"
+    "after": "03791db49329757f84135c308b3678fe13b05f626b3573262858ede16f4c4437",
+    "compatible": [
+      "27c63869d8c975af733f51fba73970a2d488422b935c855252e75b013af60f64"
+    ]
   },
   "PdfChords.cs": {
     "before": null,
@@ -9,7 +12,10 @@
   },
   "wwwroot/song-library.html": {
     "before": "22727d4dd74be112f32fbc8a4e59cfe268d05a8b8eaab13d04023ac8cf9bf4a6",
-    "after": "7b16ac004ae15c4915c43575be8c2b62438fe48be2540cdbbc5ceceb0af2581f"
+    "after": "47fae930f6fbae05230bc8b26035d515e45d8479de20339dab9a764f5fd0622f",
+    "compatible": [
+      "7b16ac004ae15c4915c43575be8c2b62438fe48be2540cdbbc5ceceb0af2581f"
+    ]
   },
   "wwwroot/song-library.css": {
     "before": "bdfee7948b4a92533368fe8def6cde1498de153c2cfacbdc01b8fb1636db1da3",
@@ -17,9 +23,10 @@
   },
   "wwwroot/song-library.js": {
     "before": "a0938ddb69262e4591b77423289f028d58f98af24f0cfab2d089570634f58f9e",
-    "after": "1ee11e5c07e7ac2d598d27d7eb5ac7d574ac0f6233f7e4b9d2f8069648b46b31",
+    "after": "370940217c8c58ae13ea0c2fdf3c421fbcb03ad7fc52e66e2423aae6aebca7d0",
     "compatible": [
-      "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970"
+      "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970",
+      "1ee11e5c07e7ac2d598d27d7eb5ac7d574ac0f6233f7e4b9d2f8069648b46b31"
     ]
   },
   "wwwroot/chord-shapes.js": {
@@ -32,7 +39,10 @@
   },
   "Program.cs": {
     "before": "c1e38c312f6a7a5867a61d088472be8a6aa75f5e2c4f0ca68399575afd3b8cc5",
-    "after": "b36dff8220237eef28c956e3036da176958ba598188f88365faf5c7d4d161c1a"
+    "after": "abeb8a7af6029e477d52c0242df4e6590d2997c8e62240c199e93bea6b09861b",
+    "compatible": [
+      "b36dff8220237eef28c956e3036da176958ba598188f88365faf5c7d4d161c1a"
+    ]
   },
   "ChordDetector.cs": {
     "before": null,
@@ -44,7 +54,10 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804"
+    "after": "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
+    "compatible": [
+      "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804"
+    ]
   },
   "wwwroot/chord-diagram.js": {
     "before": null,
@@ -56,6 +69,41 @@
   },
   "wwwroot/one-minute-changes.js": {
     "before": null,
-    "after": "00dae06c09f12fa93c6d7b3b381ebc6683f51a3190d65f9a91b631ef45faf3c0"
+    "after": "af7a932524a3ee62c960f0dbda80a3364a5a17fddfc35aecb7395a6e86c60abd",
+    "compatible": [
+      "00dae06c09f12fa93c6d7b3b381ebc6683f51a3190d65f9a91b631ef45faf3c0"
+    ]
+  },
+  "Lessons.cs": {
+    "before": null,
+    "after": "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568"
+  },
+  "Desktop/lesson-browser.py": {
+    "before": null,
+    "after": "284ad298c4502135275a98298d8a42353f5d5e1a3e8c97bc64dcc4371c9907f5"
+  },
+  "wwwroot/lesson-links.js": {
+    "before": null,
+    "after": "0760827d9dd3644653887d2a2a9d213768c67cca48010db25af8d27331870175"
+  },
+  "wwwroot/lessons.html": {
+    "before": null,
+    "after": "67c5038de8df8a2b7a2cbb4782a4121a0b7c3440b75bb25a91995491221cf940"
+  },
+  "wwwroot/lessons.css": {
+    "before": null,
+    "after": "6ebd624396e37bfd363de4e36a1ee5bf350ab96f8620c1895665341deee578d3"
+  },
+  "wwwroot/lessons.js": {
+    "before": null,
+    "after": "052484fa4b59641555dccafef24c585c14aa24497eed844ef6a162ab3dc8fc10"
+  },
+  "wwwroot/lesson-return.html": {
+    "before": null,
+    "after": "b693c893f5d31ff529e2112aadc5e40e58a97ca843389c37cd57f08d9a94a8e6"
+  },
+  "wwwroot/lesson-return.js": {
+    "before": null,
+    "after": "e6c0767d6d64795ed38020e0f0102583e453d393ea25f2459822efac65a5a750"
   }
 }

@@ -26,7 +26,7 @@ public static class SongLibrary
         await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(song, Json));
         File.Move(temporary, Metadata(song.Id), true);
     }
-    static object View(Song s) => new { s.Id, s.Title, s.Pages, s.AudioName, s.Duration, s.Notes, s.Cues, s.Updated,
+    static object View(Song s) => new { s.Id, s.Title, s.Pages, s.AudioName, s.Duration, s.Notes, s.LessonUrl, s.Cues, s.Updated,
         s.BackingName, s.BackingDuration, s.BackingImportMessage,
         hasAudio = !string.IsNullOrEmpty(s.AudioFile), hasBacking = !string.IsNullOrEmpty(s.BackingFile) };
 
@@ -207,6 +207,7 @@ public static class SongLibrary
                 if (settings.Notes.Length > 10000) throw new ArgumentException("Notes are limited to 10,000 characters.");
                 song.Notes = settings.Notes;
             }
+            if (settings.LessonUrl is not null) song.LessonUrl = Lessons.ValidateUrl(settings.LessonUrl, allowEmpty: true);
             if (settings.Cues is not null)
             {
                 if (settings.Cues.Count > 300) throw new ArgumentException("A song can have up to 300 cues.");
@@ -382,6 +383,7 @@ public static class SongLibrary
         public string BackingImportMessage { get; set; } = "";
         public double Duration { get; set; }
         public string Notes { get; set; } = "";
+        public string LessonUrl { get; set; } = "";
         public List<Cue> Cues { get; set; } = new();
         public DateTimeOffset Updated { get; set; }
     }
@@ -389,6 +391,7 @@ public static class SongLibrary
     {
         public string? Title { get; set; }
         public string? Notes { get; set; }
+        public string? LessonUrl { get; set; }
         public List<Cue>? Cues { get; set; }
     }
     public sealed class Cue

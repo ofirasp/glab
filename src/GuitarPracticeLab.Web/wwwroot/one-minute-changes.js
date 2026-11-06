@@ -50,6 +50,7 @@ el('changesHistory').onclick=history;el('changesCloseResults').onclick=()=>el('c
 async function leave(){if(leaving)return;leaving=true;el('chordChanges').hidden=true;el('status').textContent=priorStatus;if(session?.status==='running')try{await request('/'+session.id+'/cancel',{method:'POST'});}catch{}}
 el('changesBack').onclick=()=>{leave();el('practiceTab').click();};
 for(const id of ['tunerTab','metroTab','practiceTab','wavUpload'])el(id).addEventListener('click',()=>{if(!el('chordChanges').hidden)leave();});
+document.addEventListener('guitar-open-lesson',()=>{if(session?.status==='running')el('changesCancel').click();});
 window.addEventListener('pagehide',()=>{if(session?.status==='running')navigator.sendBeacon(api+'/'+session.id+'/cancel');});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&session?.status==='running')el('changesCancel').click();});
 setInterval(poll,300);setInterval(countdown,100);draw();

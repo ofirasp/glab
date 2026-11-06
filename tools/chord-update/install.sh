@@ -14,6 +14,7 @@ systemctl cat guitar-practice-lab >/dev/null
 test -d "$lab/published" || { echo "Cannot find the existing published app."; exit 1; }
 # Repository checkout or extracted update bundle.
 if test -d "$bundle/payload"; then payload="$bundle/payload"; else payload="$bundle/../../src/GuitarPracticeLab.Web"; fi
+export CHORD_AUTOSTART="${GPL_AUTOSTART_DIR:-$HOME/.config/autostart}/guitar-lab-lessons.desktop"
 export CHORD_PROJECT="$project" CHORD_PAYLOAD="$payload" CHORD_MANIFEST="$bundle/manifest.json" CHORD_BACKUP="$backup"
 python3 - <<'PY'
 import hashlib,json,os
@@ -38,6 +39,13 @@ for name in json.loads(m.read_text()):
  if target.exists():
   copy=b/'source'/name;copy.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(target,copy)
 PY
+python3 - <<'DESKTOP_BACKUP'
+import os,shutil
+from pathlib import Path
+path=Path(os.environ['CHORD_AUTOSTART']);backup=Path(os.environ['CHORD_BACKUP'])/'lesson-browser.desktop'
+if path.exists():shutil.copy2(path,backup)
+DESKTOP_BACKUP
+desktop_changed=0
 source_changed=0
 published_swapped=0
 service_stopped=0
@@ -45,6 +53,15 @@ restore() {
   code=$?
   if [ "$code" -ne 0 ]; then
     echo 'Update failed; restoring the previous source and deployment.'
+    if [ "$desktop_changed" = 1 ]; then
+      python3 - <<'DESKTOP_RESTORE'
+import os,shutil
+from pathlib import Path
+path=Path(os.environ['CHORD_AUTOSTART']);backup=Path(os.environ['CHORD_BACKUP'])/'lesson-browser.desktop'
+if backup.exists():path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(backup,path)
+elif path.exists():path.unlink()
+DESKTOP_RESTORE
+    fi
     if [ "$source_changed" = 1 ]; then
       python3 - <<'PY'
 import json,os,shutil
@@ -89,6 +106,18 @@ for attempt in $(seq 1 60); do
   sleep 1
 done
 [ "$ready" = 1 ] || { echo 'App did not become ready.'; exit 1; }
+desktop_changed=1
+python3 - <<'DESKTOP_INSTALL'
+import os
+from pathlib import Path
+path=Path(os.environ['CHORD_AUTOSTART']);script=Path(os.environ['CHORD_PROJECT'])/'Desktop/lesson-browser.py'
+def quoted(value):return '"'+str(value).replace('\\','\\\\').replace('"','\\"').replace('`','\\`').replace('$','\\$')+'"'
+path.parent.mkdir(parents=True,exist_ok=True)
+temporary=path.with_suffix('.tmp')
+temporary.write_text('[Desktop Entry]\nType=Application\nName=Guitar Practice Lab lesson browser\nExec=/usr/bin/python3 '+quoted(script)+'\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n')
+temporary.replace(path)
+DESKTOP_INSTALL
 echo "Installed. Backup: $backup"
+echo 'Restart the Pi once to activate the lesson-browser helper and touchscreen Return to Practice tab.'
 echo 'Close and reopen the app browser. Practice → 1 Minute Changes uses the Pi microphone.'
 echo 'Choose your guitar tuning in the popup. Standard tuning is supported; alternate-tuning diagrams stay hidden.'

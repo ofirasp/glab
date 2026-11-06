@@ -28,13 +28,13 @@ encoded=Path(sys.argv[1]).read_text().split('\\n__GPL_PAYLOAD__\\n',1)[1]
 Path(sys.argv[2]).write_bytes(base64.b64decode(encoded))
 PAYLOAD_PY
 remote="GuitarPracticeLab/updates/app-$(date +%Y%m%d-%H%M%S)-$$"
-echo 'Guitar Practice Lab update: 1 Minute Changes, automatic Follow and chord diagrams.'
+echo 'Guitar Practice Lab update: Lessons, saved links and guitar practice exercises.'
 echo 'Enter the Pi SSH password when asked. Sudo may ask separately.'
 ssh -M -S "$socket" -o ControlPersist=120 -o ServerAliveInterval=30 -fnN "$target"
 ssh -S "$socket" "$target" "mkdir -p '$remote'"
 scp -o "ControlPath=$socket" "$archive" "$target:$remote/update.zip"
 ssh -t -S "$socket" "$target" "cd '$remote' && unzip -q update.zip && bash GuitarLab-Chord-Update/install.sh"
-echo 'Done. Close and reopen the browser on the Pi.'
+echo 'Done. Restart the Pi once to activate the Lessons browser helper.'
 read -r -p 'Press Return to close.'
 exit 0
 __GPL_PAYLOAD__

@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lessons · Guitar Practice Lab</title><link rel="stylesheet" href="/song-library.css"><link rel="stylesheet" href="/lessons.css"><script src="/lesson-links.js" defer></script><script src="/lessons.js" defer></script><script src="/touch-keyboard.js" defer></script></head><body>
+<header class="top"><strong>Lessons</strong><button id="addLesson">Save a lesson</button><button id="refreshLessons">Refresh</button><a href="/song-library.html" class="button">Songs</a><a href="/practice.html" class="button">Practice</a></header>
+<main class="lessonmain">
+ <div class="lessonproviders"><button id="justin"><strong>JustinGuitar</strong><small>Browse song lessons ↗</small></button><button id="zero"><strong>GuitarZero2Hero</strong><small>Browse song lessons ↗</small></button></div>
+ <div class="lessonheading"><h1>Saved lessons</h1><span id="songContext"></span><span id="lessonCount"></span></div>
+ <div id="lessonList" aria-label="Saved lessons"></div>
+</main>
+<footer><span id="lessonStatus" role="status">Loading saved lessons…</span> <button id="undoRemove" hidden>Undo remove</button></footer>
+<dialog id="lessonEdit"><div class="dialoghead"><h2 id="editHeading">Save a lesson</h2><button data-close="lessonEdit">Cancel</button></div><div class="dialogbody stack"><label>Title<input id="lessonTitle" maxlength="160" placeholder="Song or lesson name"></label><label>Lesson link<input id="lessonUrl" type="url" maxlength="2048" placeholder="https://…" autocomplete="off"></label><label>Practice notes<textarea id="lessonNotes" maxlength="10000" rows="2" placeholder="Where to start, technique to practise…"></textarea></label><p id="editError" role="alert" class="hint"></p></div><div class="dialogfoot"><button id="saveLesson" class="primary">Save lesson</button></div></dialog>
+<dialog id="lessonRemove"><div class="dialoghead"><h2>Remove saved lesson?</h2><button data-close="lessonRemove">Cancel</button></div><div class="dialogbody"><p id="removeTitle"></p><p class="hint">The link is removed from this list. You can undo this afterward. Your song files stay.</p></div><div class="dialogfoot"><button id="confirmRemove" class="danger">Remove link</button></div></dialog>
+</body></html>

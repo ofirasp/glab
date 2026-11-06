@@ -116,3 +116,48 @@ all completed results. Raw microphone samples are processed in memory only.
 Detector checks: `dotnet run --project tests/ChordPracticeChecks`. The test uses
 synthetic guitar-like harmonics and does not establish real microphone accuracy.
 The browser exercise test is `tests/one-minute-ui.test.cjs` and requires Playwright.
+
+## Lesson sites and saved lessons
+
+Open **Lessons** from Practice or Songs. JustinGuitar and GuitarZero2Hero have
+large browse buttons. **Save a lesson** stores a title, direct page link and notes
+on the Pi; **Refresh** picks up links added from another browser. Remove has Undo.
+The app stores links, not downloaded lesson videos or website account details.
+
+In Songs, use **Add lesson** (or Song notes) to attach a URL. A linked song shows
+**Watch lesson**. Alternatively open Lessons from that song and choose **Link to
+song** on a saved lesson. Linking does not change the PDF, recordings or cues.
+Watching pauses app audio; close the lesson window to continue where you left it.
+
+On the Pi kiosk, a small desktop helper opens a separate, maximized Chromium
+window with normal browser controls. Its first tab is **← Practice** with a large
+**Return to Practice** button that closes only this dedicated lesson browser.
+It uses a separate profile at `~/.config/guitar-lab-lessons`; normal site logins
+and cookies remain in that browser. The app does not handle lesson-site passwords.
+Exit the website player's fullscreen mode before using the Return tab.
+
+The updater installs `~/.config/autostart/guitar-lab-lessons.desktop`. **Restart
+the Pi once after installing** so the helper starts inside the desktop session.
+The helper is `Desktop/lesson-browser.py` in the source project, rather than a
+process launched by the system web service. Browser commands are accepted only
+from loopback, with same-origin checks; they contain validated HTTP(S) URLs and
+never shell commands. If the helper is unavailable, the kiosk shows a restart
+message instead of sending you into an external tab without a return path.
+
+From a Mac or other remote browser, lessons open in a normal separate browser
+window. Close it to return to the app. Website logins, video availability,
+subscriptions and playback quality remain controlled by each site. On the Pi 3,
+try 480p first and keep only one video playing; actual playback performance still
+needs checking on the device. No iframe embedding, content scraping or video
+downloading is used by this feature.
+
+Saved bookmarks live at `~/GuitarPracticeLab/lessons/links.json` (override with
+`GUITAR_LESSONS`). Song lesson links live in the existing `song.json` metadata.
+The desktop bridge uses `~/GuitarPracticeLab/lesson-browser` (override with
+`GUITAR_LESSON_BROWSER` for both service and helper). Back up lesson bookmarks
+alongside your song library. Archived bookmarks are retained for recovery.
+
+Checks: `dotnet run --project tests/LessonUrlChecks`,
+`python3 tests/lesson-browser.test.py`, and `tests/lessons-ui.test.cjs` with
+Playwright against an isolated app. The desktop helper is tested with fake
+browser processes; native Pi desktop/video playback has not been verified here.

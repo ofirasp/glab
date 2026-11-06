@@ -26,3 +26,5 @@ published/
 *.key
 *.backup
 chord-practice/
+lessons/
+lesson-browser/

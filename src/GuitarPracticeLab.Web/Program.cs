@@ -63,5 +63,6 @@ app.MapPost("/api/analyze-wav", async (HttpRequest request) =>
 
 SongLibrary.MapEndpoints(app);
 ChordPractice.MapEndpoints(app);
+Lessons.MapEndpoints(app);
 
 app.Run();

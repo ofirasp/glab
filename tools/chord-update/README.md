@@ -13,7 +13,7 @@ normally needed once. Sudo may separately request the Pi password. No password
 is stored. Keep the Pi and Mac on the same network; don't disconnect power while
 installation is running.
 
-The install backs up the seven changed/new files and the previous published app
+The install backs up the changed/new files and the previous published app
 under `~/GuitarPracticeLab/backups/chord-shapes-*`. It builds before stopping the
 service and restores the previous source/deployment if startup fails. The song
 library, recordings, notes and cues stay in their existing directories.
@@ -46,3 +46,10 @@ save on the Pi under `~/GuitarPracticeLab/chord-practice`, outside publishing.
 Detection is experimental and must be checked against your real guitar/microphone.
 Synthetic tests and a full simulated capture round passed; real Pi microphone
 accuracy has not been measured in this session.
+
+Lessons update: restart the Pi once after this installer finishes. It adds a
+standard desktop autostart entry for the lesson-browser helper. The helper opens
+lesson sites in a dedicated Chromium window; its **← Practice** tab contains a
+large Return button. Existing kiosk startup scripts are unchanged. Closing the
+lesson browser reveals the original app window. On a Mac, close the ordinary
+lesson popup to return. Saved links and per-song lesson URLs stay on the Pi.
