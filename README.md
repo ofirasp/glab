@@ -80,7 +80,7 @@ dotnet run --project tests/PdfChordChecks
 
 ## 1 Minute Changes
 
-Open **Practice → 1 Minute Changes**, choose two different chord names, select the
+Open **Practice → 1 Minute Changes**, choose a **Root** (C, D, F♯…) and **Type** (Major, Minor, 7…) for each of the two chords, select the
 Pi's microphone and confirm **standard tuning, no capo**. Start connects to the
 microphone; the sixty-second countdown begins only when audio is available.
 Play the displayed chord cleanly and let it ring. A stable match counts once and

@@ -140,7 +140,10 @@ nav button{font-size:17px}
   <div class="changesbody">
     <div class="changesplay"><strong id="changesTarget">Play C</strong><div id="changesDiagram"></div><span id="changesNext">Then G</span></div>
     <div class="changessetup">
-      <div class="changespair"><label>First chord<select id="changesFirst"></select></label><label>Second chord<select id="changesSecond"></select></label></div>
+      <div class="changespair">
+        <fieldset class="chordchoice"><legend>First chord · <span id="changesFirstName">C</span></legend><div><label>Root<select id="changesFirst" aria-label="First chord root"></select></label><label>Type<select id="changesFirstType" aria-label="First chord type"></select></label></div></fieldset>
+        <fieldset class="chordchoice"><legend>Second chord · <span id="changesSecondName">G</span></legend><div><label>Root<select id="changesSecond" aria-label="Second chord root"></select></label><label>Type<select id="changesSecondType" aria-label="Second chord type"></select></label></div></fieldset>
+      </div>
       <div class="changespair"><label>Microphone<select id="changesDevice"><option>default</option></select></label><label>Room<select id="changesSensitivity"><option value="0.0015">Quiet</option><option value="0.003" selected>Normal</option><option value="0.007">Noisy</option></select></label></div>
       <label class="changesconfirm"><input id="changesTuning" type="checkbox"> Standard tuning, no capo</label>
       <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="changesHistory">Results</button><button id="changesRetry" hidden>Retry save</button></div>
