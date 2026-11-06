@@ -79,3 +79,19 @@ Playback pauses when the page is hidden. Recording tempo remains unchanged.
 Checks: `node tests/scales.test.cjs` and the Playwright touchscreen/audio test
 `node tests/scale-practice-ui.test.cjs`. UI tests use a generated WAV and a
 fixture library; real Pi speaker playback has not been verified here.
+
+**Practice → Fretboard Map** shows five fret positions at a time, from open
+strings through fret 24. Tap notes for reference sounds and string/fret details;
+highlight a pitch class, include sharps/flats, filter major/minor pentatonic
+scales, or switch note names to intervals relative to the selected root.
+Scale filters include their accidentals automatically. **Find the Note** hides
+labels, asks for a note available in the current fret range and scale, accepts
+any matching octave, and counts correct answers and taps for the current quiz.
+Correct answers advance after a short delay; Skip does not affect the score.
+Changing range/filter chooses a new question. Quiz scores are not persisted.
+These are tap-based exercises with reference audio, not microphone recognition.
+Use standard tuning with no capo. Volume/mute and a touch Help dialog are included.
+
+Checks: `node tests/fretboard-notes.test.cjs` validates all keys, filters and fret
+ranges; `node tests/fretboard-map-ui.test.cjs` tests touchscreen navigation,
+filters, quiz feedback, score and layout in an isolated browser.

@@ -81,6 +81,9 @@ section{min-height:0;padding:12px}
 #practice .row{width:100%}
 #practice button{flex:1}
 nav button{font-size:17px}
+#practice{gap:5px}#remaining{font-size:56px}
+#practice .exercise-menu{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#practice .exercise-menu button{min-height:42px;font-size:16px;padding:6px 10px}
 </style>
 
 </head>
@@ -120,7 +123,7 @@ nav button{font-size:17px}
 </section>
 
 <section id="practice" hidden>
-  <div class="row"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Follow the Notes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button></div>
+  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Follow the Notes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button><button id="fretboardMap" onclick="location.href='/fretboard-map.html'">Fretboard Map</button></div>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>

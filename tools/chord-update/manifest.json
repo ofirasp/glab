@@ -54,11 +54,12 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10",
+    "after": "bf01acf94319cbecaa32420dbd469bd0ecdd6560b134b87e751f97e711e31399",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
       "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
-      "6da2bcf5a05b63efa8702cbd2a07b539218b61975985af3a8bafd8a32177af3d"
+      "6da2bcf5a05b63efa8702cbd2a07b539218b61975985af3a8bafd8a32177af3d",
+      "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -147,5 +148,21 @@
   "wwwroot/scale-practice.js": {
     "before": null,
     "after": "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e"
+  },
+  "wwwroot/fretboard-map.html": {
+    "before": null,
+    "after": "dbbfd8902f2b9fda4eb9cc991850d3aa8f485e18787ffd461936dc3769f3123e"
+  },
+  "wwwroot/fretboard-map.css": {
+    "before": null,
+    "after": "53b1164461907ec042f6713bc5afb97bc2bf9db3f2960fd04e97196235484050"
+  },
+  "wwwroot/fretboard-map.js": {
+    "before": null,
+    "after": "1c5d3da3c79037d763304afdd5ddc59116e2e3c9e8ba93d188a91bd908d2456e"
+  },
+  "wwwroot/fretboard-notes.js": {
+    "before": null,
+    "after": "3f0702a3d379fd4eb7cb7f02fd3d87fb05b6ef1e360dfb9fe5d8774fdf55a022"
   }
 }
