@@ -9,6 +9,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .top{display:flex;align-items:center;gap:6px;min-width:0}
 .top strong{font-size:18px;margin-right:4px}
 .top .button:first-child{margin-left:0}
+#readerToggle{margin-left:auto}
 .split{display:grid;grid-template-columns:minmax(0,3fr) minmax(180px,1fr);gap:8px;min-height:0}
 .sheet{display:grid;grid-template-rows:40px minmax(0,1fr)42px;min-width:0;min-height:0;background:#19283a;border-radius:10px;overflow:hidden}
 .pagebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px 40px;align-items:center;gap:4px;padding:0 4px}

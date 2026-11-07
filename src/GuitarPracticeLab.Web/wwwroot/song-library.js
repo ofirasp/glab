@@ -102,7 +102,7 @@ async function operation(action) {
 }
 function update() {
   $('chordListButton').disabled = $('watchLesson').disabled = busy || !song;
-  $('watchLesson').textContent = song?.lessonUrl ? 'Watch lesson ↗' : 'Add lesson';
+  $('watchLesson').hidden = !song?.lessonUrl;
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
   for (const id of ['audioButton', 'notesButton', 'lessonsButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
@@ -145,7 +145,7 @@ function update() {
   $('readerLoop').setAttribute('aria-pressed', String(looping));
   $('loopTimes').textContent = `A ${loopA === null ? '—' : clock(loopA)} · B ${loopB === null ? '—' : clock(loopB)}`;
   $('toolsLoopTimes').textContent = $('loopTimes').textContent;
-  $('readerToggle').textContent = readerMode ? 'Split view' : 'Read PDF';
+  $('readerToggle').textContent = readerMode ? 'Split view' : 'FullScreen';
   $('readerToggle').setAttribute('aria-pressed', String(readerMode));
 }
 function setFollow(value) { following = value; activeCue = null; update(); }
@@ -630,7 +630,6 @@ refreshLibrary().then(() => {
 $('watchLesson').onclick = () => {
   if (!song) return;
   if (song.lessonUrl) LessonLinks.open(song.lessonUrl, status);
-  else $('notesButton').onclick();
 };
 
 $('lessonsButton').onclick = () => {
