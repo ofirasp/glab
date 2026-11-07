@@ -21,3 +21,13 @@ assert.deepEqual(loop.map(n=>n.midi),[48,50,52,53,55,57,59,60,62,64,65,67,65,64,
 assert.deepEqual(S.sequence(open,'down'),[...open.notes].reverse());
 assert.equal(S.build(7,'major','open').open,false);
 console.log('PASS open C major positions and practice sequence');
+
+assert.deepEqual(S.backingProgression(S.build(0,'major')).map(c=>c.name),['C','F','G','C']);
+assert.deepEqual(S.backingProgression(S.build(9,'minorPentatonic')).map(c=>c.name),['Am','C','Gsus2','Am']);
+for(let root=0;root<12;root++)for(const type of Object.keys(S.patterns)){
+ const scale=S.build(root,type);
+ for(const chord of S.backingProgression(scale)){
+  assert.ok([chord.bass,chord.bass+7,...chord.notes].every(note=>S.patterns[type].intervals.includes((note-root+12)%12)));
+ }
+}
+console.log('PASS backing chords stay inside all 24 scales');

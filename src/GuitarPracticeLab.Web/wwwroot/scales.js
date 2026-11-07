@@ -30,5 +30,15 @@ function sequence(scale,direction){
  if(direction==='both')return [...up,...up.slice(1,-1).reverse()];
  return [...up];
 }
-return {names,patterns,build,sequence};
+function backingProgression(scale){
+ const minor=scale.type==='minorPentatonic';
+ const degrees=minor?[[0,'m',[0,3,7]],[3,'',[0,4,7]],[10,'sus2',[0,2,7]],[0,'m',[0,3,7]]]
+                    :[[0,'',[0,4,7]],[5,'',[0,4,7]],[7,'',[0,4,7]],[0,'',[0,4,7]]];
+ return degrees.map(([interval,suffix,triad])=>{
+  const root=(scale.root+interval)%12;
+  const name=spelling(scale.root,scale.type,interval).name+suffix;
+  return {name,bass:36+root,notes:triad.map(offset=>48+root+offset)};
+ });
+}
+return {names,patterns,build,sequence,backingProgression};
 });

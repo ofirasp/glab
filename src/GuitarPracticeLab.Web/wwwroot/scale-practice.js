@@ -2,7 +2,7 @@
 'use strict';
 const el=id=>document.getElementById(id),S=GuitarScales,media=el('track');
 let mode=new URLSearchParams(location.search).get('mode')==='along'?'along':'follow';
-let scale,index=0,sequence=[],running=false,preparing=false,generation=0,context,master,source,clock,nextBeat,step,startIndex=0,barBeat=0,fileUrl='',fileName='',muted=false,shownIndex=-1;
+let scale,progression,index=0,sequence=[],running=false,preparing=false,generation=0,context,master,source,clock,nextBeat,step,startIndex=0,barBeat=0,fileUrl='',fileName='',muted=false,shownIndex=-1;
 const voices=new Set(),flashes=new Set(),tracks=new Map();
 for(let i=0;i<12;i++){const o=document.createElement('option');o.value=i;o.textContent=S.names[i];el('scaleKey').append(o);}el('scaleKey').value='9';
 function message(text){el('message').textContent=text;}
@@ -45,6 +45,8 @@ function updateScale(){
  const canUseOpen=key==='0'&&type==='major';
  el('positionLabel').hidden=!canUseOpen;
  scale=S.build(key,type,canUseOpen?el('scalePosition').value:undefined);
+ progression=S.backingProgression(scale);
+ updateGrooveInfo();
  sequence=S.sequence(scale,el('direction').value);
  index=0;
  draw();
@@ -57,14 +59,19 @@ function schedule(){
    if(step<0){const count=step+5;click(t,true);later(t,()=>{message('Count in: '+count+' / 4');el('progress').textContent='Ready · '+count;});step++;}
    else{const i=(step+startIndex)%sequence.length,note=sequence[i];click(t,i===0);if(el('hearNotes').checked)tone(note.midi,t,Math.min(.4,beatLength*.7));later(t,()=>{index=i;if(shownIndex!==index)draw();else el('progress').textContent=(i+1)+' / '+sequence.length;message('Play one note per beat · '+scale.name+' · No microphone scoring.');});step++;}
   }else{
-   // A root/fifth bass ostinato works with either displayed scale quality.
-   tone(scale.bassMidi+(barBeat%4===2?7:0),t,beatLength*.7,.22,'triangle');click(t,barBeat%4===0);
-   later(t,()=>{el('progress').textContent='Beat '+(barBeatUI++%4+1);});barBeat++;
+   const beat=barBeat%4;
+   const chord=progression[Math.floor(barBeat/4)%progression.length];
+   tone(chord.bass+(beat===2?7:0),t,beatLength*.65,.23,'triangle');
+   if(beat===0||beat===2){
+    chord.notes.forEach((note,i)=>tone(note,t+i*.016,beatLength*1.6,.075,'triangle'));
+   }
+   tone(beat%2===0?36:78,t,.09,beat%2===0?.24:.085);
+   later(t,()=>{el('progress').textContent=chord.name+' · Beat '+(beat+1);});
+   barBeat++;
   }
   nextBeat+=beatLength;
  }
 }
-let barBeatUI=0;
 async function start(){
  if(running||preparing){stop('Paused. Tap Start when ready.');return;}
  preparing=true;const token=++generation;lock();
@@ -75,9 +82,9 @@ async function start(){
    if(!url)throw Error('Choose an audio file first.');if(media.getAttribute('src')!==url)media.src=url;media.loop=el('loopTrack').checked;
    await media.play();if(token!==generation){media.pause();return;}running=true;message('Playing backing audio. Match the scale key to your song; tempo is set by the recording.');
   }else{
-   running=true;step=-4;barBeat=0;barBeatUI=0;nextBeat=context.currentTime+.12;
+   running=true;step=-4;barBeat=0;nextBeat=context.currentTime+.12;
    startIndex=index;
-   schedule();clock=setInterval(schedule,25);message(mode==='follow'?'Get ready…':'Playing a root + fifth groove in '+S.names[scale.root]+'.');
+   schedule();clock=setInterval(schedule,25);message(mode==='follow'?'Get ready…':'Playing the '+scale.name+' chord loop.');
   }
  }catch(e){if(token===generation)stop('Could not play audio: '+e.message);}
  finally{if(token===generation){preparing=false;lock();}}
@@ -91,11 +98,15 @@ function tempo(value){el('bpm').value=Math.max(40,Math.min(160,value));el('bpmVa
 el('bpm').oninput=()=>tempo(Number(el('bpm').value));el('slower').onclick=()=>tempo(Number(el('bpm').value)-5);el('faster').onclick=()=>tempo(Number(el('bpm').value)+5);
 el('volume').oninput=()=>{muted=false;volume();};el('mute').onclick=()=>{muted=!muted;volume();};
 el('help').onclick=()=>el('scaleHelp').showModal();el('closeHelp').onclick=()=>el('scaleHelp').close();
-function trackChanged(){stop();media.removeAttribute('src');media.load();const value=el('backing').value;el('chooseAudio').hidden=value!=='file';el('trackInfo').textContent=value==='groove'?'Root + fifth groove in the selected key.':value==='file'?(fileName||'Choose an audio file from this device. It stays on this device.'):'Song-library backing. Choose its key manually; audio is not transposed.';lock();if(value==='file'&&!fileUrl)el('audioFile').click();}
+function grooveDescription(){return progression.map(chord=>chord.name).join(' → ')+' · loops in '+scale.name;}
+function updateGrooveInfo(){
+ if(el('backing').value==='groove')el('trackInfo').textContent=grooveDescription();
+}
+function trackChanged(){stop();media.removeAttribute('src');media.load();const value=el('backing').value;el('chooseAudio').hidden=value!=='file';el('trackInfo').textContent=value==='groove'?grooveDescription():value==='file'?(fileName||'Choose an audio file from this device. It stays on this device.'):'Song-library backing. Choose its key manually; audio is not transposed.';lock();if(value==='file'&&!fileUrl)el('audioFile').click();}
 el('backing').onchange=trackChanged;el('chooseAudio').onclick=()=>el('audioFile').click();el('loopTrack').onchange=()=>{media.loop=el('loopTrack').checked;};
 el('audioFile').onchange=()=>{const file=el('audioFile').files[0];if(!file)return;stop();if(fileUrl)URL.revokeObjectURL(fileUrl);fileUrl=URL.createObjectURL(file);fileName=file.name;media.removeAttribute('src');media.load();el('backing').value='file';el('chooseAudio').hidden=false;el('trackInfo').textContent=fileName+' · choose its matching scale key';lock();};
 media.onended=()=>stop('Track finished. Tap Start to play again.');media.onerror=()=>{if(running||preparing)stop('Audio could not be loaded. Check the file or attached song backing.');};
-async function loadTracks(){try{const response=await fetch('/api/song-library',{signal:AbortSignal.timeout(8000)});if(!response.ok)throw Error();const songs=await response.json();for(const song of songs){if(!song.hasBacking||!/^[-a-f0-9]{36}$/i.test(song.id))continue;const key='song:'+song.id;tracks.set(key,{url:'/api/song-library/'+song.id+'/audio?variant=backing'});const o=document.createElement('option');o.value=key;o.textContent=song.title+' · backing';el('backing').append(o);}}catch{el('trackInfo').textContent='Library unavailable. Built-in groove and local audio still work.';}}
+async function loadTracks(){try{const response=await fetch('/api/song-library',{signal:AbortSignal.timeout(8000)});if(!response.ok)throw Error();const songs=await response.json();for(const song of songs){if(!song.hasBacking||!/^[-a-f0-9]{36}$/i.test(song.id))continue;const key='song:'+song.id;tracks.set(key,{url:'/api/song-library/'+song.id+'/audio?variant=backing'});const o=document.createElement('option');o.value=key;o.textContent=song.title+' · backing';el('backing').append(o);}}catch{/* The built-in loop and local files remain available. */}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop('Paused while away. Tap Start to continue.');});window.addEventListener('pagehide',()=>{stop();if(fileUrl)URL.revokeObjectURL(fileUrl);});
 updateScale();setMode(mode);loadTracks();
 })();

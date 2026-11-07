@@ -135,16 +135,18 @@
   },
   "wwwroot/scales.js": {
     "before": null,
-    "after": "add54b4c140ebb98925f528faf4521fb0196f82bd1216b4f6a646c75300b0c9f",
+    "after": "9ac2bc6c8389129904bb045f75d950ecb4a09141c16a539164fa566d9c8639ee",
     "compatible": [
-      "befb80f29d5044e3cf9215aabf3f34ae50073a4079fac9099b1a47937b77d12f"
+      "befb80f29d5044e3cf9215aabf3f34ae50073a4079fac9099b1a47937b77d12f",
+      "add54b4c140ebb98925f528faf4521fb0196f82bd1216b4f6a646c75300b0c9f"
     ]
   },
   "wwwroot/scale-practice.html": {
     "before": null,
-    "after": "ea78575a0ee07624d3279555d3622d4a23685e8c5a89da0a48f0b85bc278fa6a",
+    "after": "0a5eebdf8b01c59980cbe6f677fc45c209c10faaf7be68302a95273ceaf8de58",
     "compatible": [
-      "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d"
+      "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d",
+      "ea78575a0ee07624d3279555d3622d4a23685e8c5a89da0a48f0b85bc278fa6a"
     ]
   },
   "wwwroot/scale-practice.css": {
@@ -153,9 +155,10 @@
   },
   "wwwroot/scale-practice.js": {
     "before": null,
-    "after": "49db7d1c0a948226321022e837e7f124048ad22c4cfbf0619c8532efd838d853",
+    "after": "18baa680e8996ff2c9f7548861d2969dc80fd6230e6f17753b6d7ad790bd5c94",
     "compatible": [
-      "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e"
+      "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e",
+      "49db7d1c0a948226321022e837e7f124048ad22c4cfbf0619c8532efd838d853"
     ]
   },
   "wwwroot/fretboard-map.html": {
