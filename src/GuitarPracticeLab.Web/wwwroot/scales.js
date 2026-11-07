@@ -9,13 +9,26 @@ function spelling(root,type,interval){
  let accidental=((root+interval)%12-natural[letter]+12)%12;if(accidental>6)accidental-=12;
  return {name:letters[letter]+(accidental<0?'♭'.repeat(-accidental):'♯'.repeat(accidental)),accidental};
 }
-function build(root,type){
+function build(root,type,position){
  root=Number(root);if(!Number.isInteger(root)||root<0||root>11||!patterns[type])throw Error('Choose a valid key and scale.');
- const shape=patterns[type],start=roots[root],notes=[];
- shape.frets.forEach((frets,string)=>frets.forEach(offset=>{const fret=start+offset,midi=tuning[string]+fret,pc=midi%12,interval=(pc-root+12)%12,spelled=spelling(root,type,interval);notes.push({string,fret,midi,pc,name:spelled.name,octave:Math.floor((midi-spelled.accidental)/12)-1,root:pc===root});}));
- const lastRoot=notes.map(n=>n.root).lastIndexOf(true),ascending=notes.slice(0,lastRoot+1);
- return {root,type,name:names[root]+' '+shape.name.toLowerCase(),notes,ascending,minFret:Math.min(...notes.map(n=>n.fret)),maxFret:Math.max(...notes.map(n=>n.fret)),bassMidi:36+root};
+ const open=position==='open'&&root===0&&type==='major';
+ const shape=patterns[type],start=open?0:roots[root],notes=[];
+ const fretsByString=open?[[0,1,3],[0,2,3],[0,2,3],[0,2],[0,1,3],[0,1,3]]:shape.frets;
+ fretsByString.forEach((frets,string)=>frets.forEach(offset=>{const fret=start+offset,midi=tuning[string]+fret,pc=midi%12,interval=(pc-root+12)%12,spelled=spelling(root,type,interval);notes.push({string,fret,midi,pc,name:spelled.name,octave:Math.floor((midi-spelled.accidental)/12)-1,root:pc===root});}));
+ const lastRoot=notes.map(n=>n.root).lastIndexOf(true),ascending=open?notes.slice(notes.findIndex(note=>note.root)):notes.slice(0,lastRoot+1);
+ return {root,type,open,name:names[root]+' '+shape.name.toLowerCase(),notes,ascending,minFret:Math.min(...notes.map(n=>n.fret)),maxFret:Math.max(...notes.map(n=>n.fret)),bassMidi:36+root};
 }
-function sequence(scale,direction){const up=scale.ascending;if(direction==='down')return [...up].reverse();if(direction==='both')return [...up,...up.slice(1,-1).reverse()];return [...up];}
+function sequence(scale,direction){
+ const up=scale.ascending;
+ if(scale.open){
+  const down=[...scale.notes].reverse();
+  if(direction==='down')return down;
+  // Start on C, descend past it to low E, then return to C on the next loop.
+  if(direction==='both')return [...up,...down.slice(1),...scale.notes.slice(1,scale.notes.length-up.length)];
+ }
+ if(direction==='down')return [...up].reverse();
+ if(direction==='both')return [...up,...up.slice(1,-1).reverse()];
+ return [...up];
+}
 return {names,patterns,build,sequence};
 });

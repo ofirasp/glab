@@ -13,3 +13,11 @@ assert.ok(S.build(4,'major').notes.some(n=>n.name==='G♯'));assert.ok(!S.build(
 assert.ok(S.build(1,'major').notes.some(n=>n.name==='E♯'));assert.ok(S.build(5,'major').notes.some(n=>n.name==='B♭'));
 assert.throws(()=>S.build(12,'major'));assert.throws(()=>S.build(0,'other'));
 console.log('PASS 24 key/scale combinations, interval membership, frets, two-octave sequences and loop turnarounds');
+
+const open=S.build(0,'major','open');
+assert.deepEqual(open.notes.map(n=>n.midi),[40,41,43,45,47,48,50,52,53,55,57,59,60,62,64,65,67]);
+const loop=S.sequence(open,'both');
+assert.deepEqual(loop.map(n=>n.midi),[48,50,52,53,55,57,59,60,62,64,65,67,65,64,62,60,59,57,55,53,52,50,48,47,45,43,41,40,41,43,45,47]);
+assert.deepEqual(S.sequence(open,'down'),[...open.notes].reverse());
+assert.equal(S.build(7,'major','open').open,false);
+console.log('PASS open C major positions and practice sequence');

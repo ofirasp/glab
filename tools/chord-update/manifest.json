@@ -135,11 +135,17 @@
   },
   "wwwroot/scales.js": {
     "before": null,
-    "after": "befb80f29d5044e3cf9215aabf3f34ae50073a4079fac9099b1a47937b77d12f"
+    "after": "add54b4c140ebb98925f528faf4521fb0196f82bd1216b4f6a646c75300b0c9f",
+    "compatible": [
+      "befb80f29d5044e3cf9215aabf3f34ae50073a4079fac9099b1a47937b77d12f"
+    ]
   },
   "wwwroot/scale-practice.html": {
     "before": null,
-    "after": "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d"
+    "after": "ea78575a0ee07624d3279555d3622d4a23685e8c5a89da0a48f0b85bc278fa6a",
+    "compatible": [
+      "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d"
+    ]
   },
   "wwwroot/scale-practice.css": {
     "before": null,
@@ -147,7 +153,10 @@
   },
   "wwwroot/scale-practice.js": {
     "before": null,
-    "after": "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e"
+    "after": "49db7d1c0a948226321022e837e7f124048ad22c4cfbf0619c8532efd838d853",
+    "compatible": [
+      "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e"
+    ]
   },
   "wwwroot/fretboard-map.html": {
     "before": null,

@@ -18,10 +18,10 @@ function draw(){
  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 740 164');svg.setAttribute('role','group');svg.setAttribute('aria-label',scale.name+' fretboard; high E at top, low E at bottom');
  const add=(name,attrs,text,parent=svg)=>{const n=document.createElementNS(ns,name);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;parent.append(n);return n;};
  const min=scale.minFret,max=scale.maxFret,width=650/(max-min+1),x=fret=>65+(fret-min+.5)*width;
- for(let f=min;f<=max+1;f++)add('line',{x1:65+(f-min)*width,x2:65+(f-min)*width,y1:24,y2:149,stroke:'#52667f','stroke-width':2});
+ for(let f=min;f<=max+1;f++)add('line',{x1:65+(f-min)*width,x2:65+(f-min)*width,y1:24,y2:149,stroke:'#52667f','stroke-width':scale.open&&f===1?5:2});
  const strings=['E₂','A₂','D₃','G₃','B₃','E₄'];
  for(let s=0;s<6;s++){const y=149-s*25;add('text',{x:12,y:y+4,fill:'#afbed2','font-size':13},strings[s]);add('line',{x1:65,x2:715,y1:y,y2:y,stroke:'#8a9bb0','stroke-width':s<3?2:1});}
- for(let f=min;f<=max;f++)add('text',{x:x(f),y:15,fill:'#afbed2','text-anchor':'middle','font-size':12},'Fret '+f);
+ for(let f=min;f<=max;f++)add('text',{x:x(f),y:15,fill:'#afbed2','text-anchor':'middle','font-size':12},f===0?'Open':'Fret '+f);
  const current=sequence[index];
  scale.notes.forEach((n,i)=>{
   const active=mode==='follow'&&current.string===n.string&&current.fret===n.fret,g=add('g',{'data-note':i,tabindex:'0',role:'button','aria-label':n.name+n.octave+', string '+(6-n.string)+', fret '+n.fret+(active?', play now':'')});
@@ -30,16 +30,25 @@ function draw(){
   const hear=async()=>{try{await audio();tone(n.midi,context.currentTime+.01);}catch(e){message('Audio unavailable: '+e.message);}};
   g.onclick=hear;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();hear();}};
  });
- el('fretboard').replaceChildren(svg);el('target').textContent=mode==='follow'?current.name: S.names[scale.root];el('detail').textContent=mode==='follow'?'String '+(6-current.string)+' · fret '+current.fret:scale.name;el('progress').textContent=mode==='follow'?(index+1)+' / '+sequence.length:'Root notes in red';shownIndex=index;
+ el('fretboard').replaceChildren(svg);el('target').textContent=mode==='follow'?current.name: S.names[scale.root];el('detail').textContent=mode==='follow'?'String '+(6-current.string)+(current.fret?' · fret '+current.fret:' · open'):scale.name;el('progress').textContent=mode==='follow'?(index+1)+' / '+sequence.length:'Root notes in red';shownIndex=index;
 }
 function lock(){
- for(const id of ['scaleKey','scaleType','direction','backing','chooseAudio'])el(id).disabled=running||preparing;
+ for(const id of ['scaleKey','scaleType','scalePosition','direction','backing','chooseAudio'])el(id).disabled=running||preparing;
  for(const id of ['previous','next'])el(id).disabled=running||preparing;
  el('play').disabled=preparing||(mode==='along'&&el('backing').value==='file'&&!fileUrl);el('play').textContent=preparing?'Starting…':running?'Pause':'Start';
  const external=mode==='along'&&el('backing').value!=='groove';for(const id of ['bpm','slower','faster'])el(id).disabled=external;
 }
 function stop(text){generation++;preparing=false;running=false;clearInterval(clock);flashes.forEach(clearTimeout);flashes.clear();for(const v of voices){try{v.stop();}catch{}}voices.clear();media.pause();lock();if(text)message(text);}
-function updateScale(){stop();scale=S.build(el('scaleKey').value,el('scaleType').value);sequence=S.sequence(scale,el('direction').value);index=0;draw();}
+function updateScale(){
+ stop();
+ const key=el('scaleKey').value,type=el('scaleType').value;
+ const canUseOpen=key==='0'&&type==='major';
+ el('positionLabel').hidden=!canUseOpen;
+ scale=S.build(key,type,canUseOpen?el('scalePosition').value:undefined);
+ sequence=S.sequence(scale,el('direction').value);
+ index=0;
+ draw();
+}
 function setMode(value){stop();mode=value;el('followMode').classList.toggle('active',mode==='follow');el('alongMode').classList.toggle('active',mode==='along');el('followOptions').hidden=mode!=='follow';el('alongOptions').hidden=mode!=='along';el('directionLabel').hidden=mode!=='follow';el('trackLabel').hidden=mode!=='along';draw();lock();message(mode==='follow'?'Four count-in beats, then one note per beat. No microphone scoring.':'Use short phrases and pauses. Choose the matching key for imported tracks.');}
 function schedule(){
  while(running&&nextBeat<context.currentTime+.1){
@@ -74,7 +83,7 @@ async function start(){
  finally{if(token===generation){preparing=false;lock();}}
 }
 el('play').onclick=start;el('reset').onclick=()=>{stop();index=0;media.currentTime=0;draw();message('Reset. Ready to start.');};
-for(const id of ['scaleKey','scaleType','direction'])el(id).onchange=()=>{updateScale();message('Ready · '+scale.name);};
+for(const id of ['scaleKey','scaleType','scalePosition','direction'])el(id).onchange=()=>{updateScale();message('Ready · '+scale.name);};
 el('followMode').onclick=()=>setMode('follow');el('alongMode').onclick=()=>setMode('along');
 el('next').onclick=()=>{index=(index+1)%sequence.length;draw();};el('previous').onclick=()=>{index=(index+sequence.length-1)%sequence.length;draw();};
 el('hear').onclick=async()=>{try{await audio();tone(sequence[index].midi,context.currentTime+.01);}catch(e){message('Audio unavailable: '+e.message);}};
