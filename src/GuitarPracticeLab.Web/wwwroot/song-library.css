@@ -6,9 +6,9 @@ button,.button{min-height:40px;border:1px solid #40546e;border-radius:9px;backgr
 button:disabled{opacity:.4;cursor:default}
 button.primary,.primary,button[aria-pressed=true]{background:#2869be;border-color:#6aa8ff}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #8bc7ff;outline-offset:1px}
-.top{display:flex;align-items:center;gap:6px;padding-right:110px;min-width:0}
+.top{display:flex;align-items:center;gap:6px;min-width:0}
 .top strong{font-size:18px;margin-right:4px}
-.top .button{margin-left:auto}
+.top .button:first-child{margin-left:0}
 .split{display:grid;grid-template-columns:minmax(0,3fr) minmax(180px,1fr);gap:8px;min-height:0}
 .sheet{display:grid;grid-template-rows:40px minmax(0,1fr)42px;min-width:0;min-height:0;background:#19283a;border-radius:10px;overflow:hidden}
 .pagebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px 40px;align-items:center;gap:4px;padding:0 4px}

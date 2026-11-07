@@ -38,10 +38,10 @@ main{
   width:100%;max-width:900px;height:100dvh;
   padding:10px;margin:auto;
   display:grid;
-  grid-template-rows:40px 48px minmax(0,1fr)24px;
+  grid-template-rows:40px minmax(0,1fr)24px;
   gap:8px;
 }
-header{height:40px;padding-right:110px;white-space:nowrap}
+header{height:40px;white-space:nowrap}
 h1{font-size:21px}
 header small{font-size:12px}
 nav{margin:0;gap:8px}
@@ -84,20 +84,46 @@ nav button{font-size:17px}
 #practice{gap:5px}#remaining{font-size:56px}
 #practice .exercise-menu{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 #practice .exercise-menu button{min-height:42px;font-size:16px;padding:6px 10px}
+#menuBack{min-height:40px;padding:5px 12px;font-size:16px}
+main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
+.menu-screen{
+  display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px;
+  background:radial-gradient(ellipse at 88% 0%,#27486d,transparent 66%),#142338;
+  padding:14px;text-align:left;
+}
+.menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.menu-grid button{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;
+  border:1px solid #547091;border-radius:16px;padding:14px 18px;
+  background:linear-gradient(135deg,#274766,#1b2b42);text-align:left;font-size:clamp(18px,3.2vw,27px);
+}
+.menu-grid small{font-size:clamp(11px,1.8vw,15px);font-weight:400}
+#exitDesktop{justify-self:end;min-height:44px;font-size:15px}
 </style>
 
 </head>
 <body>
 <main>
-<header><h1>Guitar Practice Lab</h1><small id="inputStatus">Tuner demo · WAV analysis</small></header>
-<nav>
-<button id="tunerTab" class="active">Tuner demo</button>
-<button id="metroTab">Metronome</button><button id="practiceTab">Practice</button>
-<button id="lessonsTab" onclick="location.href='/lessons.html'">Lessons</button>
-<button id="wavUpload">Load WAV</button><button id="songLibraryLink" onclick="location.href='/song-library.html'">Songs</button>
-</nav>
+<header><button id="menuBack" hidden>‹ Back</button><h1 id="pageTitle">Guitar Practice Lab</h1></header>
+<section id="homeMenu" class="menu-screen" aria-label="Main menu">
+  <div class="menu-grid">
+    <button id="songLibraryLink" onclick="location.href='/song-library.html'">Songs<small>Chord sheets and backing tracks</small></button>
+    <button id="toolsTab">Tools<small>Tuner, metronome and fretboard</small></button>
+    <button id="lessonsTab" onclick="location.href='/lessons.html'">Lessons<small>Browse and revisit lessons</small></button>
+    <button id="practiceTab">Practice<small>Chord changes and play along</small></button>
+  </div>
+  <button id="exitDesktop" hidden>Exit to Desktop</button>
+</section>
+<section id="toolsMenu" class="menu-screen" aria-label="Tools menu" hidden>
+  <div class="menu-grid">
+    <button id="tunerTab">Tuner<small>Reference tones and WAV analysis</small></button>
+    <button id="fretboardMap" onclick="location.href='/fretboard-map.html'">Fretboard Map<small>Explore and find notes</small></button>
+    <button id="metroTab">Metronome<small>Set a steady tempo</small></button>
+    <button id="followNotes" onclick="location.href='/scale-practice.html'">Scales<small>Follow the Notes</small></button>
+  </div>
+</section>
 
-<section id="tuner">
+<section id="tuner" hidden>
 <div class="note" id="note">E2</div>
 <div class="muted" id="freq">82.41 Hz · reference</div>
 <div class="track"><span id="needle"></span></div>
@@ -107,7 +133,7 @@ nav button{font-size:17px}
 <button id="flat">← Flatter</button>
 <button id="center">In tune</button>
 <button id="sharp">Sharper →</button>
-<button id="tone">Play tone</button><button id="analyze">Analyze</button>
+<button id="tone">Play tone</button><button id="analyze">Analyze</button><button id="wavUpload">Load WAV</button>
 </div>
 </section>
 
@@ -123,7 +149,7 @@ nav button{font-size:17px}
 </section>
 
 <section id="practice" hidden>
-  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Follow the Notes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button><button id="fretboardMap" onclick="location.href='/fretboard-map.html'">Fretboard Map</button></div>
+  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button></div>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>
@@ -139,7 +165,7 @@ nav button{font-size:17px}
 </section>
 
 <section id="chordChanges" hidden aria-label="1 Minute Changes">
-  <div class="changeshead"><button id="changesBack">‹ Practice</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
+  <div class="changeshead"><button id="changesBack">‹ Back</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
   <div class="changesbody">
     <div id="changesPreviews" class="changespreviews">
       <div class="changesplay">
@@ -266,14 +292,30 @@ $('tone').onclick=async()=>{
     $('tone').textContent='Stop tone';toneTimer=setTimeout(stopTone,4000);
   }catch(e){$('status').textContent='Audio error: '+e.message}
 };
-function tab(metro){
-  stopTone();stopMetro();
-  $('tuner').hidden=metro;$('metro').hidden=!metro;
-  $('tunerTab').classList.toggle('active',!metro);
-  $('metroTab').classList.toggle('active',metro);
+const pageTitles={homeMenu:'Guitar Practice Lab',toolsMenu:'Tools',practice:'Practice',tuner:'Tuner',metro:'Metronome'};
+let currentPage='homeMenu';
+function showPage(page){
+  stopTone();
+  stopMetro();
+  if(currentPage==='practice'&&page!=='practice')document.dispatchEvent(new Event('guitar-exercise-open'));
+  currentPage=page;
+  for(const id of Object.keys(pageTitles))$(id).hidden=id!==page;
+  $('pageTitle').textContent=pageTitles[page];
+  $('menuBack').hidden=page==='homeMenu';
+  $('status').hidden=page==='homeMenu'||page==='toolsMenu'||page==='practice';
+  $('status').textContent=page==='tuner'?'Demo input and WAV analysis · reference tones use the Pi audio output.':'';
 }
-$('tunerTab').onclick=()=>tab(false);
-$('metroTab').onclick=()=>tab(true);
+$('toolsTab').onclick=()=>showPage('toolsMenu');
+$('tunerTab').onclick=()=>showPage('tuner');
+$('metroTab').onclick=()=>showPage('metro');
+$('menuBack').onclick=()=>showPage(currentPage==='tuner'||currentPage==='metro'?'toolsMenu':'homeMenu');
+if(window.parent!==window){
+  const exit=window.parent.document.getElementById('desktopAction');
+  if(exit){
+    $('exitDesktop').hidden=false;
+    $('exitDesktop').onclick=()=>exit.click();
+  }
+}
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){stopTone();stopMetro()}
 });
@@ -357,21 +399,9 @@ update();
   get('timerFinish').onclick=finish;
 
   get('practiceTab').onclick=()=>{
-    stopTone();stopMetro();
-    get('tuner').hidden=true;get('metro').hidden=true;
-    get('practice').hidden=false;
-    get('tunerTab').classList.remove('active');
-    get('metroTab').classList.remove('active');
-    get('practiceTab').classList.add('active');
-    today();draw();
-  };
-  get('tunerTab').onclick=()=>{
-    get('practice').hidden=true;
-    get('practiceTab').classList.remove('active');tab(false);
-  };
-  get('metroTab').onclick=()=>{
-    get('practice').hidden=true;
-    get('practiceTab').classList.remove('active');tab(true);
+    showPage('practice');
+    today();
+    draw();
   };
 
   setInterval(()=>{
@@ -430,10 +460,7 @@ document.getElementById('analyze').onclick=async()=>{
   el('wavFile').onchange=async()=>{
     const file=el('wavFile').files[0];
     if(!file)return;
-    stopTone();stopMetro();
-    el('practice').hidden=true;
-    el('practiceTab').classList.remove('active');
-    tab(false);
+    showPage('tuner');
     el('wavUpload').disabled=true;
     el('status').textContent='Analyzing '+file.name+'…';
     try{
@@ -474,6 +501,11 @@ document.getElementById('analyze').onclick=async()=>{
 <script src="/one-minute-changes.js" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
-<script>if(new URLSearchParams(location.search).get('tab')==='practice')document.getElementById('practiceTab').click();</script>
+<script>
+const requestedPage=new URLSearchParams(location.search).get('tab');
+const entryButtons={practice:'practiceTab',tools:'toolsTab',tuner:'tunerTab',metronome:'metroTab'};
+if(Object.hasOwn(entryButtons,requestedPage))$(entryButtons[requestedPage]).click();
+else showPage('homeMenu');
+</script>
 </body>
 </html>

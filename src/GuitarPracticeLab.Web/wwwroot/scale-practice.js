@@ -51,7 +51,7 @@ function updateScale(){
  index=0;
  draw();
 }
-function setMode(value){stop();mode=value;el('followMode').classList.toggle('active',mode==='follow');el('alongMode').classList.toggle('active',mode==='along');el('followOptions').hidden=mode!=='follow';el('alongOptions').hidden=mode!=='along';el('directionLabel').hidden=mode!=='follow';el('trackLabel').hidden=mode!=='along';draw();lock();message(mode==='follow'?'Four count-in beats, then one note per beat. No microphone scoring.':'Use short phrases and pauses. Choose the matching key for imported tracks.');}
+function setMode(value){stop();mode=value;el('scaleBack').href='/practice.html?tab='+(mode==='follow'?'tools':'practice');el('followMode').classList.toggle('active',mode==='follow');el('alongMode').classList.toggle('active',mode==='along');el('followOptions').hidden=mode!=='follow';el('alongOptions').hidden=mode!=='along';el('directionLabel').hidden=mode!=='follow';el('trackLabel').hidden=mode!=='along';draw();lock();message(mode==='follow'?'Four count-in beats, then one note per beat. No microphone scoring.':'Use short phrases and pauses. Choose the matching key for imported tracks.');}
 function schedule(){
  while(running&&nextBeat<context.currentTime+.1){
   const t=nextBeat,beatLength=60/Number(el('bpm').value);

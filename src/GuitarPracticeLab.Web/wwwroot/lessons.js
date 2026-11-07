@@ -21,5 +21,5 @@ el('confirmRemove').onclick=async()=>{if(!removing||busy)return;busy=true;try{aw
 el('undoRemove').onclick=async()=>{if(!removed)return;try{await request('/'+removed.id+'/restore',{method:'POST'});removed=null;el('undoRemove').hidden=true;await refresh();status('Saved lesson restored.');}catch(e){status(e.message);}};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>el(b.dataset.close).close());
 refresh().then(()=>status('Choose a lesson site or watch a saved lesson.')).catch(e=>status(e.message));
-if(songId&&/^[0-9a-f-]{36}$/i.test(songId))fetch('/api/song-library').then(r=>r.json()).then(items=>{song=items.find(item=>item.id===songId)||null;if(song){el('songContext').textContent='Link a lesson to '+song.title;render();}}).catch(()=>status('Could not load the selected song. Saved lessons are still available.'));
+if(songId&&/^[0-9a-f-]{36}$/i.test(songId))fetch('/api/song-library').then(r=>r.json()).then(items=>{song=items.find(item=>item.id===songId)||null;if(song){el('lessonsBack').href='/song-library.html';el('songContext').textContent='Link a lesson to '+song.title;render();}}).catch(()=>status('Could not load the selected song. Saved lessons are still available.'));
 })();
