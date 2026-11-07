@@ -3,7 +3,16 @@
 .changeshead{display:flex;align-items:center;gap:12px}.changeshead strong{font-size:17px}.changeshead button{min-height:38px;font-size:14px;padding:5px 10px}
 #changesTime{margin-left:auto;font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}#changesCount{font-size:15px;min-width:70px}
 .changesbody{display:grid;grid-template-columns:minmax(180px,1fr) minmax(330px,1.65fr);gap:12px;min-height:0}
-.changesplay{display:grid;grid-template-rows:28px minmax(0,1fr)20px;justify-items:center;min-height:0}#changesTarget{font-size:24px}#changesDiagram{min-height:0;width:100%;display:flex;justify-content:center}#changesDiagram svg{height:100%;width:auto;max-width:100%}#changesNext{font-size:13px;color:#bdcee2}
+.changespreviews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-height:0}
+.changespreviews.running{grid-template-columns:1fr}
+.changesplay{display:grid;grid-template-rows:28px minmax(0,1fr) 44px;justify-items:center;min-height:0}
+.changesplay strong{font-size:20px;text-align:center}
+.changesdiagram{min-height:0;width:100%;display:flex;justify-content:center;align-items:center}
+.changesdiagram svg{height:100%;width:auto;max-width:100%}
+.changesnav{display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;white-space:nowrap}
+.changesnav button{min-height:40px;min-width:35px;padding:2px 6px}
+#changesNext{font-size:13px;color:#bdcee2}
+
 .changessetup{display:flex;flex-direction:column;gap:8px;min-height:0}.changespair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.changespair label{font-size:12px;min-width:0}.changespair select{display:block;width:100%;min-height:37px;background:#293950;color:white;border:1px solid #536981;border-radius:8px;font:16px system-ui;padding:4px}
 .changesconfirm{display:flex;gap:8px;align-items:center;font-size:13px;min-height:24px}.changesconfirm input{width:22px;height:22px;margin:0}.changesbuttons{display:flex;gap:6px}.changesbuttons button{min-height:42px;font-size:15px;padding:6px 12px;flex:1}#changesStart{background:#245a9b}#changesLevel{width:100%;height:14px}#changesMessage{font-size:12px;line-height:1.35;overflow:auto;min-height:30px;color:#c2d2e6}
 #changesResults{width:min(680px,calc(100vw - 20px));height:min(420px,calc(100dvh - 20px));border:1px solid #536981;border-radius:12px;background:#192639;color:#eef3ff;padding:12px}#changesResults[open]{display:grid;grid-template-rows:44px minmax(0,1fr);gap:8px}#changesResults::backdrop{background:#000a}.changesresulthead{display:flex;justify-content:space-between;align-items:center;gap:10px}.changesresulthead h2{font-size:19px;margin:0}.changesresulthead button{min-height:38px;font-size:14px}#changesResultsList{overflow:auto}.changeresult{padding:10px;margin-bottom:8px;background:#101827;border-radius:8px;font-size:14px}.changeresult strong{display:block;font-size:18px}.changeresult small{display:block;margin-top:4px}
@@ -12,3 +21,7 @@
 .chordchoice{min-width:0;margin:0;padding:0;border:0}.chordchoice legend{padding:0 0 3px;font-size:12px;color:#c2d2e6}.chordchoice>div{display:grid;grid-template-columns:minmax(60px,.85fr) minmax(90px,1.35fr);gap:5px}.chordchoice label{font-size:10px}.chordchoice select{font-size:14px;min-height:38px}.chordchoice legend span{font-weight:700;color:#eef3ff}
 
 .changessetup{gap:6px}#changesLevel{flex-shrink:0;min-height:10px}
+@media(max-width:600px){
+ .changesnav{gap:2px;font-size:10px}
+ .changesnav button{min-width:24px;padding:2px}
+}

@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const el=id=>document.getElementById(id),api='/api/chord-practice';
-let session=null,polling=false,preparing=false,available=false,receivedAt=0,shownTarget='',leaving=false,priorStatus='';
+let session=null,polling=false,preparing=false,available=false,receivedAt=0,leaving=false,priorStatus='';
 const active=()=>preparing||session&&['preparing','running'].includes(session.status);
 async function request(path,options={}){const r=await fetch(api+path,{...options,signal:AbortSignal.timeout(15000)});const value=await r.json().catch(()=>({}));if(!r.ok)throw Error(value.message||value.detail||'Exercise request failed.');return value;}
 const qualities=[['','Major'],['m','Minor (m)'],['7','7 · Dominant'],['maj7','Major 7'],['m7','Minor 7'],['sus2','Sus2'],['sus4','Sus4'],['5','Power (5)'],['6','Major 6'],['m6','Minor 6'],['add9','Add9'],['madd9','Minor add9'],['6add9','6 add9'],['dim','Diminished'],['dim7','Diminished 7'],['aug','Augmented'],['m7b5','Minor 7♭5'],['9','Dominant 9'],['m9','Minor 9'],['maj9','Major 9'],['7sus4','7 sus4'],['7sus2','7 sus2'],['7b5','7♭5'],['7#5','7♯5'],['7b9','7♭9'],['7#9','7♯9']];
@@ -17,7 +17,49 @@ const chord=id=>el(id).value+el(id+'Type').value;
 function selectChord(id,name){const match=/^([A-G](?:#|b)?)(.*)$/.exec(name);if(match){el(id).value=match[1];el(id+'Type').value=match[2];}}
 el('changesFirst').value='C';el('changesSecond').value='G';
 function message(text){el('changesMessage').textContent=text;}
-function target(name){if(shownTarget===name)return;shownTarget=name;el('changesTarget').textContent='Play '+name;el('changesDiagram').replaceChildren();const shape=GuitarChords.shapes(name)[0];if(shape)el('changesDiagram').append(GuitarChordDiagram(shape,name));}
+const shapeChoices={changesFirst:{},changesSecond:{}};
+function shapeChoice(id){
+ const name=chord(id);
+ if(shapeChoices[id].name!==name)shapeChoices[id]={name,index:0,shapes:GuitarChords.shapes(name)};
+ return shapeChoices[id];
+}
+function renderDiagram(id,choice){
+ const diagram=el(id);
+ const key=choice.name+':'+choice.index;
+ if(diagram.dataset.shape===key)return;
+ diagram.dataset.shape=key;
+ const shape=choice.shapes[choice.index];
+ diagram.replaceChildren(shape?GuitarChordDiagram(shape,choice.name):'No shape available');
+}
+for(const id of ['changesFirst','changesSecond']){
+ for(const [suffix,step] of [['Prev',-1],['Next',1]]){
+  el(id+suffix).onclick=()=>{
+   const choice=shapeChoice(id),count=choice.shapes.length;
+   if(active()||count<2)return;
+   choice.index=(choice.index+step+count)%count;
+   draw();
+  };
+ }
+}
+function drawPreviews(locked){
+ const running=session?.status==='running';
+ const first=shapeChoice('changesFirst'),second=shapeChoice('changesSecond');
+ const current=running&&session.target===second.name?second:first;
+ el('changesPreviews').classList.toggle('running',running);
+ el('changesSecondPreview').hidden=running;
+ el('changesFirstShapes').hidden=running;
+ el('changesNext').hidden=!running;
+ el('changesNext').textContent='Then '+(current===first?second.name:first.name);
+ el('changesTarget').textContent='Play '+current.name;
+ el('changesSecondTarget').textContent=second.name;
+ renderDiagram('changesDiagram',current);
+ if(!running)renderDiagram('changesSecondDiagram',second);
+ for(const id of ['changesFirst','changesSecond']){
+  const choice=shapeChoice(id),count=choice.shapes.length;
+  el(id+'Shape').textContent=count?(choice.index+1)+' / '+count:'—';
+  el(id+'Prev').disabled=el(id+'Next').disabled=!!locked||count<2;
+ }
+}
 function draw(){
  const busy=active(),locked=busy||(session?.status==='completed'&&!session.saved);for(const id of ['changesFirst','changesFirstType','changesSecond','changesSecondType','changesDevice','changesSensitivity','changesTuning'])el(id).disabled=!!locked;
  el('changesBack').disabled=preparing;el('changesCancel').disabled=!session||session.status!=='running';
@@ -25,9 +67,8 @@ function draw(){
  el('changesRetry').hidden=!(session?.status==='completed'&&!session.saved);
  el('changesStart').textContent=preparing?'Connecting…':session?.status==='completed'?'Try again':'Start';
  el('changesFirstName').textContent=chord('changesFirst');el('changesSecondName').textContent=chord('changesSecond');
- target(session?.status==='running'?session.target:chord('changesFirst'));
- const other=session?.status==='running'?(session.target===session.first?session.second:session.first):chord('changesSecond');
- el('changesNext').textContent='Then '+other;const count=session?.correctChords||0;el('changesCount').textContent=count+(count===1?' chord':' chords');
+ drawPreviews(locked);
+ const count=session?.correctChords||0;el('changesCount').textContent=count+(count===1?' chord':' chords');
  el('changesLevel').value=Math.min(.1,session?.rms||0);
 }
 function countdown(){let remaining=session?.status==='running'?Math.max(0,session.remaining-(performance.now()-receivedAt)/1000):session?.status==='completed'?0:60;
@@ -43,7 +84,7 @@ async function poll(){if(polling||!active()||preparing)return;polling=true;try{c
 async function devices(){try{const value=await request('/devices');available=value.available;el('changesDevice').replaceChildren();for(const name of value.devices){const o=document.createElement('option');o.value=o.textContent=name;el('changesDevice').append(o);}if(!available)message(value.message);draw();}catch(e){available=false;message(e.message);draw();}}
 async function openExercise(){priorStatus=el('status').textContent;el('status').textContent='Live Pi microphone · standard tuning · no capo · use headphones to avoid speaker bleed';stopTone();stopMetro();document.dispatchEvent(new Event('guitar-exercise-open'));el('practice').hidden=true;el('tuner').hidden=true;el('metro').hidden=true;el('chordChanges').hidden=false;leaving=false;draw();await devices();try{const value=await request('/active');if(value)receive(value);}catch(e){message(e.message);}}
 el('oneMinuteChanges').onclick=openExercise;
-for(const id of ['changesFirst','changesFirstType','changesSecond','changesSecondType','changesTuning'])el(id).onchange=()=>{shownTarget='';session=null;draw();countdown();};
+for(const id of ['changesFirst','changesFirstType','changesSecond','changesSecondType','changesTuning'])el(id).onchange=()=>{session=null;draw();countdown();};
 el('changesStart').onclick=async()=>{
  const first=chord('changesFirst'),second=chord('changesSecond');
  if(!el('changesTuning').checked){message('Confirm standard tuning with no capo first.');return;}

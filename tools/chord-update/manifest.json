@@ -54,12 +54,13 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "bf01acf94319cbecaa32420dbd469bd0ecdd6560b134b87e751f97e711e31399",
+    "after": "52d6fda4f035c41b956c85399d0e507939417d412ae2556c6c1c33149d28140c",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
       "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
       "6da2bcf5a05b63efa8702cbd2a07b539218b61975985af3a8bafd8a32177af3d",
-      "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10"
+      "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10",
+      "bf01acf94319cbecaa32420dbd469bd0ecdd6560b134b87e751f97e711e31399"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -68,17 +69,19 @@
   },
   "wwwroot/one-minute-changes.css": {
     "before": null,
-    "after": "39521177bef4fef5cbb2b52c617365eac79b93d4bea436781f3643d9accb1b0e",
+    "after": "30ae46afda0072e39d292a210dfe70d470925e99ef24cfeb68c3e05ab3801891",
     "compatible": [
-      "3209e6637c865e9466927632db06bbd9f7d8296ed1b4720a861e51e12ecf94b3"
+      "3209e6637c865e9466927632db06bbd9f7d8296ed1b4720a861e51e12ecf94b3",
+      "39521177bef4fef5cbb2b52c617365eac79b93d4bea436781f3643d9accb1b0e"
     ]
   },
   "wwwroot/one-minute-changes.js": {
     "before": null,
-    "after": "156308f8a06c0fa5010201eba7e37e77a9896630bd39375c2e2f797f6a8a96b4",
+    "after": "2de165ba7b0e0b2985c04d406a5bb40a6ee49b33dc62362dfc5d943ac613f811",
     "compatible": [
       "00dae06c09f12fa93c6d7b3b381ebc6683f51a3190d65f9a91b631ef45faf3c0",
-      "af7a932524a3ee62c960f0dbda80a3364a5a17fddfc35aecb7395a6e86c60abd"
+      "af7a932524a3ee62c960f0dbda80a3364a5a17fddfc35aecb7395a6e86c60abd",
+      "156308f8a06c0fa5010201eba7e37e77a9896630bd39375c2e2f797f6a8a96b4"
     ]
   },
   "Lessons.cs": {

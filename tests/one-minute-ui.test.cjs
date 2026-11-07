@@ -16,11 +16,23 @@ check('exercise fits touchscreen without page scrollbar',await page.evaluate(()=
 check('root and type menus replace the long chord list',await page.locator('#changesFirst option').count()===12&&await page.locator('#changesFirstType option').count()===26);
 await page.locator('#changesFirstType').selectOption('m');await page.locator('#changesFirst').selectOption('A');check('root plus minor type updates the diagram',await page.locator('#changesTarget').textContent()==='Play Am');await page.locator('#changesFirst').selectOption('C');await page.locator('#changesFirstType').selectOption('');
 check('diagram displayed before start',await page.locator('#changesDiagram svg').count()===1);
+await page.locator('#changesSecond').selectOption('D');
+check('second selection updates its preview before Start',await page.locator('#changesSecondDiagram svg').getAttribute('aria-label').then(label=>label.startsWith('D,')));
+await page.locator('#changesSecond').selectOption('G');
+const originalFirst=await page.locator('#changesDiagram svg').getAttribute('aria-label');
+const originalSecond=await page.locator('#changesSecondDiagram svg').getAttribute('aria-label');
+await page.locator('#changesFirstNext').tap();
+await page.locator('#changesSecondNext').tap();
+const selectedSecond=await page.locator('#changesSecondDiagram svg').getAttribute('aria-label');
+check('arrows choose independent alternatives',selectedSecond!==originalSecond&&await page.locator('#changesDiagram svg').getAttribute('aria-label')!==originalFirst);
+
 check('standard tuning confirmation required',await page.locator('#changesStart').isDisabled());await page.locator('#changesTuning').check();
 await page.locator('#changesSecond').selectOption('C');await page.locator('#changesStart').tap();check('identical chords rejected without opening mic',starts===0&&await page.locator('#changesMessage').textContent().then(t=>t.includes('different notes')));
-await page.locator('#changesSecond').selectOption('G');await page.locator('#changesStart').tap();await page.waitForFunction(()=>document.querySelector('#changesCancel').disabled===false);
+await page.locator('#changesSecond').selectOption('G');await page.locator('#changesSecondNext').tap();await page.locator('#changesStart').tap();await page.waitForFunction(()=>document.querySelector('#changesCancel').disabled===false);
 check('start displays one-minute countdown and locks chord choices',await page.locator('#changesFirst').isDisabled()&&await page.locator('#changesFirstType').isDisabled()&&await page.locator('#changesSecondType').isDisabled()&&await page.locator('#changesTime').textContent()==='1:00');
 state={...state,target:'G',correctChords:1,remaining:54};await page.waitForFunction(()=>document.querySelector('#changesTarget').textContent==='Play G');check('recognition advances target and score',await page.locator('#changesCount').textContent()==='1 chord');
+check('running round shows the chosen second shape',await page.locator('#changesDiagram svg').getAttribute('aria-label')===selectedSecond&&await page.locator('#changesSecondPreview').isHidden());
+
 await page.screenshot({path:process.env.GPL_TEST_SCREENSHOT||'/tmp/glab-one-minute.png'});
 state={...state,status:'completed',remaining:0,correctChords:31,changes:30,saved:false,error:'Result not saved.'};await page.waitForFunction(()=>!document.querySelector('#changesRetry').hidden);check('unsaved result remains available for retry',await page.locator('#changesStart').isDisabled()&&await page.locator('#changesFirst').isDisabled());await page.locator('#changesRetry').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('Saved on the Pi'));
 check('completed result shows score, changes and save status',await page.locator('#changesMessage').textContent().then(t=>t.includes('31 correct chords')&&t.includes('30 changes')));

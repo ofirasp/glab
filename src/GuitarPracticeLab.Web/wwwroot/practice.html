@@ -141,7 +141,17 @@ nav button{font-size:17px}
 <section id="chordChanges" hidden aria-label="1 Minute Changes">
   <div class="changeshead"><button id="changesBack">‹ Practice</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
   <div class="changesbody">
-    <div class="changesplay"><strong id="changesTarget">Play C</strong><div id="changesDiagram"></div><span id="changesNext">Then G</span></div>
+    <div id="changesPreviews" class="changespreviews">
+      <div class="changesplay">
+        <strong id="changesTarget">Play C</strong><div id="changesDiagram" class="changesdiagram"></div>
+        <div id="changesFirstShapes" class="changesnav"><button id="changesFirstPrev" aria-label="Previous first chord shape">‹</button><span id="changesFirstShape"></span><button id="changesFirstNext" aria-label="Next first chord shape">›</button></div>
+        <span id="changesNext" hidden></span>
+      </div>
+      <div id="changesSecondPreview" class="changesplay">
+        <strong id="changesSecondTarget">G</strong><div id="changesSecondDiagram" class="changesdiagram"></div>
+        <div class="changesnav"><button id="changesSecondPrev" aria-label="Previous second chord shape">‹</button><span id="changesSecondShape"></span><button id="changesSecondNext" aria-label="Next second chord shape">›</button></div>
+      </div>
+    </div>
     <div class="changessetup">
       <div class="changespair">
         <fieldset class="chordchoice"><legend>First chord · <span id="changesFirstName">C</span></legend><div><label>Root<select id="changesFirst" aria-label="First chord root"></select></label><label>Type<select id="changesFirstType" aria-label="First chord type"></select></label></div></fieldset>
