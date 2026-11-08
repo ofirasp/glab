@@ -75,7 +75,7 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "3bbd25a86da627f2707cf4a48f3db5d7a5508829f5f61da88a2379ab52595333",
+    "after": "6c71869cc2901e0ed8a71105fd9359bc4e0ef22ec5801824a01ad7933e125134",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
       "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
@@ -83,7 +83,8 @@
       "52c69c435743f5ffcbefdb38a0ab43a14d87f28b80ee90877e8f604ef15dcb10",
       "bf01acf94319cbecaa32420dbd469bd0ecdd6560b134b87e751f97e711e31399",
       "52d6fda4f035c41b956c85399d0e507939417d412ae2556c6c1c33149d28140c",
-      "4301eed69d4d1e7fd59baa0b7fdf1b65dd728c666287d190bbe4016fcf0aa0f5"
+      "4301eed69d4d1e7fd59baa0b7fdf1b65dd728c666287d190bbe4016fcf0aa0f5",
+      "3bbd25a86da627f2707cf4a48f3db5d7a5508829f5f61da88a2379ab52595333"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -110,9 +111,10 @@
   },
   "Lessons.cs": {
     "before": null,
-    "after": "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52",
+    "after": "5de9d54a6ad0610d7825b32506a2248b7d373f193d96a793a74b154ec40849af",
     "compatible": [
-      "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568"
+      "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568",
+      "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52"
     ]
   },
   "Desktop/lesson-browser.py": {
@@ -233,5 +235,9 @@
   "wwwroot/guitar-home.jpg": {
     "before": null,
     "after": "b211a9e8b6c23d5840100e588f01404d4c984173db941fcd99a772067d248604"
+  },
+  "Desktop/desktop-session.py": {
+    "before": null,
+    "after": "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df"
   }
 }

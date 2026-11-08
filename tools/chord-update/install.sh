@@ -28,7 +28,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[]),*allowed.get('preserve',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
-sudo apt-get install -y poppler-utils alsa-utils
+sudo apt-get install -y poppler-utils alsa-utils swayidle wlopm
 mkdir -p "$backup/source" "$stage"
 python3 - <<'PY'
 import json,os,shutil
@@ -114,14 +114,14 @@ desktop_changed=1
 python3 - <<'DESKTOP_INSTALL'
 import os
 from pathlib import Path
-path=Path(os.environ['CHORD_AUTOSTART']);script=Path(os.environ['CHORD_PROJECT'])/'Desktop/lesson-browser.py'
+path=Path(os.environ['CHORD_AUTOSTART']);script=Path(os.environ['CHORD_PROJECT'])/'Desktop/desktop-session.py'
 def quoted(value):return '"'+str(value).replace('\\','\\\\').replace('"','\\"').replace('`','\\`').replace('$','\\$')+'"'
 path.parent.mkdir(parents=True,exist_ok=True)
 temporary=path.with_suffix('.tmp')
-temporary.write_text('[Desktop Entry]\nType=Application\nName=Guitar Practice Lab lesson browser\nExec=/usr/bin/python3 '+quoted(script)+'\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n')
+temporary.write_text('[Desktop Entry]\nType=Application\nName=Guitar Practice Lab desktop controls\nExec=/usr/bin/python3 '+quoted(script)+'\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n')
 temporary.replace(path)
 DESKTOP_INSTALL
 echo "Installed. Backup: $backup"
-echo 'Restart the Pi once to activate the lesson-browser helper and touchscreen Return to Practice tab.'
+echo 'Restart the Pi once to activate desktop controls and the lesson browser.'
 echo 'Close and reopen the app browser. Practice → 1 Minute Changes uses the Pi microphone.'
 echo 'Choose your guitar tuning in the popup. Standard tuning is supported; alternate-tuning diagrams stay hidden.'

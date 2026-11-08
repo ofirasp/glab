@@ -109,7 +109,14 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
   border-color:rgba(156,181,208,.56);
 }
 #homeMenu .menu-grid small{color:#e1eaf4}
-#exitDesktop{justify-self:end;min-height:44px;font-size:15px}
+.home-actions{display:flex;align-items:center;gap:8px}
+.home-actions button{min-height:44px;font-size:15px}
+#exitDesktop{margin-left:auto}
+#homeActionStatus{font-size:12px;color:#e1eaf4;flex:1}
+#shutdownConfirm{max-width:calc(100vw - 30px);border:1px solid #547091;border-radius:16px;background:#192639;color:#eef3ff;padding:18px}
+#shutdownConfirm::backdrop{background:#000b}
+#shutdownConfirm .row{justify-content:flex-end}
+#confirmShutdown{background:#803f46}
 </style>
 
 </head>
@@ -123,8 +130,21 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
     <button id="lessonsTab" onclick="location.href='/lessons.html'">Lessons<small>Browse and revisit lessons</small></button>
     <button id="practiceTab">Practice<small>Chord changes and play along</small></button>
   </div>
-  <button id="exitDesktop" hidden>Exit to Desktop</button>
+  <div id="homeActions" class="home-actions" hidden>
+    <button id="shutdownButton">Shut down</button>
+    <button id="sleepScreen">Sleep screen</button>
+    <span id="homeActionStatus" role="status"></span>
+    <button id="exitDesktop">Exit to Desktop</button>
+  </div>
 </section>
+<dialog id="shutdownConfirm" aria-labelledby="shutdownTitle">
+  <h2 id="shutdownTitle">Shut down the Pi?</h2>
+  <p>This will close Guitar Practice Lab and power off the system.</p>
+  <form method="dialog" class="row">
+    <button value="cancel" autofocus>Cancel</button>
+    <button id="confirmShutdown" value="poweroff">Shut down</button>
+  </form>
+</dialog>
 <section id="toolsMenu" class="menu-screen" aria-label="Tools menu" hidden>
   <div class="menu-grid">
     <button id="tunerTab">Tuner<small>Reference tones and WAV analysis</small></button>
@@ -323,8 +343,31 @@ $('menuBack').onclick=()=>showPage(currentPage==='tuner'||currentPage==='metro'?
 if(window.parent!==window){
   const exit=window.parent.document.getElementById('desktopAction');
   if(exit){
-    $('exitDesktop').hidden=false;
+    $('homeActions').hidden=false;
     $('exitDesktop').onclick=()=>exit.click();
+    const local=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
+    $('shutdownButton').hidden=$('sleepScreen').hidden=!local;
+    const confirm=$('shutdownConfirm');
+    $('shutdownButton').onclick=()=>{confirm.returnValue='';confirm.showModal();};
+    confirm.onclose=()=>{if(confirm.returnValue==='poweroff')requestDesktopAction('poweroff');};
+    $('sleepScreen').onclick=()=>requestDesktopAction('screen-sleep');
+  }
+}
+async function requestDesktopAction(action){
+  const status=$('homeActionStatus'), buttons=[$('shutdownButton'),$('sleepScreen')];
+  for(const button of buttons)button.disabled=true;
+  status.textContent=action==='poweroff'?'Shutting down…':'Preparing screen sleep…';
+  try{
+    const response=await fetch('/api/desktop/'+action,{method:'POST',signal:AbortSignal.timeout(10000)});
+    if(!response.ok){
+      const error=await response.json().catch(()=>({}));
+      throw new Error(error.message||'Desktop action was unavailable.');
+    }
+    if(action==='screen-sleep')status.textContent='';
+  }catch(error){
+    status.textContent=error.message;
+  }finally{
+    for(const button of buttons)button.disabled=false;
   }
 }
 document.addEventListener('visibilitychange',()=>{

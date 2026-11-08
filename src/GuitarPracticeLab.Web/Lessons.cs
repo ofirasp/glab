@@ -37,12 +37,67 @@ public static class Lessons
             return doc.RootElement.TryGetProperty("captureId",out var id)&&id.GetString() is string value&&System.Text.RegularExpressions.Regex.IsMatch(value,@"^[a-p]{32}$")?value:null;
         }catch(Exception e)when(e is IOException||e is JsonException||e is UnauthorizedAccessException){return null;}
     }
-    static void Command(string action,string url=""){
+    static Guid Command(string action,string url=""){
+        var id = Guid.NewGuid();
         Directory.CreateDirectory(Bridge);var temp=Path.Combine(Bridge,"request.json.tmp");
-        File.WriteAllText(temp,JsonSerializer.Serialize(new{id=Guid.NewGuid(),action,url,created=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()/1000.0},Json));
+        File.WriteAllText(temp,JsonSerializer.Serialize(new{id,action,url,created=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()/1000.0},Json));
         File.Move(temp,Path.Combine(Bridge,"request.json"),true);
+        return id;
     }
+    static bool KioskRequest(HttpContext context) =>
+        Local(context) &&
+        (context.Request.Host.Host is "127.0.0.1" or "localhost" or "[::1]");
+
+    static JsonElement DesktopStatus()
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(Bridge, "status.json")));
+            var status = document.RootElement;
+            var age = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0 - status.GetProperty("heartbeat").GetDouble();
+            if (age < 0 || age > 6 || !status.TryGetProperty("desktopControls", out var enabled) ||
+                enabled.ValueKind != JsonValueKind.True)
+                return default;
+            return status.Clone();
+        }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException or KeyNotFoundException)
+        {
+            return default;
+        }
+    }
+
+    static async Task<IResult> RequestDesktopAction(HttpContext context, string action)
+    {
+        if (!KioskRequest(context) || context.Request.Headers.Origin != context.Request.Scheme + "://" + context.Request.Host)
+            return Results.StatusCode(403);
+        if (action is not ("poweroff" or "screen-sleep")) return Results.NotFound();
+        if (DesktopStatus().ValueKind == JsonValueKind.Undefined)
+            return Results.Json(new { message = "Restart the Pi to enable the desktop controls." }, statusCode: 503);
+
+        Guid id;
+        await Gate.WaitAsync(context.RequestAborted);
+        try { id = Command(action); }
+        finally { Gate.Release(); }
+
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            await Task.Delay(250, context.RequestAborted);
+            var status = DesktopStatus();
+            if (status.ValueKind != JsonValueKind.Object ||
+                !status.TryGetProperty("desktopResult", out var result) || result.ValueKind != JsonValueKind.Object ||
+                !result.TryGetProperty("id", out var requestId) || !requestId.TryGetGuid(out var completedId) ||
+                completedId != id)
+                continue;
+            var error = result.GetProperty("error").GetString();
+            return string.IsNullOrEmpty(error)
+                ? Results.Ok()
+                : Results.Json(new { message = error }, statusCode: 503);
+        }
+        return Results.Json(new { message = "The desktop did not confirm this request." }, statusCode: 503);
+    }
+
     public static void MapEndpoints(WebApplication app){
+        app.MapPost("/api/desktop/{action}", RequestDesktopAction);
         var api=app.MapGroup("/api/lessons");
         api.AddEndpointFilter(async(context,next)=>{
             var req=context.HttpContext.Request;

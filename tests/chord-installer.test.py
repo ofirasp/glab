@@ -47,7 +47,7 @@ done'''}
   assert (result.returncode==0)==(mode in ('success','previous-update','preserved-local')),(mode,result.stdout,result.stderr)
   if mode in ('success','previous-update','preserved-local'):
    assert (published/'new.txt').exists()
-   assert 'Desktop/lesson-browser.py' in entry.read_text()
+   assert 'Desktop/desktop-session.py' in entry.read_text()
    for name,hashes in manifest.items():
     contents = (project/name).read_bytes()
     if mode == 'preserved-local' and name == preserved_name:
