@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import time
+from uuid import uuid4
 
 spec = importlib.util.spec_from_file_location(
     'lesson_browser', Path(__file__).with_name('lesson-browser.py')
@@ -19,11 +20,17 @@ class DesktopSession(lesson_browser.Browser):
     screen_idle = None
     desktop_result = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.desktop_session_id = str(uuid4())
+
     def handle(self, command):
         action = command.get('action')
         if action not in ('poweroff', 'screen-sleep'):
             return super().handle(command)
         command_id = command.get('id')
+        if command.get('desktopSessionId') != self.desktop_session_id:
+            return
         if command_id == self.seen or abs(time.time() - command.get('created', 0)) > 30:
             return
         self.seen = command_id
@@ -85,7 +92,8 @@ class DesktopSession(lesson_browser.Browser):
         temporary.write_text(json.dumps({
             'heartbeat': time.time(), 'available': bool(self.executable),
             'running': self.running(), 'error': self.error, 'captureId': self.extension_id,
-            'desktopControls': True, 'desktopResult': self.desktop_result,
+            'desktopControls': True, 'desktopSessionId': self.desktop_session_id,
+            'desktopResult': self.desktop_result,
         }))
         temporary.replace(target)
 

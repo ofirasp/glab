@@ -37,10 +37,10 @@ public static class Lessons
             return doc.RootElement.TryGetProperty("captureId",out var id)&&id.GetString() is string value&&System.Text.RegularExpressions.Regex.IsMatch(value,@"^[a-p]{32}$")?value:null;
         }catch(Exception e)when(e is IOException||e is JsonException||e is UnauthorizedAccessException){return null;}
     }
-    static Guid Command(string action,string url=""){
+    static Guid Command(string action,string url="",Guid? desktopSessionId=null){
         var id = Guid.NewGuid();
         Directory.CreateDirectory(Bridge);var temp=Path.Combine(Bridge,"request.json.tmp");
-        File.WriteAllText(temp,JsonSerializer.Serialize(new{id,action,url,created=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()/1000.0},Json));
+        File.WriteAllText(temp,JsonSerializer.Serialize(new{id,action,url,desktopSessionId,created=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()/1000.0},Json));
         File.Move(temp,Path.Combine(Bridge,"request.json"),true);
         return id;
     }
@@ -71,12 +71,15 @@ public static class Lessons
         if (!KioskRequest(context) || context.Request.Headers.Origin != context.Request.Scheme + "://" + context.Request.Host)
             return Results.StatusCode(403);
         if (action is not ("poweroff" or "screen-sleep")) return Results.NotFound();
-        if (DesktopStatus().ValueKind == JsonValueKind.Undefined)
+        var desktop = DesktopStatus();
+        if (desktop.ValueKind != JsonValueKind.Object ||
+            !desktop.TryGetProperty("desktopSessionId", out var sessionId) ||
+            !sessionId.TryGetGuid(out var desktopSessionId))
             return Results.Json(new { message = "Restart the Pi to enable the desktop controls." }, statusCode: 503);
 
         Guid id;
         await Gate.WaitAsync(context.RequestAborted);
-        try { id = Command(action); }
+        try { id = Command(action, desktopSessionId: desktopSessionId); }
         finally { Gate.Release(); }
 
         for (var attempt = 0; attempt < 30; attempt++)

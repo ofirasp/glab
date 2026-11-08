@@ -111,10 +111,11 @@
   },
   "Lessons.cs": {
     "before": null,
-    "after": "5de9d54a6ad0610d7825b32506a2248b7d373f193d96a793a74b154ec40849af",
+    "after": "81a03cd69dfff26677ebe05745b5d76367438ccede9ed855486a6d43f3225339",
     "compatible": [
       "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568",
-      "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52"
+      "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52",
+      "5de9d54a6ad0610d7825b32506a2248b7d373f193d96a793a74b154ec40849af"
     ]
   },
   "Desktop/lesson-browser.py": {
@@ -238,6 +239,9 @@
   },
   "Desktop/desktop-session.py": {
     "before": null,
-    "after": "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df"
+    "after": "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507",
+    "compatible": [
+      "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df"
+    ]
   }
 }
