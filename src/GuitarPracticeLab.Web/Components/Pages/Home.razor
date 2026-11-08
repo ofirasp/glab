@@ -9,6 +9,12 @@
 <iframe class="@CursorClass" src="/practice.html" title="Guitar Practice Lab"
         style="position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000"></iframe>
 
+@if (CursorClass == "touch-kiosk")
+{
+    <div id="screenWakeShield" hidden aria-hidden="true"></div>
+    <script src="/screen-wake-shield.js" defer></script>
+}
+
 @code {
     private string CursorClass => new Uri(Navigation.Uri).IsLoopback ? "touch-kiosk" : "";
 
@@ -27,4 +33,6 @@
 html,body{margin:0;height:100%;overflow:hidden}
 iframe{display:block}
 iframe.touch-kiosk{cursor:none}
+#screenWakeShield{position:fixed;inset:0;z-index:10000;background:#000;touch-action:none;cursor:none}
+#screenWakeShield[hidden]{display:none}
 </style>

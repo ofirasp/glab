@@ -58,6 +58,12 @@ with tempfile.TemporaryDirectory() as directory:
         agent.next_idle_check = 0
         run.return_value = Mock(returncode=0, stdout='Paused\n', stderr='')
         agent.check_auto_idle()
+        assert agent.auto_blank_at is not None
+        assert not agent.auto_blanked
+        agent.status()
+        assert '"screenShield": true' in (agent.root / 'status.json').read_text()
+        agent.next_idle_check = 0
+        agent.check_auto_idle()
         assert run.call_args.args[0] == ['wlopm', '--off', '*']
         assert agent.auto_blanked
         agent.idle_marker.unlink()

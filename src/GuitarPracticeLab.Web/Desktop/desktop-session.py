@@ -28,6 +28,7 @@ class DesktopSession(lesson_browser.Browser):
         self.auto_idle_process = None
         self.idle_marker = self.root / 'desktop-idle'
         self.auto_blanked = False
+        self.auto_blank_at = None
         self.next_idle_check = 0.0
 
     def handle(self, command):
@@ -102,6 +103,7 @@ class DesktopSession(lesson_browser.Browser):
             self.idle_marker.unlink(missing_ok=True)
             self.auto_idle_process = None
         if not self.idle_marker.exists():
+            self.auto_blank_at = None
             if self.auto_blanked:
                 subprocess.run(['wlopm', '--on', '*'], check=True, timeout=3)
                 self.auto_blanked = False
@@ -116,10 +118,16 @@ class DesktopSession(lesson_browser.Browser):
             ['playerctl', '--all-players', 'status'],
             capture_output=True, text=True, timeout=2, env={**os.environ, 'LC_ALL': 'C'}
         )
-        if result.returncode and 'No players found' not in result.stderr:
+        if (result.returncode and 'No players found' not in result.stderr
+                or 'Playing' in result.stdout.splitlines() or not self.idle_marker.exists()):
+            self.auto_blank_at = None
             return
-        if 'Playing' in result.stdout.splitlines() or not self.idle_marker.exists():
+        if self.auto_blank_at is None:
+            # Give the kiosk time to cover its controls before the display powers off.
+            self.auto_blank_at = now + 1.2
+            self.next_idle_check = self.auto_blank_at
             return
+        self.auto_blank_at = None
         subprocess.run(['wlopm', '--off', '*'], check=True, timeout=3)
         self.auto_blanked = True
 
@@ -145,6 +153,7 @@ class DesktopSession(lesson_browser.Browser):
             'running': self.running(), 'error': self.error, 'captureId': self.extension_id,
             'desktopControls': True, 'desktopSessionId': self.desktop_session_id,
             'desktopResult': self.desktop_result,
+            'screenShield': self.screen_idle is not None or self.auto_blanked or self.auto_blank_at is not None,
         }))
         temporary.replace(target)
 

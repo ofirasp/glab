@@ -100,6 +100,17 @@ public static class Lessons
     }
 
     public static void MapEndpoints(WebApplication app){
+        app.MapGet("/api/desktop/screen-state", (HttpContext context) =>
+        {
+            if (!KioskRequest(context)) return Results.Json(new { active = false });
+            var status = DesktopStatus();
+            return Results.Json(new
+            {
+                active = status.ValueKind == JsonValueKind.Object &&
+                         status.TryGetProperty("screenShield", out var shield) &&
+                         shield.ValueKind == JsonValueKind.True
+            });
+        });
         app.MapPost("/api/desktop/{action}", RequestDesktopAction);
         var api=app.MapGroup("/api/lessons");
         api.AddEndpointFilter(async(context,next)=>{
