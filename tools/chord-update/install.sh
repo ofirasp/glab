@@ -28,7 +28,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[]),*allowed.get('preserve',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
-sudo apt-get install -y poppler-utils alsa-utils swayidle wlopm
+sudo apt-get install -y poppler-utils alsa-utils swayidle wlopm playerctl
 mkdir -p "$backup/source" "$stage"
 python3 - <<'PY'
 import json,os,shutil

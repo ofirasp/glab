@@ -37,17 +37,30 @@ const server=http.createServer((req,res)=>{
  try{
  browser=await chromium.launch({headless:true,...(process.env.GPL_TEST_CHROME?{executablePath:process.env.GPL_TEST_CHROME}:{})});
  const page=await browser.newPage({viewport:{width:800,height:480},hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{
+  window.testScreenLocks=0;
+  Object.defineProperty(navigator,'wakeLock',{value:{async request(){
+   window.testScreenLocks++;
+   const sentinel=new EventTarget();
+   sentinel.release=async()=>{window.testScreenLocks--;sentinel.dispatchEvent(new Event('release'));};
+   return sentinel;
+  }}});
+ });
  await page.goto(`http://127.0.0.1:${server.address().port}/song-library.html`);
  const openSong=async title=>{if(!await page.locator('#libraryDialog').isVisible())await page.locator('#libraryButton').tap();await page.locator('.songrow').filter({hasText:title}).getByRole('button',{name:'Open',exact:true}).tap();await page.waitForFunction(()=>!document.querySelector('#markCue').disabled);};
  const isOn=()=>page.locator('#follow').getAttribute('aria-pressed').then(v=>v==='true');
  await openSong('With cues');await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  check('autoplay enables Follow for a song with cues',await isOn());
+ await page.waitForFunction(()=>window.testScreenLocks===1);
+ check('song playback holds a screen wake lock',await page.evaluate(()=>window.testScreenLocks===1));
  const simple=page.getByRole('switch',{name:'Simple version'});
  const simplePage=page.waitForResponse(r=>r.url().includes('/page/1?')&&r.url().includes('variant=simple'));
  await simple.tap();await simplePage;
  check('switching to simple keeps Follow on',await isOn()&&await page.locator('#follow').isEnabled());
  await page.waitForFunction(()=>document.querySelector('#pageLoading').hidden);
  await page.locator('#audio').evaluate(a=>a.pause());
+ await page.waitForFunction(()=>window.testScreenLocks===0);
+ check('pausing releases the screen wake lock',await page.evaluate(()=>window.testScreenLocks===0));
  await page.locator('#audio').evaluate(a=>a.currentTime=2);
  await page.waitForFunction(()=>{
   const pane=document.querySelector('#pdfViewport');

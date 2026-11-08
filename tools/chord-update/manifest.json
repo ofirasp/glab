@@ -15,13 +15,14 @@
   },
   "wwwroot/song-library.html": {
     "before": "22727d4dd74be112f32fbc8a4e59cfe268d05a8b8eaab13d04023ac8cf9bf4a6",
-    "after": "812b6fa4bf90320436504d50d56c0b5f12a90b7f4ef074c2f38aaed59124085b",
+    "after": "0f09b9b66af8e69f7d08effd504bd7736c9ec6fbeb6ea238d1681fa2d8be03e9",
     "compatible": [
       "7b16ac004ae15c4915c43575be8c2b62438fe48be2540cdbbc5ceceb0af2581f",
       "47fae930f6fbae05230bc8b26035d515e45d8479de20339dab9a764f5fd0622f",
       "60990f9ff2985ac7d7e3d1bb988e4ba9546833bb2b1050a155ce00717520ff1b",
       "0fd3b9d7954c07191b901ac3bf27dc9a25d85abf0adb4469dc73f81c5a78c881",
-      "53d96dbe001a2c5f0e1d56de6dab127bc7f6e4dccd8f2a3c0e8ac98c8e67cc45"
+      "53d96dbe001a2c5f0e1d56de6dab127bc7f6e4dccd8f2a3c0e8ac98c8e67cc45",
+      "812b6fa4bf90320436504d50d56c0b5f12a90b7f4ef074c2f38aaed59124085b"
     ]
   },
   "wwwroot/song-library.css": {
@@ -184,11 +185,12 @@
   },
   "wwwroot/scale-practice.html": {
     "before": null,
-    "after": "0fa23a0a146391ebd4dc3d54f40a3a6b545fc96d9708302c68bf05a635906f5f",
+    "after": "424a29c47bcca617e0bf2ef1e8349bfd013bf8b8bd0ed41c906e15e9d5322f27",
     "compatible": [
       "6f74c789a72b83c94e7f69f25a3046e89ef9eff6543139c47b7bd079094e0a4d",
       "ea78575a0ee07624d3279555d3622d4a23685e8c5a89da0a48f0b85bc278fa6a",
-      "0a5eebdf8b01c59980cbe6f677fc45c209c10faaf7be68302a95273ceaf8de58"
+      "0a5eebdf8b01c59980cbe6f677fc45c209c10faaf7be68302a95273ceaf8de58",
+      "0fa23a0a146391ebd4dc3d54f40a3a6b545fc96d9708302c68bf05a635906f5f"
     ]
   },
   "wwwroot/scale-practice.css": {
@@ -200,11 +202,12 @@
   },
   "wwwroot/scale-practice.js": {
     "before": null,
-    "after": "a4c0f7255c8c84d0649e616199b8027de08cc4976347cb073a4a0cdaeb088cce",
+    "after": "777a44cd211913c936d243f5fe35300cdecd5e673ed4f0883d7785083fe8f742",
     "compatible": [
       "bc2196bb86209f91e07f71c9e0bfce99e7bc3ddfd30bc9e8efebaf71f5dceb5e",
       "49db7d1c0a948226321022e837e7f124048ad22c4cfbf0619c8532efd838d853",
-      "18baa680e8996ff2c9f7548861d2969dc80fd6230e6f17753b6d7ad790bd5c94"
+      "18baa680e8996ff2c9f7548861d2969dc80fd6230e6f17753b6d7ad790bd5c94",
+      "a4c0f7255c8c84d0649e616199b8027de08cc4976347cb073a4a0cdaeb088cce"
     ]
   },
   "wwwroot/fretboard-map.html": {
@@ -239,9 +242,14 @@
   },
   "Desktop/desktop-session.py": {
     "before": null,
-    "after": "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507",
+    "after": "31e6c4468a517685c3fd99f45fa275e5aa1c9eb2047f13e30c0fd19a1ae2fd23",
     "compatible": [
-      "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df"
+      "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df",
+      "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507"
     ]
+  },
+  "wwwroot/playback-wake-lock.js": {
+    "before": null,
+    "after": "00b2b5af76b75d9499a51c025a5e0061b4c34a0069dc4597757b54bdb8705ee3"
   }
 }

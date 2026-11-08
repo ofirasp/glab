@@ -2,6 +2,7 @@
 """Run lesson browsing and the kiosk's power controls in the desktop session."""
 import importlib.util
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -23,6 +24,11 @@ class DesktopSession(lesson_browser.Browser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.desktop_session_id = str(uuid4())
+        self.auto_idle_started = False
+        self.auto_idle_process = None
+        self.idle_marker = self.root / 'desktop-idle'
+        self.auto_blanked = False
+        self.next_idle_check = 0.0
 
     def handle(self, command):
         action = command.get('action')
@@ -76,7 +82,51 @@ class DesktopSession(lesson_browser.Browser):
                 return
         subprocess.run(['xset', 's', 'activate'], check=True, timeout=5)
 
+    def start_auto_idle(self):
+        self.idle_marker.unlink(missing_ok=True)
+        if os.environ.get('WAYLAND_DISPLAY'):
+            env = {**os.environ, 'GPL_IDLE_MARKER': str(self.idle_marker)}
+            self.auto_idle_process = subprocess.Popen([
+                'swayidle', '-w', 'timeout', '600', 'touch "$GPL_IDLE_MARKER"',
+                'resume', "rm -f \"$GPL_IDLE_MARKER\"; wlopm --on '*'"
+            ], env=env)
+        elif os.environ.get('DISPLAY'):
+            subprocess.run(['xset', 's', '600'], check=True, timeout=3)
+
+    def check_auto_idle(self):
+        if not self.auto_idle_started:
+            self.auto_idle_started = True
+            self.start_auto_idle()
+        if self.auto_idle_process and self.auto_idle_process.poll() is not None:
+            self.idle_marker.unlink(missing_ok=True)
+            if self.auto_blanked:
+                subprocess.run(['wlopm', '--on', '*'], check=True, timeout=3)
+            self.auto_idle_process = None
+        if not self.idle_marker.exists():
+            self.auto_blanked = False
+            return
+        now = time.monotonic()
+        if self.auto_blanked or now < self.next_idle_check:
+            return
+        self.next_idle_check = now + 3
+        # Chromium publishes playback via MPRIS. This also catches playing
+        # background tabs where the page cannot hold a screen wake lock.
+        result = subprocess.run(
+            ['playerctl', '--all-players', 'status'],
+            capture_output=True, text=True, timeout=2, env={**os.environ, 'LC_ALL': 'C'}
+        )
+        if result.returncode and 'No players found' not in result.stderr:
+            return
+        if 'Playing' in result.stdout.splitlines() or not self.idle_marker.exists():
+            return
+        subprocess.run(['wlopm', '--off', '*'], check=True, timeout=3)
+        self.auto_blanked = True
+
     def status(self):
+        try:
+            self.check_auto_idle()
+        except (OSError, subprocess.SubprocessError) as exc:
+            logging.warning('Automatic screen blanking: %s', exc)
         if self.screen_idle and (self.screen_idle.poll() is not None or self.wake_marker.exists()):
             if self.screen_idle.poll() is None:
                 self.screen_idle.terminate()
@@ -101,8 +151,9 @@ class DesktopSession(lesson_browser.Browser):
         try:
             super().run()
         finally:
-            if self.screen_idle and self.screen_idle.poll() is None:
-                self.screen_idle.terminate()
+            for process in (self.screen_idle, self.auto_idle_process):
+                if process and process.poll() is None:
+                    process.terminate()
 
 
 if __name__ == '__main__':

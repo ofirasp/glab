@@ -33,6 +33,7 @@ function draw(){
  el('fretboard').replaceChildren(svg);el('target').textContent=mode==='follow'?current.name: S.names[scale.root];el('detail').textContent=mode==='follow'?'String '+(6-current.string)+(current.fret?' · fret '+current.fret:' · open'):scale.name;el('progress').textContent=mode==='follow'?(index+1)+' / '+sequence.length:'Root notes in red';shownIndex=index;
 }
 function lock(){
+ window.GuitarScreenAwake?.setGeneratedPlayback(running&&mode==='along'&&el('backing').value==='groove');
  for(const id of ['scaleKey','scaleType','scalePosition','direction','backing','chooseAudio'])el(id).disabled=running||preparing;
  for(const id of ['previous','next'])el(id).disabled=running||preparing;
  el('play').disabled=preparing||(mode==='along'&&el('backing').value==='file'&&!fileUrl);el('play').textContent=preparing?'Starting…':running?'Pause':'Start';

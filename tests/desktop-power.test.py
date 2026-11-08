@@ -34,3 +34,30 @@ with tempfile.TemporaryDirectory() as directory:
         assert run.call_count == 2
 
 print('PASS shutdown runs once in its original desktop session and cannot replay after restart')
+
+with tempfile.TemporaryDirectory() as directory:
+    agent = module.DesktopSession(Path(directory))
+    with patch.dict(module.os.environ, {'WAYLAND_DISPLAY': 'test-wayland'}):
+        with patch.object(module.subprocess, 'Popen', return_value=Mock(poll=Mock(return_value=None))) as launch:
+            agent.check_auto_idle()
+            assert launch.call_args.args[0][:4] == ['swayidle', '-w', 'timeout', '600']
+
+    with patch.object(module.subprocess, 'run') as run:
+        agent.check_auto_idle()
+        run.assert_not_called()
+        agent.idle_marker.touch()
+        run.return_value = Mock(returncode=0, stdout='Paused\nPlaying\n', stderr='')
+        agent.check_auto_idle()
+        run.assert_called_once()
+        assert not agent.auto_blanked
+
+        agent.next_idle_check = 0
+        run.return_value = Mock(returncode=0, stdout='Paused\n', stderr='')
+        agent.check_auto_idle()
+        assert run.call_args.args[0] == ['wlopm', '--off', '*']
+        assert agent.auto_blanked
+        agent.idle_marker.unlink()
+        agent.check_auto_idle()
+        assert not agent.auto_blanked
+
+print('PASS ten-minute Wayland timeout, active-media suppression, blanking, and wake reset')
