@@ -276,10 +276,39 @@ public static class SongLibrary
         var stem = string.IsNullOrWhiteSpace(song.PdfStem) ? song.Title : song.PdfStem;
         if (stem.EndsWith("-simple", StringComparison.OrdinalIgnoreCase) || !Directory.Exists(Recordings))
             throw new FileNotFoundException("No matching simple PDF.");
-        var expected = stem + "-simple.pdf";
-        var matches = Directory.EnumerateFiles(Recordings)
-            .Where(path => string.Equals(Path.GetFileName(path), expected, StringComparison.OrdinalIgnoreCase))
-            .Take(2).ToArray();
+        var pdfs = Directory.EnumerateFiles(Recordings)
+            .Where(path => Path.GetExtension(path).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            .ToLookup(path => Path.GetFileNameWithoutExtension(path).Normalize(), StringComparer.OrdinalIgnoreCase);
+        var matches = pdfs[stem.Normalize() + "-simple"].Take(2).ToArray();
+        if (matches.Length == 0)
+        {
+            // Older library entries retained the editable title but not the upload filename.
+            // Recover the filename from an identical standard PDF beside its simple version.
+            var imported = new FileInfo(Path.Combine(Folder(song.Id), song.PdfFile));
+            var hash = song.PdfHash;
+            if (string.IsNullOrEmpty(hash))
+            {
+                using var original = imported.OpenRead();
+                hash = Convert.ToHexString(SHA256.HashData(original));
+            }
+            var recovered = new List<string>();
+            foreach (var group in pdfs)
+            {
+                if (group.Key.EndsWith("-simple", StringComparison.OrdinalIgnoreCase)) continue;
+                var alternatives = pdfs[group.Key + "-simple"].Take(2).ToArray();
+                if (alternatives.Length != 1) continue;
+                foreach (var candidatePath in group)
+                {
+                    var candidate = new FileInfo(candidatePath);
+                    if (candidate.LinkTarget is not null || candidate.Length != imported.Length) continue;
+                    using var stream = candidate.OpenRead();
+                    if (!Convert.ToHexString(SHA256.HashData(stream)).Equals(hash, StringComparison.OrdinalIgnoreCase)) continue;
+                    recovered.Add(alternatives[0]);
+                    break;
+                }
+            }
+            matches = recovered.Take(2).ToArray();
+        }
         if (matches.Length != 1) throw new FileNotFoundException("No unique matching simple PDF.");
         var file = new FileInfo(matches[0]);
         if (file.LinkTarget is not null || file.Length > 20 * 1024 * 1024)
