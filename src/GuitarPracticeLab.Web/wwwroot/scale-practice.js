@@ -103,11 +103,24 @@ function grooveDescription(){return progression.map(chord=>chord.name).join(' �
 function updateGrooveInfo(){
  if(el('backing').value==='groove')el('trackInfo').textContent=grooveDescription();
 }
-function trackChanged(){stop();media.removeAttribute('src');media.load();const value=el('backing').value;el('chooseAudio').hidden=value!=='file';el('trackInfo').textContent=value==='groove'?grooveDescription():value==='file'?(fileName||'Choose an audio file from this device. It stays on this device.'):'Song-library backing. Choose its key manually; audio is not transposed.';lock();if(value==='file'&&!fileUrl)el('audioFile').click();}
+function trackChanged(){stop();media.removeAttribute('src');media.load();const value=el('backing').value;el('chooseAudio').hidden=value!=='file';el('trackInfo').textContent=value==='groove'?grooveDescription():value==='file'?(fileName||'Choose an audio file from this device. It stays on this device.'):'Choose the matching key and scale for this backing track.';lock();if(value==='file'&&!fileUrl)el('audioFile').click();}
 el('backing').onchange=trackChanged;el('chooseAudio').onclick=()=>el('audioFile').click();el('loopTrack').onchange=()=>{media.loop=el('loopTrack').checked;};
 el('audioFile').onchange=()=>{const file=el('audioFile').files[0];if(!file)return;stop();if(fileUrl)URL.revokeObjectURL(fileUrl);fileUrl=URL.createObjectURL(file);fileName=file.name;media.removeAttribute('src');media.load();el('backing').value='file';el('chooseAudio').hidden=false;el('trackInfo').textContent=fileName+' · choose its matching scale key';lock();};
-media.onended=()=>stop('Track finished. Tap Start to play again.');media.onerror=()=>{if(running||preparing)stop('Audio could not be loaded. Check the file or attached song backing.');};
-async function loadTracks(){try{const response=await fetch('/api/song-library',{signal:AbortSignal.timeout(8000)});if(!response.ok)throw Error();const songs=await response.json();for(const song of songs){if(!song.hasBacking||!/^[-a-f0-9]{36}$/i.test(song.id))continue;const key='song:'+song.id;tracks.set(key,{url:'/api/song-library/'+song.id+'/audio?variant=backing'});const o=document.createElement('option');o.value=key;o.textContent=song.title+' · backing';el('backing').append(o);}}catch{/* The built-in loop and local files remain available. */}}
+media.onended=()=>stop('Track finished. Tap Start to play again.');media.onerror=()=>{if(running||preparing)stop('Audio could not be loaded. Check the selected backing file.');};
+async function loadTracks(){
+ try{
+  const response=await fetch('/api/scale-backing',{signal:AbortSignal.timeout(8000)});
+  if(!response.ok)return;
+  for(const track of await response.json()){
+   const key='scale:'+track.name;
+   tracks.set(key,{url:'/api/scale-backing/audio?'+new URLSearchParams({name:track.name})});
+   const option=document.createElement('option');
+   option.value=key;
+   option.textContent=track.title;
+   el('backing').append(option);
+  }
+ }catch{/* Built-in and local-file playback are still available. */}
+}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop('Paused while away. Tap Start to continue.');});window.addEventListener('pagehide',()=>{stop();if(fileUrl)URL.revokeObjectURL(fileUrl);});
 updateScale();setMode(mode);loadTracks();
 })();

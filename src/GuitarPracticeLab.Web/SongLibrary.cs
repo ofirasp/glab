@@ -30,9 +30,28 @@ public static class SongLibrary
         s.BackingName, s.BackingDuration, s.BackingImportMessage,
         hasAudio = !string.IsNullOrEmpty(s.AudioFile), hasBacking = !string.IsNullOrEmpty(s.BackingFile) };
 
+    static IEnumerable<FileInfo> ScaleBackingTracks()
+    {
+        var folder = new DirectoryInfo(Path.Combine(Recordings, "Scale-Backing-Tracks"));
+        if (!folder.Exists || folder.LinkTarget is not null) return [];
+        return folder.EnumerateFiles().Where(file =>
+            file.Extension.Equals(".mp3", StringComparison.OrdinalIgnoreCase) &&
+            !file.Name.StartsWith('.') && file.LinkTarget is null);
+    }
+
     public static void MapEndpoints(WebApplication app)
     {
         Directory.CreateDirectory(Root);
+        app.MapGet("/api/scale-backing", () => Guard(() => Task.FromResult<IResult>(
+            Results.Ok(ScaleBackingTracks().OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(file => new { file.Name, title = Path.GetFileNameWithoutExtension(file.Name) }).ToArray()))));
+        app.MapGet("/api/scale-backing/audio", (string name) => Guard(() =>
+        {
+            var file = ScaleBackingTracks().FirstOrDefault(candidate => candidate.Name == name);
+            if (file is null) throw new FileNotFoundException("Scale backing track not found.");
+            return Task.FromResult<IResult>(Results.File(file.FullName, "audio/mpeg", enableRangeProcessing: true));
+        }));
+
         var api = app.MapGroup("/api/song-library");
         api.AddEndpointFilter(async (context, next) =>
         {
