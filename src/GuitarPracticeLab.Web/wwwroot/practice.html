@@ -90,7 +90,7 @@ section{min-height:0;padding:12px}
 #practice button{flex:1}
 nav button{font-size:17px}
 #practice{gap:5px}#remaining{font-size:56px}
-#practice .exercise-menu{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#practice .exercise-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #practice .exercise-menu button{min-height:42px;font-size:16px;padding:6px 10px}
 #menuBack{min-height:40px;padding:5px 12px;font-size:16px}
 main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
@@ -188,7 +188,7 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </section>
 
 <section id="practice" hidden>
-  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button></div>
+  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button><button id="findNotes" onclick="location.href='/fretboard-map.html?mode=quiz'">Find the Notes</button></div>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>

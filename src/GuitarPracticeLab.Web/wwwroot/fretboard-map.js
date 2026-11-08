@@ -54,5 +54,7 @@ el('quiz').onclick=()=>mode(true);el('explore').onclick=()=>mode(false);el('skip
 el('hearMap').onclick=()=>sound(quiz?notes.find(n=>n.pc===target&&n.inScale):selected);
 el('mapVolume').oninput=()=>{muted=false;volume();};el('mapMute').onclick=()=>{muted=!muted;volume();};el('mapHelp').onclick=()=>el('mapHelpDialog').showModal();el('mapCloseHelp').onclick=()=>el('mapHelpDialog').close();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAudio();if(pending){cancelNext();if(quiz)nextQuestion();}}});window.addEventListener('pagehide',()=>{cancelNext();stopAudio();});
-rebuild();
+const openQuiz = new URLSearchParams(location.search).get('mode') === 'quiz';
+if (openQuiz) el('mapBack').href = '/practice.html?tab=practice';
+mode(openQuiz);
 })();

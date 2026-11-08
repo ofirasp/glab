@@ -79,7 +79,7 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "7a292f94b51945697f30453f9266dd2cf28090a4333db48f8b4561cbaacb7699",
+    "after": "70c5bb774c8c841c2e58f72f113d3f115ec057d56c58405d3f87b95fd794a3b7",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
       "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
@@ -89,7 +89,8 @@
       "52d6fda4f035c41b956c85399d0e507939417d412ae2556c6c1c33149d28140c",
       "4301eed69d4d1e7fd59baa0b7fdf1b65dd728c666287d190bbe4016fcf0aa0f5",
       "3bbd25a86da627f2707cf4a48f3db5d7a5508829f5f61da88a2379ab52595333",
-      "6c71869cc2901e0ed8a71105fd9359bc4e0ef22ec5801824a01ad7933e125134"
+      "6c71869cc2901e0ed8a71105fd9359bc4e0ef22ec5801824a01ad7933e125134",
+      "7a292f94b51945697f30453f9266dd2cf28090a4333db48f8b4561cbaacb7699"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -219,9 +220,10 @@
   },
   "wwwroot/fretboard-map.html": {
     "before": null,
-    "after": "5edba98ceda873b332e755dbd6e7c6a023b9409aa5b37ccdc5fd18884adb88bf",
+    "after": "f6eb9466727e43bd5db9d5f9da1789b87b0ae5655515408440c20c995f368434",
     "compatible": [
-      "dbbfd8902f2b9fda4eb9cc991850d3aa8f485e18787ffd461936dc3769f3123e"
+      "dbbfd8902f2b9fda4eb9cc991850d3aa8f485e18787ffd461936dc3769f3123e",
+      "5edba98ceda873b332e755dbd6e7c6a023b9409aa5b37ccdc5fd18884adb88bf"
     ]
   },
   "wwwroot/fretboard-map.css": {
@@ -233,7 +235,10 @@
   },
   "wwwroot/fretboard-map.js": {
     "before": null,
-    "after": "1c5d3da3c79037d763304afdd5ddc59116e2e3c9e8ba93d188a91bd908d2456e"
+    "after": "72762384123751fd8c82a033a4ac89fab012dcb28dc8e402dcab03aba64cb701",
+    "compatible": [
+      "1c5d3da3c79037d763304afdd5ddc59116e2e3c9e8ba93d188a91bd908d2456e"
+    ]
   },
   "wwwroot/fretboard-notes.js": {
     "before": null,
