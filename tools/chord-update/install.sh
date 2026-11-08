@@ -25,7 +25,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest()!=allowed['after']:raise SystemExit('Incomplete update: '+name)
  target=p/name
  value=hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None
- if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
+ if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[]),*allowed.get('preserve',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
 sudo apt-get install -y poppler-utils alsa-utils
@@ -86,11 +86,15 @@ PY
 trap restore EXIT
 source_changed=1
 python3 - <<'PYCODE'
-import json,os,shutil
+import hashlib,json,os,shutil
 from pathlib import Path
 p,s,m=(Path(os.environ[k]) for k in ('CHORD_PROJECT','CHORD_PAYLOAD','CHORD_MANIFEST'))
-for name in json.loads(m.read_text()):
- target=p/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(s/name,target)
+for name,allowed in json.loads(m.read_text()).items():
+ target=p/name
+ if allowed.get('preserve') and target.exists():
+  if hashlib.sha256(target.read_bytes()).hexdigest() in allowed['preserve']:continue
+ target.parent.mkdir(parents=True,exist_ok=True)
+ shutil.copy2(s/name,target)
 PYCODE
 # Build before touching the running service.
 dotnet publish "$project" -c Release -o "$stage"

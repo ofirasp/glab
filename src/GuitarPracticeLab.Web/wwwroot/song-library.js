@@ -190,12 +190,27 @@ function pagePoint() {
     x: $('pdfViewport').scrollLeft / Math.max(1, $('pdfImage').clientWidth)
   };
 }
+function cueScrollTop(position, pageAnchor) {
+  const pane = $('pdfViewport'), image = $('pdfImage');
+  const bottom = Math.max(0, pane.scrollHeight - pane.clientHeight);
+  const top = Number.isFinite(pageAnchor) ? pageAnchor * image.clientHeight : position * bottom;
+  return Math.max(0, Math.min(bottom, top));
+}
 function restorePosition(position, pageAnchor = null, horizontal = 0) {
   const pane = $('pdfViewport'), image = $('pdfImage');
-  pane.scrollTop = pageAnchor !== null && Number.isFinite(pageAnchor)
-    ? pageAnchor * image.clientHeight
-    : position * Math.max(0, pane.scrollHeight - pane.clientHeight);
+  pane.scrollTop = cueScrollTop(position, pageAnchor);
   pane.scrollLeft = horizontal * image.clientWidth;
+}
+function scrollBetweenCues(current, next, time) {
+  if (!pageReady || !current || !next || next.time <= current.time || next.page < current.page) return;
+  const pane = $('pdfViewport');
+  const start = cueScrollTop(current.position, current.pageAnchor);
+  const end = next.page === current.page
+    ? cueScrollTop(next.position, next.pageAnchor)
+    : Math.max(0, pane.scrollHeight - pane.clientHeight);
+  const progress = Math.max(0, Math.min(1, (time - current.time) / (next.time - current.time)));
+  const top = start + (end - start) * progress;
+  if (Math.abs(pane.scrollTop - top) >= 1) pane.scrollTop = top;
 }
 function seekPdf(cue) {
   const destination = cue || { page: 1, position: 0, pageAnchor: 0 };
@@ -449,14 +464,17 @@ function tick() {
   $('readerClock').textContent = $('toolsClock').textContent = $('clock').textContent;
   const cues = song.cues;
   let index = -1;
-  for (let i = 0; i < cues.length; i++) { if (cues[i].time <= now + 0.05) index = i; else break; }
+  for (let i = 0; i < cues.length; i++) { if (cues[i].time <= now) index = i; else break; }
   const cue = cues[index], nextCue = cues[index + 1];
   $('currentSection').textContent = cue?.label || (cues.length ? 'Before first cue' : 'No cue yet');
   $('nextSection').textContent = nextCue ? `Next: ${nextCue.label} at ${clock(nextCue.time)}` :
     cue ? 'Final saved section' : 'Move the PDF to a section, then tap Mark here.';
-  if (following && activeCue !== index) {
-    activeCue = index;
-    seekPdf(cue);
+  if (following) {
+    if (activeCue !== index) {
+      activeCue = index;
+      seekPdf(cue);
+    }
+    scrollBetweenCues(cue, nextCue, now);
   }
 }
 document.querySelectorAll('[data-close]').forEach(button => {

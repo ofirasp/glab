@@ -2,12 +2,13 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../src/GuitarPracticeLab.Web/wwwroot');
-const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64');
+const sheet='<svg xmlns="http://www.w3.org/2000/svg" width="500" height="2000"><rect width="500" height="2000" fill="white"/></svg>';
 // A small valid WAV recording, generated locally, is served as audio for the test.
 const samples=48000*20,wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
 const make=(id,cues)=>({id,title:cues.length?'With cues':'Without cues',pages:1,hasAudio:true,hasBacking:false,audioName:'test.wav',duration:20,notes:'',cues,updated:'test'});
 const songs=[make('11111111-1111-1111-1111-111111111111',[{time:0,page:1,position:0,pageAnchor:0,label:'Intro',zoom:1}]),make('22222222-2222-2222-2222-222222222222',[])];
 songs[0].pages=2;
+songs[0].cues.push({time:4,page:1,position:.6,label:'Middle',zoom:1});
 songs[0].cues.push({time:5,page:2,position:0,pageAnchor:0,label:'Verse',zoom:1});
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
@@ -16,8 +17,16 @@ const server=http.createServer((req,res)=>{
   res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({pages:2,updated:'simple-test'}));
  }
  if(url.pathname.endsWith('/chords')){res.setHeader('Content-Type','application/json');return res.end('[]');}
- if(url.pathname.includes('/page/')){res.setHeader('Content-Type','image/png');return res.end(png);}
- if(url.pathname.endsWith('/audio')){res.setHeader('Content-Type','audio/wav');return res.end(wav);}
+ if(url.pathname.includes('/page/')){res.setHeader('Content-Type','image/svg+xml');return res.end(sheet);}
+ if(url.pathname.endsWith('/audio')){
+  res.setHeader('Content-Type','audio/wav');
+  res.setHeader('Accept-Ranges','bytes');
+  const range=/^bytes=(\d+)-(\d*)$/.exec(req.headers.range||'');
+  if(!range)return res.end(wav);
+  const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),wav.length-1):wav.length-1;
+  res.writeHead(206,{'Content-Range':`bytes ${start}-${end}/${wav.length}`,'Content-Length':end-start+1});
+  return res.end(wav.subarray(start,end+1));
+ }
  const name=path.resolve(root,'.'+decodeURIComponent(url.pathname));if(!name.startsWith(root+path.sep)){res.statusCode=403;return res.end();}
  if(!fs.existsSync(name)){res.statusCode=404;return res.end();}
  res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.js')?'text/javascript':'text/css');res.end(fs.readFileSync(name));
@@ -37,12 +46,29 @@ const server=http.createServer((req,res)=>{
  const simplePage=page.waitForResponse(r=>r.url().includes('/page/1?')&&r.url().includes('variant=simple'));
  await simple.tap();await simplePage;
  check('switching to simple keeps Follow on',await isOn()&&await page.locator('#follow').isEnabled());
+ await page.waitForFunction(()=>document.querySelector('#pageLoading').hidden);
+ await page.locator('#audio').evaluate(a=>a.pause());
+ await page.locator('#audio').evaluate(a=>a.currentTime=2);
+ await page.waitForFunction(()=>{
+  const pane=document.querySelector('#pdfViewport');
+  return Math.abs(pane.scrollTop/(pane.scrollHeight-pane.clientHeight)-0.3)<.02;
+ });
+ const scrollFraction=await page.locator('#pdfViewport').evaluate(pane=>pane.scrollTop/(pane.scrollHeight-pane.clientHeight));
+ check('halfway through same-page cues scrolls halfway to the next position',Math.abs(scrollFraction-.3)<.02);
+ await page.locator('#audio').evaluate(a=>a.currentTime=4.5);
+ await page.waitForFunction(()=>{
+  const pane=document.querySelector('#pdfViewport');
+  return Math.abs(pane.scrollTop/(pane.scrollHeight-pane.clientHeight)-0.8)<.02;
+ });
+ const pageEndFraction=await page.locator('#pdfViewport').evaluate(pane=>pane.scrollTop/(pane.scrollHeight-pane.clientHeight));
+ check('follow scrolls toward the page bottom before turning',Math.abs(pageEndFraction-.8)<.02);
  const nextCuePage=page.waitForResponse(r=>r.url().includes('/page/2?')&&r.url().includes('variant=simple'));
- await page.locator('#seek').fill('6');await nextCuePage;
+ await page.locator('#audio').evaluate(a=>a.currentTime=6);await nextCuePage;
  check('following a later cue loads the simple PDF page',await page.locator('#pageNumber').textContent().then(t=>t.startsWith('2 / 2')));
  const standardPage=page.waitForResponse(r=>r.url().includes('/page/2?')&&!r.url().includes('variant=simple'));
  await simple.tap();await standardPage;
  check('switching back keeps Follow on and seeks to the same cue',await isOn());
+ await page.locator('#audio').evaluate(a=>a.play());
  await page.locator('#follow').tap();check('manual off still works during playback',!await isOn());
  await page.locator('#play').tap();await page.locator('#play').tap();await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  await page.waitForFunction(()=>document.querySelector('#follow').getAttribute('aria-pressed')==='true');
