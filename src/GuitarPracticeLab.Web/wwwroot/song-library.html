@@ -35,27 +35,30 @@
       <div id="pdfSurface"><img id="pdfImage" alt="Selected chord sheet page" hidden><div id="chordTargets"></div></div>
       <span id="pageLoading" hidden>Loading page…</span>
     </div>
-    <div class="cuebar">
-      <button id="follow" aria-pressed="false" disabled>Follow off</button>
-      <button id="markCue" disabled>Mark here</button>
-      <button id="watchLesson" hidden disabled>Watch lesson ↗</button>
-      <button id="chordListButton" disabled>Chords</button>
-      <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
+    <div id="readerControls">
+      <div class="cuebar">
+        <button id="follow" aria-pressed="false" disabled>Follow off</button>
+        <button id="markCue" disabled>Mark here</button>
+        <button id="watchLesson" hidden disabled>Watch lesson ↗</button>
+        <button id="chordListButton" disabled>Chords</button>
+        <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
+      </div>
+      <div class="readerbar" id="readerBar">
+        <button id="readerBack" disabled>−5s</button>
+        <button id="readerPlay" class="primary" disabled>Play</button>
+        <button id="readerForward" disabled>+5s</button>
+        <span id="readerClock">0:00 / 0:00</span>
+        <button id="readerLoop" aria-pressed="false" disabled>Loop off</button>
+        <button id="readerTrack" disabled>Original</button>
+        <button id="readerTools">Tools</button>
+      </div>
+      <div class="volumecontrols reader-volume" aria-label="Song volume">
+        <button id="readerMute" aria-label="Mute song" aria-pressed="false">Mute</button>
+        <input id="readerVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Reader song volume">
+        <output id="readerVolumeValue" for="readerVolume">100%</output>
+      </div>
     </div>
-    <div class="readerbar" id="readerBar">
-      <button id="readerBack" disabled>−5s</button>
-      <button id="readerPlay" class="primary" disabled>Play</button>
-      <button id="readerForward" disabled>+5s</button>
-      <span id="readerClock">0:00 / 0:00</span>
-      <button id="readerLoop" aria-pressed="false" disabled>Loop off</button>
-      <button id="readerTrack" disabled>Original</button>
-      <button id="readerTools">Tools</button>
-    </div>
-    <div class="volumecontrols reader-volume" aria-label="Song volume">
-      <button id="readerMute" aria-label="Mute song" aria-pressed="false">Mute</button>
-      <input id="readerVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Reader song volume">
-      <output id="readerVolumeValue" for="readerVolume">100%</output>
-    </div>
+    <button id="readerControlsToggle" type="button" aria-expanded="false" aria-controls="readerControls" hidden>▴ Controls</button>
   </section>
   <section class="companion" aria-label="Play along controls">
     <div class="songheading"><button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button><h1 id="songTitle">Choose a song</h1></div>

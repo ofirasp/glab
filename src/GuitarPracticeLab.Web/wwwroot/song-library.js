@@ -46,7 +46,7 @@ for (const prefix of ['song', 'reader']) {
 }
 audio.addEventListener('volumechange', syncVolume);
 syncVolume();
-let preferredZoom = 1.5, readerMode = false;
+let preferredZoom = 1.5, readerMode = false, readerControlsOpen = false;
 try {
   const saved = Number(localStorage.getItem('guitar-reading-zoom'));
   if (saved >= 1 && saved <= 3) preferredZoom = saved;
@@ -671,16 +671,33 @@ $('trackToggle').onclick = $('readerTrack').onclick = () => switchTrack(audioVar
 $('originalTrack').onclick = () => switchTrack('original');
 $('backingTrack').onclick = () => switchTrack('backing');
 $('clearLoop').onclick = () => { loopA = loopB = null; looping = false; update(); };
+function syncReaderControls() {
+  document.body.classList.toggle('reader', readerMode);
+  document.body.classList.toggle('reader-controls-collapsed', readerMode && !readerControlsOpen);
+  $('readerControls').hidden = readerMode && !readerControlsOpen;
+  const toggle = $('readerControlsToggle');
+  toggle.hidden = !readerMode;
+  toggle.setAttribute('aria-expanded', String(readerControlsOpen));
+  toggle.textContent = readerControlsOpen ? '▾ Hide controls' : '▴ Controls';
+  toggle.setAttribute('aria-label', readerControlsOpen ? 'Hide controls' : 'Show controls');
+}
 function setReaderMode(value) {
   const point = pagePoint();
   readerMode = value;
-  document.body.classList.toggle('reader', readerMode);
+  readerControlsOpen = false;
+  syncReaderControls();
   try { localStorage.setItem('guitar-reading-view', readerMode ? 'full' : 'split'); } catch {}
   restorePosition(0, point.y, point.x);
   update();
 }
 $('readerToggle').onclick = () => setReaderMode(!readerMode);
-document.body.classList.toggle('reader', readerMode);
+$('readerControlsToggle').onclick = () => {
+  const point = pagePoint();
+  readerControlsOpen = !readerControlsOpen;
+  syncReaderControls();
+  restorePosition(0, point.y, point.x);
+};
+syncReaderControls();
 audio.addEventListener('play', () => {
   setFollow(Boolean(song?.cues.length));
   tick();
