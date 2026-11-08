@@ -22,11 +22,10 @@ try{
  check('song shows Watch lesson button',true);
  await page.locator('#audio').evaluate(a=>{a.loop=true;return a.play()});check('test song is playing before opening lesson',await page.locator('#audio').evaluate(a=>!a.paused));
  const songPopup=page.waitForEvent('popup');await page.locator('#watchLesson').tap();const lesson=await songPopup;await lesson.waitForURL('https://www.justinguitar.com/songs?test=1');check('watching pauses song audio',await page.locator('#audio').evaluate(a=>a.paused));await lesson.close();
- await page.locator('#toolsButton').tap();await page.locator('#lessonsButton').tap();await page.waitForURL('**/lessons.html?song=*');
- await page.waitForFunction(()=>document.querySelector('#lessonsBack').getAttribute('href')==='/song-library.html');
- await page.locator('#lessonsBack').tap();await page.waitForURL('**/song-library.html');
+ await page.locator('#toolsButton').tap();
+ check('Song tools omits the Saved lessons shortcut',await page.getByRole('button',{name:'Saved lessons',exact:true}).count()===0);
+ await page.locator('#toolsDialog [data-close="toolsDialog"]').tap();
  await page.getByRole('link',{name:'‹ Back'}).tap();await page.waitForURL('**/practice.html');
- check('saved lessons are reachable from Song tools and Back returns through Songs to Main',await page.locator('#homeMenu').isVisible());
  await page.goto(base+'/practice.html');check('Main menu has Lessons navigation',await page.locator('#lessonsTab').isVisible());await page.locator('#lessonsTab').tap();await page.waitForURL('**/lessons.html');
  await page.screenshot({path:process.env.GPL_TEST_SCREENSHOT||'/tmp/glab-lessons.png'});
  check('no JavaScript errors',errors.length===0);

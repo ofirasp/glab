@@ -38,7 +38,7 @@ A USB microphone on the Pi and `alsa-utils` are needed for 1 Minute Changes. Cap
 
 Open **Lessons → Add Lesson** to save a URL with a title and notes. On the Pi, a lesson opens in a separate Chromium window. Its **← Practice** tab offers **Save current lesson** to capture the active lesson's title and address, and **Return to Practice** to close the lesson window. Website sign-in and playback are handled by Chromium in its dedicated lesson profile.
 
-To link a saved lesson to a song, open **Songs → Tools → Saved lessons**, then use **Link to song**. The song then shows **Watch lesson**. Opening the lesson pauses song playback.
+To attach a lesson URL to a song, open **Songs → Tools → Song notes**. The song then shows **Watch lesson**. Opening the lesson pauses song playback.
 
 ## Run locally
 

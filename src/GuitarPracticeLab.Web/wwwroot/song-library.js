@@ -138,7 +138,7 @@ function update() {
   $('chordListButton').disabled = $('watchLesson').disabled = busy || !song;
   $('watchLesson').hidden = !song?.lessonUrl;
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
-  for (const id of ['audioButton', 'notesButton', 'lessonsButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
+  for (const id of ['audioButton', 'notesButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
   $('previous').disabled ||= page <= 1;
   $('next').disabled ||= !song || page >= pdf.pages;
@@ -703,10 +703,4 @@ refreshLibrary().then(() => {
 $('watchLesson').onclick = () => {
   if (!song) return;
   if (song.lessonUrl) LessonLinks.open(song.lessonUrl, status);
-};
-
-$('lessonsButton').onclick = () => {
-  if (!song) return;
-  audio.pause();
-  location.href = '/lessons.html?song=' + encodeURIComponent(song.id);
 };
