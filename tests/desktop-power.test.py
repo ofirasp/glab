@@ -46,6 +46,10 @@ with tempfile.TemporaryDirectory() as directory:
         agent.check_auto_idle()
         run.assert_not_called()
         agent.idle_marker.touch()
+        agent.screen_idle = Mock()
+        agent.check_auto_idle()
+        run.assert_not_called()
+        agent.screen_idle = None
         run.return_value = Mock(returncode=0, stdout='Paused\nPlaying\n', stderr='')
         agent.check_auto_idle()
         run.assert_called_once()
@@ -58,6 +62,10 @@ with tempfile.TemporaryDirectory() as directory:
         assert agent.auto_blanked
         agent.idle_marker.unlink()
         agent.check_auto_idle()
+        assert run.call_args.args[0] == ['wlopm', '--on', '*']
+        calls = run.call_count
+        agent.check_auto_idle()
+        assert run.call_count == calls
         assert not agent.auto_blanked
 
 print('PASS ten-minute Wayland timeout, active-media suppression, blanking, and wake reset')

@@ -242,10 +242,11 @@
   },
   "Desktop/desktop-session.py": {
     "before": null,
-    "after": "31e6c4468a517685c3fd99f45fa275e5aa1c9eb2047f13e30c0fd19a1ae2fd23",
+    "after": "c401e6651b0f947617627ad4098985f151aafd02e8fbde9bdba36b920867faf9",
     "compatible": [
       "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df",
-      "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507"
+      "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507",
+      "31e6c4468a517685c3fd99f45fa275e5aa1c9eb2047f13e30c0fd19a1ae2fd23"
     ]
   },
   "wwwroot/playback-wake-lock.js": {

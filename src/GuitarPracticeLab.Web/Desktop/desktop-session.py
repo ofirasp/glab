@@ -57,7 +57,7 @@ class DesktopSession(lesson_browser.Browser):
 
     def sleep_screen(self):
         if os.environ.get('WAYLAND_DISPLAY'):
-            if self.screen_idle and self.screen_idle.poll() is None:
+            if self.auto_blanked or (self.screen_idle and self.screen_idle.poll() is None):
                 return
             if not shutil.which('swayidle') or not shutil.which('wlopm'):
                 raise RuntimeError('Screen sleep requires swayidle and wlopm on this desktop.')
@@ -67,8 +67,9 @@ class DesktopSession(lesson_browser.Browser):
             # The resume handler wakes the display and marks this one-shot request done.
             env = {**os.environ, 'GPL_WAKE_MARKER': str(self.wake_marker)}
             self.screen_idle = subprocess.Popen([
-                'swayidle', '-w', 'timeout', '2', "wlopm --off '*'",
-                'resume', "wlopm --on '*'; touch \"$GPL_WAKE_MARKER\""
+                'swayidle', '-w', 'timeout', '2',
+                """if [ ! -e "$GPL_WAKE_MARKER" ]; then wlopm --off '*'; fi""",
+                'resume', """touch "$GPL_WAKE_MARKER"; wlopm --on '*'"""
             ], env=env)
             time.sleep(.2)
             if self.screen_idle.poll() is not None:
@@ -88,7 +89,7 @@ class DesktopSession(lesson_browser.Browser):
             env = {**os.environ, 'GPL_IDLE_MARKER': str(self.idle_marker)}
             self.auto_idle_process = subprocess.Popen([
                 'swayidle', '-w', 'timeout', '600', 'touch "$GPL_IDLE_MARKER"',
-                'resume', "rm -f \"$GPL_IDLE_MARKER\"; wlopm --on '*'"
+                'resume', 'rm -f "$GPL_IDLE_MARKER"'
             ], env=env)
         elif os.environ.get('DISPLAY'):
             subprocess.run(['xset', 's', '600'], check=True, timeout=3)
@@ -99,14 +100,14 @@ class DesktopSession(lesson_browser.Browser):
             self.start_auto_idle()
         if self.auto_idle_process and self.auto_idle_process.poll() is not None:
             self.idle_marker.unlink(missing_ok=True)
-            if self.auto_blanked:
-                subprocess.run(['wlopm', '--on', '*'], check=True, timeout=3)
             self.auto_idle_process = None
         if not self.idle_marker.exists():
-            self.auto_blanked = False
+            if self.auto_blanked:
+                subprocess.run(['wlopm', '--on', '*'], check=True, timeout=3)
+                self.auto_blanked = False
             return
         now = time.monotonic()
-        if self.auto_blanked or now < self.next_idle_check:
+        if self.auto_blanked or self.screen_idle or now < self.next_idle_check:
             return
         self.next_idle_check = now + 3
         # Chromium publishes playback via MPRIS. This also catches playing
@@ -154,6 +155,8 @@ class DesktopSession(lesson_browser.Browser):
             for process in (self.screen_idle, self.auto_idle_process):
                 if process and process.poll() is None:
                     process.terminate()
+            if self.auto_blanked:
+                subprocess.run(['wlopm', '--on', '*'], check=False, timeout=3)
 
 
 if __name__ == '__main__':
