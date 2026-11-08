@@ -22,7 +22,7 @@
 </header>
 <main class="split">
   <section class="sheet" aria-label="Chord sheet">
-    <div class="pagebar">
+    <div id="readerPageControls" class="pagebar">
       <button id="previous" aria-label="Previous page" disabled>‹</button>
       <span id="pageNumber">No PDF selected</span>
       <button id="next" aria-label="Next page" disabled>›</button>
@@ -58,7 +58,7 @@
         <output id="readerVolumeValue" for="readerVolume">100%</output>
       </div>
     </div>
-    <button id="readerControlsToggle" type="button" aria-expanded="false" aria-controls="readerControls" hidden>▴ Controls</button>
+    <button id="readerControlsToggle" type="button" aria-expanded="false" aria-controls="readerPageControls readerControls" hidden>▴ Controls</button>
   </section>
   <section class="companion" aria-label="Play along controls">
     <div class="songheading"><button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button><h1 id="songTitle">Choose a song</h1></div>

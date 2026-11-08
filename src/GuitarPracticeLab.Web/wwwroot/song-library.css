@@ -95,7 +95,7 @@ button.danger{background:#592a32;border-color:#c36a79;color:#fff}
 .volumecontrols output{font-size:11px;text-align:right;font-variant-numeric:tabular-nums}
 .reader-volume{display:none}
 body.reader .sheet{grid-template-rows:40px minmax(0,1fr)42px 48px 42px 34px}
-body.reader.reader-controls-collapsed .sheet{grid-template-rows:40px minmax(0,1fr)34px}
+body.reader.reader-controls-collapsed .sheet{grid-template-rows:minmax(0,1fr)34px}
 body.reader .reader-volume{display:grid;padding:0 8px;border-top:1px solid #40546e;grid-template-columns:76px minmax(0,1fr) 40px}
 
 /* Chord targets scale with the PDF image without changing Follow coordinates. */

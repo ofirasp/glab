@@ -674,7 +674,7 @@ $('clearLoop').onclick = () => { loopA = loopB = null; looping = false; update()
 function syncReaderControls() {
   document.body.classList.toggle('reader', readerMode);
   document.body.classList.toggle('reader-controls-collapsed', readerMode && !readerControlsOpen);
-  $('readerControls').hidden = readerMode && !readerControlsOpen;
+  $('readerPageControls').hidden = $('readerControls').hidden = readerMode && !readerControlsOpen;
   const toggle = $('readerControlsToggle');
   toggle.hidden = !readerMode;
   toggle.setAttribute('aria-expanded', String(readerControlsOpen));

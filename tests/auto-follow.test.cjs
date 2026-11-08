@@ -87,9 +87,9 @@ const server=http.createServer((req,res)=>{
  await page.waitForFunction(()=>document.querySelector('#follow').getAttribute('aria-pressed')==='true');
  check('pause and resume enables Follow again',await isOn());
  await page.locator('#follow').tap();await page.locator('#readerToggle').tap();
- check('FullScreen starts with the lower controls collapsed',await page.locator('#readerPlay').isHidden()&&await page.locator('#follow').isHidden()&&await page.locator('#readerMute').isHidden());
+ check('FullScreen starts with both control panels collapsed',await page.locator('#readerPlay').isHidden()&&await page.locator('#follow').isHidden()&&await page.locator('#readerMute').isHidden()&&await page.locator('#zoomIn').isHidden());
  await page.locator('#readerControlsToggle').tap();
- check('Controls reveals cue, playback and volume rows',await page.locator('#follow').isVisible()&&await page.locator('#readerPlay').isVisible()&&await page.locator('#readerMute').isVisible());
+ check('Controls reveals zoom, cue, playback and volume rows',await page.locator('#follow').isVisible()&&await page.locator('#readerPlay').isVisible()&&await page.locator('#readerMute').isVisible()&&await page.locator('#zoomIn').isVisible());
  await page.locator('#readerControlsToggle').tap();check('Hide controls collapses the panel again',await page.locator('#readerPlay').isHidden());
  await page.locator('#readerControlsToggle').tap();
  await page.locator('#readerPlay').tap();await page.locator('#readerPlay').tap();
