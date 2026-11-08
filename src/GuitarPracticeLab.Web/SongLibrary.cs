@@ -26,7 +26,7 @@ public static class SongLibrary
         await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(song, Json));
         File.Move(temporary, Metadata(song.Id), true);
     }
-    static object View(Song s) => new { s.Id, s.Title, s.Pages, s.AudioName, s.Duration, s.Notes, s.LessonUrl, s.Cues, s.Updated,
+    static object View(Song s) => new { s.Id, s.Title, s.PdfStem, s.Pages, s.AudioName, s.Duration, s.Notes, s.LessonUrl, s.Cues, s.Updated,
         s.BackingName, s.BackingDuration, s.BackingImportMessage,
         hasAudio = !string.IsNullOrEmpty(s.AudioFile), hasBacking = !string.IsNullOrEmpty(s.BackingFile) };
 
@@ -86,7 +86,7 @@ public static class SongLibrary
                     throw new ArgumentException("Use a readable PDF with 1–100 pages.");
                 var name = request.Query["name"].ToString();
                 var title = Path.GetFileNameWithoutExtension(name);
-                var song = new Song { Id = id, Title = Clean(title, 160, "Untitled song"), Pages = pages, PdfHash = hash };
+                var song = new Song { Id = id, Title = Clean(title, 160, "Untitled song"), Pages = pages, PdfHash = hash, PdfStem = Clean(title, 255, "") };
                 await Save(song);
                 return Results.Ok(View(song));
             }
@@ -128,6 +128,9 @@ public static class SongLibrary
                 // Save the new pointer last. Failed validation never changes the old PDF.
                 // Prior PDF files remain available for recovery.
                 song.PdfFile = name; song.PdfHash = hash; song.Pages = pages;
+                var uploadedName = request.Query["name"].ToString();
+                if (!string.IsNullOrWhiteSpace(uploadedName))
+                    song.PdfStem = Clean(Path.GetFileNameWithoutExtension(uploadedName), 255, "");
                 song.Cues.Clear();
                 await Save(song);
                 committed = true;
@@ -371,6 +374,7 @@ public static class SongLibrary
         public Guid Id { get; set; }
         public string Title { get; set; } = "";
         public int Pages { get; set; }
+        public string PdfStem { get; set; } = "";
         public string PdfHash { get; set; } = "";
         public string PdfFile { get; set; } = "original.pdf";
         public string AudioFile { get; set; } = "";

@@ -53,6 +53,7 @@ try {
   readerMode = localStorage.getItem('guitar-reading-view') === 'full';
 } catch {}
 let songs = [], song = null, page = 1, zoom = preferredZoom, pageToken = 0;
+let alternatePdf = null, pairedPdf = null;
 let pageReady = false, following = false, activeCue = null, pendingCue = null;
 let loopA = null, loopB = null, looping = false, busy = false;
 let audioVariant = 'original', switchingTrack = false, switchToken = 0;
@@ -100,20 +101,41 @@ async function operation(action) {
     update();
   }
 }
+function pdfStem(item) {
+  return (item.pdfStem || item.title).trim().toLowerCase();
+}
+function isSimplePdf(item) {
+  return pdfStem(item).endsWith('-simple');
+}
+function findPairedPdf(item) {
+  const stem = pdfStem(item);
+  const base = stem.replace(/-simple$/, '');
+  const matching = songs.filter(candidate => {
+    const name = pdfStem(candidate);
+    return name === base || name === base + '-simple';
+  });
+  const other = matching.find(candidate => candidate.id !== item.id);
+  return base && matching.length === 2 && other && pdfStem(other) !== stem ? other : null;
+}
 function update() {
+  const pdf = alternatePdf || song;
+  $('simpleVersionControl').hidden = !pairedPdf;
+  $('simpleVersion').checked = !!pdf && isSimplePdf(pdf);
+  $('simpleVersion').disabled = busy;
   $('chordListButton').disabled = $('watchLesson').disabled = busy || !song;
   $('watchLesson').hidden = !song?.lessonUrl;
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
   for (const id of ['audioButton', 'notesButton', 'lessonsButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
   $('previous').disabled ||= page <= 1;
-  $('next').disabled ||= !song || page >= song.pages;
+  $('next').disabled ||= !song || page >= pdf.pages;
   $('zoomIn').disabled ||= zoom >= 3 || !pageReady;
   $('zoomOut').disabled ||= zoom <= 1 || !pageReady;
   for (const id of ['play', 'back', 'forward', 'seek', 'speed', 'setA', 'setB', 'follow', 'cueMark',
     'readerPlay', 'readerBack', 'readerForward', 'toolsPlay', 'clearLoop'])
     $(id).disabled = busy || switchingTrack || !hasAudio;
-  $('markCue').disabled = busy || switchingTrack || !hasAudio || !pageReady;
+  for (const id of ['follow', 'cueMark', 'cuesButton']) $(id).disabled ||= !!alternatePdf;
+  $('markCue').disabled = busy || switchingTrack || !hasAudio || !pageReady || !!alternatePdf;
   $('loop').disabled = busy || switchingTrack || !hasAudio || loopA === null || loopB === null;
   $('readerLoop').disabled = $('loop').disabled;
   $('addBacking').disabled = busy || switchingTrack || !hasAudio;
@@ -133,7 +155,7 @@ function update() {
   $('audioEmpty').hidden = hasAudio;
   $('songTitle').textContent = song?.title || 'Choose a song';
   $('songTitle').title = song?.title || '';
-  $('pageNumber').textContent = song ? `${page} / ${song.pages} · ${Math.round(zoom * 100)}%` : 'No PDF selected';
+  $('pageNumber').textContent = song ? `${page} / ${pdf.pages} · ${Math.round(zoom * 100)}%` : 'No PDF selected';
   $('cueCount').textContent = song?.cues.length || 0;
   $('play').textContent = audio.paused ? 'Play' : 'Pause';
   $('readerPlay').textContent = $('toolsPlay').textContent = $('play').textContent;
@@ -172,15 +194,16 @@ function seekPdf(cue) {
 }
 async function renderPage(number = page, position = 0, pageAnchor = null) {
   if (!song) return;
+  const pdf = alternatePdf || song;
   const horizontal = pagePoint().x;
-  page = Math.max(1, Math.min(song.pages, number));
+  page = Math.max(1, Math.min(pdf.pages, number));
   const token = ++pageToken;
   pageReady = false;
   window.GuitarChordViewer?.clearPage();
   $('pageLoading').hidden = false;
   update();
   try {
-    const response = await fetch(`${api}/${song.id}/page/${page}?v=${encodeURIComponent(song.updated)}`);
+    const response = await fetch(`${api}/${pdf.id}/page/${page}?v=${encodeURIComponent(pdf.updated)}`);
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message || error.detail || 'Could not render this PDF page.');
@@ -203,7 +226,7 @@ async function renderPage(number = page, position = 0, pageAnchor = null) {
       restorePosition(position, pageAnchor, horizontal);
       if (oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
       pageReady = true;
-      window.GuitarChordViewer?.showPage({ id: song.id, version: song.updated, page });
+      window.GuitarChordViewer?.showPage({ id: pdf.id, version: pdf.updated, page });
     } catch (error) { URL.revokeObjectURL(url); throw error; }
   } catch (error) { if (token === pageToken) message(error); }
   finally { if (token === pageToken) { $('pageLoading').hidden = true; update(); } }
@@ -242,6 +265,8 @@ function selectSong(item, autoplay = false) {
   switchToken++; switchingTrack = false; audioVariant = 'original';
   audio.pause(); audio.removeAttribute('src'); audio.load();
   song = structuredClone(item);
+  alternatePdf = null;
+  pairedPdf = findPairedPdf(song);
   window.GuitarChordViewer?.reset(song.id);
   page = 1; zoom = preferredZoom; loopA = loopB = null; looping = false;
   setFollow(false);
@@ -457,7 +482,7 @@ $('confirmReplacePdf').onclick = () => operation(async () => {
   if (file.size > 20 * 1024 * 1024) throw new Error('PDF files are limited to 20 MB.');
   audio.pause(); status('Checking and replacing PDF…');
   const previousCues = song.cues.length;
-  const updated = await request(`/${song.id}/pdf`, {
+  const updated = await request(`/${song.id}/pdf?name=${encodeURIComponent(file.name)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file
   });
   await refreshLibrary();
@@ -478,7 +503,7 @@ $('confirmDeleteSong').onclick = () => operation(async () => {
   await request(`/${song.id}`, { method: 'DELETE' });
   switchToken++; switchingTrack = false;
   audio.pause(); audio.removeAttribute('src'); audio.load();
-  pageToken++; pageReady = false; pendingCue = null; song = null;
+  pageToken++; pageReady = false; pendingCue = null; song = null; alternatePdf = pairedPdf = null;
   window.GuitarChordViewer?.reset(null);
   page = 1; audioVariant = 'original'; loopA = loopB = null; looping = false;
   setFollow(false);
@@ -521,6 +546,16 @@ $('backingFile').onchange = () => operation(async () => {
     await switchTrack('backing', playing);
   } finally { $('backingFile').value = ''; }
 });
+$('simpleVersion').onchange = () => {
+  if (!song || !pairedPdf || busy) return;
+  alternatePdf = $('simpleVersion').checked === isSimplePdf(song) ? null : pairedPdf;
+  const pdf = alternatePdf || song;
+  setFollow(false);
+  window.GuitarChordViewer?.reset(pdf.id);
+  status((isSimplePdf(pdf) ? 'Simple version' : 'Standard version') +
+    (alternatePdf ? ' · Follow and cue editing are paused for this sheet.' : ''));
+  renderPage(1, 0, 0);
+};
 $('previous').onclick = () => { setFollow(false); renderPage(page - 1); };
 $('next').onclick = () => { setFollow(false); renderPage(page + 1); };
 function changeZoom(delta) {
@@ -609,7 +644,7 @@ function setReaderMode(value) {
 $('readerToggle').onclick = () => setReaderMode(!readerMode);
 document.body.classList.toggle('reader', readerMode);
 audio.addEventListener('play', () => {
-  setFollow(Boolean(song?.cues.length));
+  setFollow(!alternatePdf && Boolean(song?.cues.length));
   tick();
 });
 audio.addEventListener('pause', update);

@@ -12,8 +12,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 #readerToggle{margin-left:auto}
 .split{display:grid;grid-template-columns:minmax(0,3fr) minmax(180px,1fr);gap:8px;min-height:0}
 .sheet{display:grid;grid-template-rows:40px minmax(0,1fr)42px;min-width:0;min-height:0;background:#19283a;border-radius:10px;overflow:hidden}
-.pagebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px 40px;align-items:center;gap:4px;padding:0 4px}
+.pagebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px 40px auto;align-items:center;gap:4px;padding:0 4px}
 .pagebar button{min-height:34px;font-size:21px;padding:0}
+#simpleVersionControl{display:flex;align-items:center;gap:4px;padding:0 6px;min-height:36px;font-size:13px;white-space:nowrap;cursor:pointer}
+#simpleVersion{width:20px;height:20px;margin:0;accent-color:#6aa8ff}
 #pageNumber{text-align:center;font-size:13px;white-space:nowrap}
 #pdfViewport{overflow:auto;position:relative;background:#cbd1d8;scroll-behavior:auto;overscroll-behavior:contain;color:#172238;touch-action:pan-x pan-y}
 #pdfImage{display:block;width:100%;max-width:none;height:auto;user-select:none}
