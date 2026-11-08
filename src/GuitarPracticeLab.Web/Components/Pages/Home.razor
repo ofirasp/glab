@@ -33,14 +33,30 @@
 html,body{margin:0;height:100%;overflow:hidden}
 iframe{display:block}
 iframe.touch-kiosk{cursor:none}
-#screenWakeShield{position:fixed;inset:0;z-index:10000;background:#000;touch-action:none;cursor:none}
+#screenWakeShield{position:fixed;inset:0;z-index:10000;overflow:hidden;background:#000;touch-action:none;cursor:none}
 #screenWakeShield[hidden],#saverClock[hidden]{display:none}
-#screenWakeShield[data-style="guitar"]{
+#screenWakeShield[data-style="guitar"]::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(#0009,#0009),url('/guitar-home.jpg') center / cover no-repeat;
+    animation:saverPhotoDrift 28s ease-in-out infinite alternate;
 }
 #saverClock{
     position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     color:#93a6b9;font:300 clamp(46px,12vw,110px) system-ui;
     font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;
+    animation:saverClockDrift 42s ease-in-out infinite alternate;
+}
+@@keyframes saverPhotoDrift{
+    from{transform:scale(1.06) translate(-1%,-1%)}
+    to{transform:scale(1.20) translate(3%,2%)}
+}
+@@keyframes saverClockDrift{
+    0%{transform:translate(calc(-50% - 17vw),calc(-50% - 15vh))}
+    33%{transform:translate(calc(-50% + 16vw),calc(-50% - 10vh))}
+    66%{transform:translate(calc(-50% + 13vw),calc(-50% + 16vh))}
+    100%{transform:translate(calc(-50% - 15vw),calc(-50% + 12vh))}
+}
+@@media (prefers-reduced-motion:reduce){
+    #saverClock,#screenWakeShield[data-style="guitar"]::before{animation:none}
 }
 </style>

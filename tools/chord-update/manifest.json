@@ -248,11 +248,12 @@
   },
   "Components/Pages/Home.razor": {
     "before": "3a4fcfebead67be403083c3ecd51ccfbd025b5ea2e1d9fbbeb3672b2ce0a668a",
-    "after": "5f4757db44844b0253c4c8eabc798f0c2aa365942c0a622a171b0507a71b5f74",
+    "after": "4fcd70b205f08e6930c7517b729a3596eb6e680fc7c4ad308eb09cec6b7329b5",
     "compatible": [
       "48a5a652840d4f1938209de67895a804654a9fd1dda87faa0b42c4adb5ba9d26",
       "e301dd842a8e88b4b999787e887c16bdcc27ce6862bcd1fe2cb8d3283d9341fb",
-      "fdfa40f05ae84e5eaa6b43db2886df2f794d06b2f86b3e9e95c758d62d63ff3c"
+      "fdfa40f05ae84e5eaa6b43db2886df2f794d06b2f86b3e9e95c758d62d63ff3c",
+      "5f4757db44844b0253c4c8eabc798f0c2aa365942c0a622a171b0507a71b5f74"
     ]
   },
   "wwwroot/guitar-home.jpg": {
