@@ -1,10 +1,11 @@
 {
   "SongLibrary.cs": {
     "before": "e7f08e16a19cf19452ef89de45d404b192649cb95a8cc025646b0ccf22c27dba",
-    "after": "b498efd2553f3d1a124e208b87089f4296e6b60565c6852fd20d87cde558d9b7",
+    "after": "81673b85633dd0def52e70a7ec5ff61b2adefb273dbcc6830bc1d6731052baef",
     "compatible": [
       "27c63869d8c975af733f51fba73970a2d488422b935c855252e75b013af60f64",
-      "03791db49329757f84135c308b3678fe13b05f626b3573262858ede16f4c4437"
+      "03791db49329757f84135c308b3678fe13b05f626b3573262858ede16f4c4437",
+      "b498efd2553f3d1a124e208b87089f4296e6b60565c6852fd20d87cde558d9b7"
     ]
   },
   "PdfChords.cs": {
@@ -13,12 +14,13 @@
   },
   "wwwroot/song-library.html": {
     "before": "22727d4dd74be112f32fbc8a4e59cfe268d05a8b8eaab13d04023ac8cf9bf4a6",
-    "after": "53d96dbe001a2c5f0e1d56de6dab127bc7f6e4dccd8f2a3c0e8ac98c8e67cc45",
+    "after": "812b6fa4bf90320436504d50d56c0b5f12a90b7f4ef074c2f38aaed59124085b",
     "compatible": [
       "7b16ac004ae15c4915c43575be8c2b62438fe48be2540cdbbc5ceceb0af2581f",
       "47fae930f6fbae05230bc8b26035d515e45d8479de20339dab9a764f5fd0622f",
       "60990f9ff2985ac7d7e3d1bb988e4ba9546833bb2b1050a155ce00717520ff1b",
-      "0fd3b9d7954c07191b901ac3bf27dc9a25d85abf0adb4469dc73f81c5a78c881"
+      "0fd3b9d7954c07191b901ac3bf27dc9a25d85abf0adb4469dc73f81c5a78c881",
+      "53d96dbe001a2c5f0e1d56de6dab127bc7f6e4dccd8f2a3c0e8ac98c8e67cc45"
     ]
   },
   "wwwroot/song-library.css": {
@@ -32,13 +34,14 @@
   },
   "wwwroot/song-library.js": {
     "before": "a0938ddb69262e4591b77423289f028d58f98af24f0cfab2d089570634f58f9e",
-    "after": "1d6cfeb4c7f6a08f56b5a3cbcf473bf4023e77d0d73c9e69aa8b1a129eed0924",
+    "after": "5a5c7f1a5b64c6771c91f98f5e2b687b6025628a459a35b50f824995c1e3d79e",
     "compatible": [
       "cce7a37e385e45ed691e08da177a477e5d836df42d7fe684da57e313a961a970",
       "1ee11e5c07e7ac2d598d27d7eb5ac7d574ac0f6233f7e4b9d2f8069648b46b31",
       "370940217c8c58ae13ea0c2fdf3c421fbcb03ad7fc52e66e2423aae6aebca7d0",
       "d8619fc5d60c4dca98091ab953f8ce4c3ce63d712104a643e3448a091148c106",
-      "1db5526bbe21d25c1b8bf8c114b93206f4e6a9950dd9f014c085f96473dcd511"
+      "1db5526bbe21d25c1b8bf8c114b93206f4e6a9950dd9f014c085f96473dcd511",
+      "1d6cfeb4c7f6a08f56b5a3cbcf473bf4023e77d0d73c9e69aa8b1a129eed0924"
     ]
   },
   "wwwroot/chord-shapes.js": {
@@ -47,7 +50,10 @@
   },
   "wwwroot/chord-viewer.js": {
     "before": null,
-    "after": "2dc7c4abe106f1ae7c01efd119cc89a4807733c9f6cc3ba73b79851397e53f7e"
+    "after": "01670abaa2d88a993bc31b112348b5ec03ed05a4ca6060dfbf55c5118df362d3",
+    "compatible": [
+      "2dc7c4abe106f1ae7c01efd119cc89a4807733c9f6cc3ba73b79851397e53f7e"
+    ]
   },
   "Program.cs": {
     "before": "c1e38c312f6a7a5867a61d088472be8a6aa75f5e2c4f0ca68399575afd3b8cc5",

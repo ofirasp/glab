@@ -58,7 +58,9 @@
     }
     if (!pending) {
       const expected = generation;
-      pending = fetch(`/api/song-library/${encodeURIComponent(identity)}/chords?v=${encodeURIComponent(revision)}`)
+      const params = new URLSearchParams({ v: revision });
+      if (detail.variant) params.set('variant', detail.variant);
+      pending = fetch(`/api/song-library/${encodeURIComponent(identity)}/chords?${params}`)
         .then(async response => {
           if (!response.ok) throw new Error('Chord detection is unavailable. Install poppler-utils on the Pi. Manual lookup still works.');
           const data = await response.json();

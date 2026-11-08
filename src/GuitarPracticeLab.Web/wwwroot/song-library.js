@@ -105,7 +105,7 @@ function pdfStem(item) {
   return (item.pdfStem || item.title).trim().toLowerCase();
 }
 function isSimplePdf(item) {
-  return pdfStem(item).endsWith('-simple');
+  return item.variant === 'simple' || pdfStem(item).endsWith('-simple');
 }
 function findPairedPdf(item) {
   const stem = pdfStem(item);
@@ -116,6 +116,19 @@ function findPairedPdf(item) {
   });
   const other = matching.find(candidate => candidate.id !== item.id);
   return base && matching.length === 2 && other && pdfStem(other) !== stem ? other : null;
+}
+async function discoverSimplePdf(item) {
+  if (pairedPdf || isSimplePdf(item)) return;
+  try {
+    const response = await fetch(`${api}/${item.id}/simple`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const metadata = await response.json();
+    if (song !== item || !Number.isInteger(metadata.pages)) return;
+    pairedPdf = { ...item, ...metadata, variant: 'simple' };
+    update();
+  } catch {
+    // The standard PDF remains usable if the companion lookup fails.
+  }
 }
 function update() {
   const pdf = alternatePdf || song;
@@ -203,7 +216,9 @@ async function renderPage(number = page, position = 0, pageAnchor = null) {
   $('pageLoading').hidden = false;
   update();
   try {
-    const response = await fetch(`${api}/${pdf.id}/page/${page}?v=${encodeURIComponent(pdf.updated)}`);
+    const params = new URLSearchParams({ v: pdf.updated });
+    if (pdf.variant) params.set('variant', pdf.variant);
+    const response = await fetch(`${api}/${pdf.id}/page/${page}?${params}`);
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message || error.detail || 'Could not render this PDF page.');
@@ -226,7 +241,7 @@ async function renderPage(number = page, position = 0, pageAnchor = null) {
       restorePosition(position, pageAnchor, horizontal);
       if (oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
       pageReady = true;
-      window.GuitarChordViewer?.showPage({ id: pdf.id, version: pdf.updated, page });
+      window.GuitarChordViewer?.showPage({ id: pdf.id, version: pdf.updated, variant: pdf.variant, page });
     } catch (error) { URL.revokeObjectURL(url); throw error; }
   } catch (error) { if (token === pageToken) message(error); }
   finally { if (token === pageToken) { $('pageLoading').hidden = true; update(); } }
@@ -267,6 +282,7 @@ function selectSong(item, autoplay = false) {
   song = structuredClone(item);
   alternatePdf = null;
   pairedPdf = findPairedPdf(song);
+  void discoverSimplePdf(song);
   window.GuitarChordViewer?.reset(song.id);
   page = 1; zoom = preferredZoom; loopA = loopB = null; looping = false;
   setFollow(false);

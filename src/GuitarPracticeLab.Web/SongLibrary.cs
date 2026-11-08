@@ -80,10 +80,7 @@ public static class SongLibrary
                         return Results.Ok(View(existing));
                     }
                 }
-                var info = await Run("pdfinfo", pdf);
-                var match = Regex.Match(info, @"(?m)^Pages:\s+(\d+)");
-                if (!match.Success || !int.TryParse(match.Groups[1].Value, out int pages) || pages < 1 || pages > 100)
-                    throw new ArgumentException("Use a readable PDF with 1–100 pages.");
+                var pages = await ReadPdfPageCount(pdf);
                 var name = request.Query["name"].ToString();
                 var title = Path.GetFileNameWithoutExtension(name);
                 var song = new Song { Id = id, Title = Clean(title, 160, "Untitled song"), Pages = pages, PdfHash = hash, PdfStem = Clean(title, 255, "") };
@@ -118,10 +115,7 @@ public static class SongLibrary
                 await using (var stream = File.OpenRead(path)) await stream.ReadExactlyAsync(signature);
                 if (System.Text.Encoding.ASCII.GetString(signature) != "%PDF-")
                     throw new ArgumentException("Choose a PDF file.");
-                var info = await Run("pdfinfo", path);
-                var match = Regex.Match(info, @"(?m)^Pages:\s+(\d+)");
-                if (!match.Success || !int.TryParse(match.Groups[1].Value, out int pages) || pages < 1 || pages > 100)
-                    throw new ArgumentException("Use a readable PDF with 1–100 pages.");
+                var pages = await ReadPdfPageCount(path);
                 string hash;
                 await using (var stream = File.OpenRead(path)) hash = Convert.ToHexString(await SHA256.HashDataAsync(stream));
                 if (song.PdfHash == hash) return Results.Ok(View(song));
@@ -243,13 +237,19 @@ public static class SongLibrary
             if (string.IsNullOrEmpty(file)) throw new FileNotFoundException("This audio version has not been attached yet.");
             return Task.FromResult<IResult>(Results.File(Path.Combine(Folder(id), file), "audio/mpeg", enableRangeProcessing: true));
         }));
-        api.MapGet("/{id:guid}/chords", (Guid id) => Guard(async () =>
+        api.MapGet("/{id:guid}/simple", (Guid id) => Guard(async () =>
+        {
+            var file = FindSimplePdf(Read(id));
+            return Results.Ok(new { pages = await ReadPdfPageCount(file.FullName), updated = PdfRevision(file) });
+        }));
+        api.MapGet("/{id:guid}/chords", (Guid id, HttpRequest request) => Guard(async () =>
         {
             var song = Read(id);
-            var cache = Path.Combine(Folder(id), "chords-v1-" + Path.GetFileNameWithoutExtension(song.PdfFile) + ".json");
+            var (path, revision) = ResolvePdf(song, request.Query["variant"].ToString());
+            var cache = Path.Combine(Folder(id), "chords-v1-" + revision + ".json");
             if (!File.Exists(cache))
             {
-                string xml = await Run("pdftotext", "-bbox-layout", Path.Combine(Folder(id), song.PdfFile), "-");
+                string xml = await Run("pdftotext", "-bbox-layout", path, "-");
                 var pages = PdfChords.Parse(xml);
                 var temporary = cache + ".tmp";
                 await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(pages, Json));
@@ -257,15 +257,54 @@ public static class SongLibrary
             }
             return Results.File(cache, "application/json");
         }));
-        api.MapGet("/{id:guid}/page/{page:int}", (Guid id, int page) => Guard(async () =>
+        api.MapGet("/{id:guid}/page/{page:int}", (Guid id, int page, HttpRequest request) => Guard(async () =>
         {
             var song = Read(id);
-            if (page < 1 || page > song.Pages) throw new ArgumentException("Page outside this PDF.");
-            var prefix = Path.Combine(Folder(id), "page-" + Path.GetFileNameWithoutExtension(song.PdfFile) + "-" + page);
+            string variant = request.Query["variant"].ToString();
+            var (path, revision) = ResolvePdf(song, variant);
+            if (page < 1 || page > (variant == "simple" ? 100 : song.Pages))
+                throw new ArgumentException("Page outside this PDF.");
+            var prefix = Path.Combine(Folder(id), "page-" + revision + "-" + page);
             if (!File.Exists(prefix + ".png"))
-                await Run("pdftoppm", "-f", page.ToString(), "-l", page.ToString(), "-singlefile", "-scale-to", "1600", "-png", Path.Combine(Folder(id), song.PdfFile), prefix);
+                await Run("pdftoppm", "-f", page.ToString(), "-l", page.ToString(), "-singlefile", "-scale-to", "1600", "-png", path, prefix);
             return Results.File(prefix + ".png", "image/png");
         }));
+    }
+
+    static FileInfo FindSimplePdf(Song song)
+    {
+        var stem = string.IsNullOrWhiteSpace(song.PdfStem) ? song.Title : song.PdfStem;
+        if (stem.EndsWith("-simple", StringComparison.OrdinalIgnoreCase) || !Directory.Exists(Recordings))
+            throw new FileNotFoundException("No matching simple PDF.");
+        var expected = stem + "-simple.pdf";
+        var matches = Directory.EnumerateFiles(Recordings)
+            .Where(path => string.Equals(Path.GetFileName(path), expected, StringComparison.OrdinalIgnoreCase))
+            .Take(2).ToArray();
+        if (matches.Length != 1) throw new FileNotFoundException("No unique matching simple PDF.");
+        var file = new FileInfo(matches[0]);
+        if (file.LinkTarget is not null || file.Length > 20 * 1024 * 1024)
+            throw new ArgumentException("Use a simple PDF file under 20 MB in recordings.");
+        return file;
+    }
+
+    static string PdfRevision(FileInfo file) => $"simple-{file.LastWriteTimeUtc.Ticks}-{file.Length}";
+
+    static (string Path, string Revision) ResolvePdf(Song song, string variant)
+    {
+        if (variant == "")
+            return (Path.Combine(Folder(song.Id), song.PdfFile), Path.GetFileNameWithoutExtension(song.PdfFile));
+        if (variant != "simple") throw new ArgumentException("Choose the standard or simple PDF.");
+        var file = FindSimplePdf(song);
+        return (file.FullName, PdfRevision(file));
+    }
+
+    static async Task<int> ReadPdfPageCount(string path)
+    {
+        var info = await Run("pdfinfo", path);
+        var match = Regex.Match(info, @"(?m)^Pages:\s+(\d+)");
+        if (!match.Success || !int.TryParse(match.Groups[1].Value, out int pages) || pages < 1 || pages > 100)
+            throw new ArgumentException("Use a readable PDF with 1–100 pages.");
+        return pages;
     }
 
     static async Task AttachMatchingBacking(Song song, string originalName)
