@@ -7,9 +7,14 @@ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIH
 const samples=48000*20,wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
 const make=(id,cues)=>({id,title:cues.length?'With cues':'Without cues',pages:1,hasAudio:true,hasBacking:false,audioName:'test.wav',duration:20,notes:'',cues,updated:'test'});
 const songs=[make('11111111-1111-1111-1111-111111111111',[{time:0,page:1,position:0,pageAnchor:0,label:'Intro',zoom:1}]),make('22222222-2222-2222-2222-222222222222',[])];
+songs[0].pages=2;
+songs[0].cues.push({time:5,page:2,position:0,pageAnchor:0,label:'Verse',zoom:1});
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(url.pathname==='/api/song-library'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(songs));}
+ if(url.pathname==='/api/song-library/'+songs[0].id+'/simple'){
+  res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({pages:2,updated:'simple-test'}));
+ }
  if(url.pathname.endsWith('/chords')){res.setHeader('Content-Type','application/json');return res.end('[]');}
  if(url.pathname.includes('/page/')){res.setHeader('Content-Type','image/png');return res.end(png);}
  if(url.pathname.endsWith('/audio')){res.setHeader('Content-Type','audio/wav');return res.end(wav);}
@@ -28,6 +33,16 @@ const server=http.createServer((req,res)=>{
  const isOn=()=>page.locator('#follow').getAttribute('aria-pressed').then(v=>v==='true');
  await openSong('With cues');await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  check('autoplay enables Follow for a song with cues',await isOn());
+ const simple=page.getByRole('switch',{name:'Simple version'});
+ const simplePage=page.waitForResponse(r=>r.url().includes('/page/1?')&&r.url().includes('variant=simple'));
+ await simple.tap();await simplePage;
+ check('switching to simple keeps Follow on',await isOn()&&await page.locator('#follow').isEnabled());
+ const nextCuePage=page.waitForResponse(r=>r.url().includes('/page/2?')&&r.url().includes('variant=simple'));
+ await page.locator('#seek').fill('6');await nextCuePage;
+ check('following a later cue loads the simple PDF page',await page.locator('#pageNumber').textContent().then(t=>t.startsWith('2 / 2')));
+ const standardPage=page.waitForResponse(r=>r.url().includes('/page/2?')&&!r.url().includes('variant=simple'));
+ await simple.tap();await standardPage;
+ check('switching back keeps Follow on and seeks to the same cue',await isOn());
  await page.locator('#follow').tap();check('manual off still works during playback',!await isOn());
  await page.locator('#play').tap();await page.locator('#play').tap();await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  await page.waitForFunction(()=>document.querySelector('#follow').getAttribute('aria-pressed')==='true');

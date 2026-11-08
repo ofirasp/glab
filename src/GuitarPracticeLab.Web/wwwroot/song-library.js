@@ -147,7 +147,7 @@ function update() {
   for (const id of ['play', 'back', 'forward', 'seek', 'speed', 'setA', 'setB', 'follow', 'cueMark',
     'readerPlay', 'readerBack', 'readerForward', 'toolsPlay', 'clearLoop'])
     $(id).disabled = busy || switchingTrack || !hasAudio;
-  for (const id of ['follow', 'cueMark', 'cuesButton']) $(id).disabled ||= !!alternatePdf;
+  for (const id of ['cueMark', 'cuesButton']) $(id).disabled ||= !!alternatePdf;
   $('markCue').disabled = busy || switchingTrack || !hasAudio || !pageReady || !!alternatePdf;
   $('loop').disabled = busy || switchingTrack || !hasAudio || loopA === null || loopB === null;
   $('readerLoop').disabled = $('loop').disabled;
@@ -199,10 +199,12 @@ function restorePosition(position, pageAnchor = null, horizontal = 0) {
 }
 function seekPdf(cue) {
   const destination = cue || { page: 1, position: 0, pageAnchor: 0 };
-  if (pageReady && page === destination.page) {
+  const pdf = alternatePdf || song;
+  const destinationPage = Math.max(1, Math.min(pdf.pages, destination.page));
+  if (pageReady && page === destinationPage) {
     restorePosition(destination.position, destination.pageAnchor ?? null, pagePoint().x);
   } else {
-    renderPage(destination.page, destination.position, destination.pageAnchor ?? null);
+    renderPage(destinationPage, destination.position, destination.pageAnchor ?? null);
   }
 }
 async function renderPage(number = page, position = 0, pageAnchor = null) {
@@ -564,13 +566,15 @@ $('backingFile').onchange = () => operation(async () => {
 });
 $('simpleVersion').onchange = () => {
   if (!song || !pairedPdf || busy) return;
+  const point = pagePoint();
   alternatePdf = $('simpleVersion').checked === isSimplePdf(song) ? null : pairedPdf;
   const pdf = alternatePdf || song;
-  setFollow(false);
+  pageReady = false;
+  activeCue = null;
   window.GuitarChordViewer?.reset(pdf.id);
-  status((isSimplePdf(pdf) ? 'Simple version' : 'Standard version') +
-    (alternatePdf ? ' · Follow and cue editing are paused for this sheet.' : ''));
-  renderPage(1, 0, 0);
+  status(isSimplePdf(pdf) ? 'Simple version' : 'Standard version');
+  if (following && !switchingTrack) tick();
+  else renderPage(page, 0, point.y);
 };
 $('previous').onclick = () => { setFollow(false); renderPage(page - 1); };
 $('next').onclick = () => { setFollow(false); renderPage(page + 1); };
@@ -660,7 +664,7 @@ function setReaderMode(value) {
 $('readerToggle').onclick = () => setReaderMode(!readerMode);
 document.body.classList.toggle('reader', readerMode);
 audio.addEventListener('play', () => {
-  setFollow(!alternatePdf && Boolean(song?.cues.length));
+  setFollow(Boolean(song?.cues.length));
   tick();
 });
 audio.addEventListener('pause', update);
