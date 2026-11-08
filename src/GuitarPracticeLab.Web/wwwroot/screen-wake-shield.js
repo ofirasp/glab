@@ -3,10 +3,32 @@
   if (!shield) return;
 
   const settleMs = 250;
+  const clock = document.getElementById('saverClock');
+  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+  let previewing = false;
   let waking = false;
   let safeAfter = 0;
   let lastResponse = performance.now();
   const touches = new Set();
+
+  function show(style) {
+    const selected = ['black', 'clock', 'guitar'].includes(style) ? style : 'black';
+    shield.dataset.style = selected;
+    clock.hidden = selected !== 'clock';
+    if (!clock.hidden) {
+      const display = timeFormat.format(new Date());
+      if (clock.textContent !== display) clock.textContent = display;
+    }
+    shield.hidden = false;
+  }
+
+  window.addEventListener('message', event => {
+    if (event.origin !== location.origin ||
+        event.source !== document.getElementById('practiceFrame')?.contentWindow ||
+        event.data?.type !== 'preview-screen-saver') return;
+    previewing = true;
+    show(event.data.style);
+  });
 
   async function wake() {
     if (waking) return;
@@ -28,7 +50,8 @@
     shield.setPointerCapture(event.pointerId);
     event.preventDefault();
     event.stopPropagation();
-    void wake();
+    if (previewing) previewing = false;
+    else void wake();
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     shield.addEventListener(type, event => {
@@ -49,17 +72,18 @@
         signal: AbortSignal.timeout(1500)
       });
       if (!response.ok) throw new Error('Screen state unavailable');
-      const { active } = await response.json();
+      const { active, style } = await response.json();
       const now = performance.now();
       lastResponse = now;
+      if (previewing) return;
       if (active) {
-        shield.hidden = false;
+        show(style);
         safeAfter = now + settleMs;
       } else if (!touches.size && now >= safeAfter) {
         shield.hidden = true;
       }
     } catch {
-      if (!touches.size && performance.now() - lastResponse > 6000) shield.hidden = true;
+      if (!previewing && !touches.size && performance.now() - lastResponse > 6000) shield.hidden = true;
     } finally {
       setTimeout(poll, 250);
     }

@@ -48,6 +48,46 @@ public static class Lessons
         Local(context) &&
         (context.Request.Host.Host is "127.0.0.1" or "localhost" or "[::1]");
 
+    public sealed record SaverSettings(string Style = "black", int IdleMinutes = 10);
+    static string SaverSettingsPath => Path.Combine(Bridge, "screen-settings.json");
+
+    static bool ValidSaverSettings(SaverSettings settings) =>
+        settings.Style is "black" or "clock" or "guitar" &&
+        settings.IdleMinutes is 1 or 5 or 10 or 15 or 30 or 60;
+
+    static SaverSettings ReadSaverSettings()
+    {
+        try
+        {
+            var settings = JsonSerializer.Deserialize<SaverSettings>(File.ReadAllText(SaverSettingsPath), Json);
+            if (settings is not null && ValidSaverSettings(settings)) return settings;
+        }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
+        return new SaverSettings();
+    }
+
+    static async Task<IResult> SaveSaverSettings(HttpContext context, SaverSettings settings)
+    {
+        if (!KioskRequest(context) || context.Request.Headers.Origin != context.Request.Scheme + "://" + context.Request.Host)
+            return Results.StatusCode(403);
+        if (!ValidSaverSettings(settings)) return Results.BadRequest(new { message = "Choose a listed saver style and timeout." });
+
+        await Gate.WaitAsync(context.RequestAborted);
+        try
+        {
+            Directory.CreateDirectory(Bridge);
+            var temporary = SaverSettingsPath + ".tmp";
+            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(settings, Json), context.RequestAborted);
+            File.Move(temporary, SaverSettingsPath, true);
+            return Results.Ok(settings);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return Results.Json(new { message = "Could not save the screen saver settings." }, statusCode: 503);
+        }
+        finally { Gate.Release(); }
+    }
+
     static JsonElement DesktopStatus()
     {
         try
@@ -100,6 +140,9 @@ public static class Lessons
     }
 
     public static void MapEndpoints(WebApplication app){
+        app.MapGet("/api/desktop/screen-settings", (HttpContext context) =>
+            KioskRequest(context) ? Results.Ok(ReadSaverSettings()) : Results.StatusCode(403));
+        app.MapPut("/api/desktop/screen-settings", SaveSaverSettings);
         app.MapGet("/api/desktop/screen-state", (HttpContext context) =>
         {
             if (!KioskRequest(context)) return Results.Json(new { active = false });
@@ -108,7 +151,10 @@ public static class Lessons
             {
                 active = status.ValueKind == JsonValueKind.Object &&
                          status.TryGetProperty("screenShield", out var shield) &&
-                         shield.ValueKind == JsonValueKind.True
+                         shield.ValueKind == JsonValueKind.True,
+                style = status.ValueKind == JsonValueKind.Object &&
+                        status.TryGetProperty("screenStyle", out var style) && style.ValueKind == JsonValueKind.String
+                            ? style.GetString() : "black"
             });
         });
         app.MapPost("/api/desktop/{action}", RequestDesktopAction);

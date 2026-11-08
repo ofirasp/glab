@@ -42,6 +42,14 @@ with tempfile.TemporaryDirectory() as directory:
             agent.check_auto_idle()
             assert launch.call_args.args[0][:4] == ['swayidle', '-w', 'timeout', '600']
 
+    (agent.root / 'screen-settings.json').write_text('{"style":"clock","idleMinutes":5}')
+    agent.next_settings_check = 0
+    with patch.dict(module.os.environ, {'WAYLAND_DISPLAY': 'test-wayland'}):
+        with patch.object(module.subprocess, 'Popen', return_value=Mock(poll=Mock(return_value=None))) as launch:
+            agent.check_auto_idle()
+            assert launch.call_args.args[0][:4] == ['swayidle', '-w', 'timeout', '300']
+            assert agent.saver_style == 'clock'
+
     with patch.object(module.subprocess, 'run') as run:
         agent.check_auto_idle()
         run.assert_not_called()

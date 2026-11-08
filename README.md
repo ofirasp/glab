@@ -13,7 +13,7 @@ Guitar Practice Lab is a touchscreen app for practising with chord sheets, backi
 
 **Shut down** asks for confirmation and powers off the Pi. Each request belongs to the current desktop session, so a saved request cannot run again after a restart. **Sleep screen** covers the kiosk with a black saver while keeping the display signal active. **Exit to Desktop** closes the practice kiosk.
 
-On the Pi's Wayland desktop, the helper activates the kiosk saver after 10 minutes without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before showing the saver. Touch the display to wake it. The backlight stays on in this mode.
+In **Tools → Screen saver**, choose Black, Clock, or Guitar photo and preview the style before saving. The idle timeout defaults to 10 minutes and can be set from 1 to 60 minutes using the listed presets. On the Pi's Wayland desktop, the helper activates the kiosk saver after the configured time without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before showing the saver. Touch the display to wake it. The backlight stays on in this mode.
 
 ## Songs and timed PDF following
 

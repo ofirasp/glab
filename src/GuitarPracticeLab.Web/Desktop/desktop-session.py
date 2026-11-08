@@ -24,6 +24,9 @@ class DesktopSession(lesson_browser.Browser):
         super().__init__(*args, **kwargs)
         self.desktop_session_id = str(uuid4())
         self.auto_idle_started = False
+        self.saver_style = 'black'
+        self.idle_minutes = 10
+        self.next_settings_check = 0.0
         self.auto_idle_process = None
         self.idle_marker = self.root / 'desktop-idle'
         self.auto_screen_sleep = False
@@ -65,11 +68,41 @@ class DesktopSession(lesson_browser.Browser):
         if os.environ.get('WAYLAND_DISPLAY'):
             env = {**os.environ, 'GPL_IDLE_MARKER': str(self.idle_marker)}
             self.auto_idle_process = subprocess.Popen([
-                'swayidle', '-w', 'timeout', '600', 'touch "$GPL_IDLE_MARKER"',
+                'swayidle', '-w', 'timeout', str(self.idle_minutes * 60), 'touch "$GPL_IDLE_MARKER"',
                 'resume', 'rm -f "$GPL_IDLE_MARKER"'
             ], env=env)
 
+    def refresh_saver_settings(self):
+        now = time.monotonic()
+        if now < self.next_settings_check:
+            return
+        self.next_settings_check = now + 1
+        try:
+            settings = json.loads((self.root / 'screen-settings.json').read_text())
+        except (OSError, ValueError):
+            return
+        if not isinstance(settings, dict):
+            return
+        style = settings.get('style')
+        if style in ('black', 'clock', 'guitar'):
+            self.saver_style = style
+        minutes = settings.get('idleMinutes')
+        if type(minutes) is not int or minutes not in (1, 5, 10, 15, 30, 60) or minutes == self.idle_minutes:
+            return
+        self.idle_minutes = minutes
+        self.auto_screen_sleep = False
+        if self.auto_idle_process and self.auto_idle_process.poll() is None:
+            self.auto_idle_process.terminate()
+            try:
+                self.auto_idle_process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                self.auto_idle_process.kill()
+                self.auto_idle_process.wait()
+        self.auto_idle_process = None
+        self.auto_idle_started = False
+
     def check_auto_idle(self):
+        self.refresh_saver_settings()
         if not self.auto_idle_started:
             self.auto_idle_started = True
             self.start_auto_idle()
@@ -107,6 +140,7 @@ class DesktopSession(lesson_browser.Browser):
             'running': self.running(), 'error': self.error, 'captureId': self.extension_id,
             'desktopControls': True, 'desktopSessionId': self.desktop_session_id,
             'desktopResult': self.desktop_result,
+            'screenStyle': self.saver_style,
             'screenShield': self.manual_screen_sleep or self.auto_screen_sleep,
         }))
         temporary.replace(target)

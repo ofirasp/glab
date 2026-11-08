@@ -6,12 +6,12 @@
 
 <button id="desktopAction" @onclick="ReturnToDesktop" hidden>Exit to Desktop</button>
 
-<iframe class="@CursorClass" src="/practice.html" title="Guitar Practice Lab"
+<iframe id="practiceFrame" class="@CursorClass" src="/practice.html" title="Guitar Practice Lab"
         style="position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000"></iframe>
 
 @if (CursorClass == "touch-kiosk")
 {
-    <div id="screenWakeShield" hidden aria-hidden="true"></div>
+    <div id="screenWakeShield" hidden aria-hidden="true"><time id="saverClock" hidden></time></div>
     <script src="/screen-wake-shield.js" defer></script>
 }
 
@@ -34,5 +34,13 @@ html,body{margin:0;height:100%;overflow:hidden}
 iframe{display:block}
 iframe.touch-kiosk{cursor:none}
 #screenWakeShield{position:fixed;inset:0;z-index:10000;background:#000;touch-action:none;cursor:none}
-#screenWakeShield[hidden]{display:none}
+#screenWakeShield[hidden],#saverClock[hidden]{display:none}
+#screenWakeShield[data-style="guitar"]{
+    background:linear-gradient(#0009,#0009),url('/guitar-home.jpg') center / cover no-repeat;
+}
+#saverClock{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    color:#93a6b9;font:300 clamp(46px,12vw,110px) system-ui;
+    font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;
+}
 </style>

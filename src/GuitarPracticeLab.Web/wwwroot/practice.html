@@ -121,10 +121,17 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 .home-actions button{min-height:44px;font-size:15px}
 #exitDesktop{margin-left:auto}
 #homeActionStatus{font-size:12px;color:#e1eaf4;flex:1}
-#shutdownConfirm{max-width:calc(100vw - 30px);border:1px solid #547091;border-radius:16px;background:#192639;color:#eef3ff;padding:18px}
-#shutdownConfirm::backdrop{background:#000b}
+#shutdownConfirm,#saverSettingsDialog{max-width:calc(100vw - 30px);border:1px solid #547091;border-radius:16px;background:#192639;color:#eef3ff;padding:18px}
+#shutdownConfirm::backdrop,#saverSettingsDialog::backdrop{background:#000b}
 #shutdownConfirm .row{justify-content:flex-end}
 #confirmShutdown{background:#803f46}
+#saverSettingsDialog{width:min(480px,calc(100vw - 30px))}
+#saverSettingsDialog h2{margin:0 0 12px;font-size:22px}
+#saverSettingsDialog label{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px;margin:8px 0}
+#saverSettingsDialog select{font:inherit;min-height:44px;background:#293950;color:#eef3ff;border:1px solid #547091;border-radius:8px;padding:6px}
+#saverSettingsDialog .row{justify-content:flex-end}
+#saverSettingsStatus{min-height:20px;font-size:13px;color:#c3d4e7}
+#saverSettingsButton{justify-self:start;min-height:42px;font-size:16px}
 </style>
 
 </head>
@@ -160,7 +167,32 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
     <button id="metroTab">Metronome<small>Set a steady tempo</small></button>
     <button id="followNotes" onclick="location.href='/scale-practice.html'">Scales<small>Follow the Notes</small></button>
   </div>
+  <button id="saverSettingsButton" hidden>Screen saver</button>
 </section>
+
+<dialog id="saverSettingsDialog" aria-labelledby="saverSettingsTitle">
+  <h2 id="saverSettingsTitle">Screen saver</h2>
+  <label>Style
+    <select id="saverStyle">
+      <option value="black">Black</option>
+      <option value="clock">Clock</option>
+      <option value="guitar">Guitar photo</option>
+    </select>
+  </label>
+  <label>Start after
+    <select id="saverIdleMinutes">
+      <option value="1">1 minute</option><option value="5">5 minutes</option>
+      <option value="10" selected>10 minutes</option><option value="15">15 minutes</option>
+      <option value="30">30 minutes</option><option value="60">60 minutes</option>
+    </select>
+  </label>
+  <p id="saverSettingsStatus" role="status"></p>
+  <div class="row">
+    <button id="saverPreview" disabled>Preview</button>
+    <button id="saverClose">Close</button>
+    <button id="saverSave" disabled>Save</button>
+  </div>
+</dialog>
 
 <section id="tuner" hidden>
 <div class="note" id="note">E2</div>
@@ -355,12 +387,55 @@ if(window.parent!==window){
     $('exitDesktop').onclick=()=>exit.click();
     const local=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
     $('shutdownButton').hidden=$('sleepScreen').hidden=!local;
+    $('saverSettingsButton').hidden=!local;
     const confirm=$('shutdownConfirm');
     $('shutdownButton').onclick=()=>{confirm.returnValue='';confirm.showModal();};
     confirm.onclose=()=>{if(confirm.returnValue==='poweroff')requestDesktopAction('poweroff');};
     $('sleepScreen').onclick=()=>requestDesktopAction('screen-sleep');
   }
 }
+const saverDialog = $('saverSettingsDialog');
+const saverStatus = $('saverSettingsStatus');
+const saverEndpoint = '/api/desktop/screen-settings';
+$('saverSettingsButton').onclick = async () => {
+  saverDialog.showModal();
+  $('saverSave').disabled = true;
+  $('saverPreview').disabled = true;
+  saverStatus.textContent = 'Loading…';
+  try {
+    const response = await fetch(saverEndpoint, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+    if (!response.ok) throw new Error('Could not load settings.');
+    const settings = await response.json();
+    $('saverStyle').value = settings.style;
+    $('saverIdleMinutes').value = String(settings.idleMinutes);
+    saverStatus.textContent = '';
+    $('saverSave').disabled = false;
+    $('saverPreview').disabled = false;
+  } catch (error) {
+    saverStatus.textContent = error.message;
+  }
+};
+$('saverClose').onclick = () => saverDialog.close();
+$('saverPreview').onclick = () => {
+  window.parent.postMessage({ type: 'preview-screen-saver', style: $('saverStyle').value }, location.origin);
+};
+$('saverSave').onclick = async () => {
+  $('saverSave').disabled = true;
+  try {
+    const response = await fetch(saverEndpoint, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ style: $('saverStyle').value, idleMinutes: Number($('saverIdleMinutes').value) }),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) throw new Error('Could not save settings.');
+    saverDialog.close();
+  } catch (error) {
+    saverStatus.textContent = error.message;
+  } finally {
+    $('saverSave').disabled = false;
+  }
+};
 async function requestDesktopAction(action){
   const status=$('homeActionStatus'), buttons=[$('shutdownButton'),$('sleepScreen')];
   for(const button of buttons)button.disabled=true;
