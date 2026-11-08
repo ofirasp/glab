@@ -46,32 +46,35 @@ with tempfile.TemporaryDirectory() as directory:
         agent.check_auto_idle()
         run.assert_not_called()
         agent.idle_marker.touch()
-        agent.screen_idle = Mock()
-        agent.check_auto_idle()
-        run.assert_not_called()
-        agent.screen_idle = None
         run.return_value = Mock(returncode=0, stdout='Paused\nPlaying\n', stderr='')
         agent.check_auto_idle()
         run.assert_called_once()
-        assert not agent.auto_blanked
+        assert not agent.auto_screen_sleep
 
         agent.next_idle_check = 0
         run.return_value = Mock(returncode=0, stdout='Paused\n', stderr='')
-        agent.check_auto_idle()
-        assert agent.auto_blank_at is not None
-        assert not agent.auto_blanked
         agent.status()
         assert '"screenShield": true' in (agent.root / 'status.json').read_text()
-        agent.next_idle_check = 0
-        agent.check_auto_idle()
-        assert run.call_args.args[0] == ['wlopm', '--off', '*']
-        assert agent.auto_blanked
+        assert run.call_args.args[0] == ['playerctl', '--all-players', 'status']
+
+        def send(action):
+            agent.handle({'action': action, 'id': action, 'created': time.time(),
+                          'desktopSessionId': agent.desktop_session_id})
+
+        send('screen-wake')
+        agent.status()
+        assert '"screenShield": false' in (agent.root / 'status.json').read_text()
+        assert agent.suppress_idle_until_activity
         agent.idle_marker.unlink()
         agent.check_auto_idle()
-        assert run.call_args.args[0] == ['wlopm', '--on', '*']
-        calls = run.call_count
-        agent.check_auto_idle()
-        assert run.call_count == calls
-        assert not agent.auto_blanked
+        assert not agent.suppress_idle_until_activity
 
-print('PASS ten-minute Wayland timeout, active-media suppression, blanking, and wake reset')
+        send('screen-sleep')
+        agent.status()
+        assert '"screenShield": true' in (agent.root / 'status.json').read_text()
+        send('screen-wake')
+        agent.status()
+        assert '"screenShield": false' in (agent.root / 'status.json').read_text()
+        assert run.call_count == 2
+
+print('PASS idle and manual saver state, playback suppression, and wake without display power commands')

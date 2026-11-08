@@ -70,7 +70,7 @@ public static class Lessons
     {
         if (!KioskRequest(context) || context.Request.Headers.Origin != context.Request.Scheme + "://" + context.Request.Host)
             return Results.StatusCode(403);
-        if (action is not ("poweroff" or "screen-sleep")) return Results.NotFound();
+        if (action is not ("poweroff" or "screen-sleep" or "screen-wake")) return Results.NotFound();
         var desktop = DesktopStatus();
         if (desktop.ValueKind != JsonValueKind.Object ||
             !desktop.TryGetProperty("desktopSessionId", out var sessionId) ||

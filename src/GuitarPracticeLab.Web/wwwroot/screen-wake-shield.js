@@ -2,16 +2,33 @@
   const shield = document.getElementById('screenWakeShield');
   if (!shield) return;
 
-  const settleMs = 1200;
+  const settleMs = 250;
+  let waking = false;
   let safeAfter = 0;
   let lastResponse = performance.now();
   const touches = new Set();
+
+  async function wake() {
+    if (waking) return;
+    waking = true;
+    try {
+      await fetch('/api/desktop/screen-wake', {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
+    } catch {
+      // The next tap can retry if the desktop helper is temporarily unavailable.
+    } finally {
+      waking = false;
+    }
+  }
 
   shield.addEventListener('pointerdown', event => {
     touches.add(event.pointerId);
     shield.setPointerCapture(event.pointerId);
     event.preventDefault();
     event.stopPropagation();
+    void wake();
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     shield.addEventListener(type, event => {

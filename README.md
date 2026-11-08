@@ -11,9 +11,9 @@ Guitar Practice Lab is a touchscreen app for practising with chord sheets, backi
 | **Lessons** | Open JustinGuitar or GuitarZero2Hero, save lesson links with notes, and revisit them later. |
 | **Practice** | **1 Minute Changes**, **Play Along**, and a practice timer. |
 
-**Shut down** asks for confirmation and powers off the Pi. Each request belongs to the current desktop session, so a saved request cannot run again after a restart. **Sleep screen** uses the desktop screen saver or screen blanking. **Exit to Desktop** closes the practice kiosk.
+**Shut down** asks for confirmation and powers off the Pi. Each request belongs to the current desktop session, so a saved request cannot run again after a restart. **Sleep screen** covers the kiosk with a black saver while keeping the display signal active. **Exit to Desktop** closes the practice kiosk.
 
-On the Pi's Wayland desktop, the helper blanks the display after 10 minutes without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before blanking. Touch the display to wake it. Actual blanking and wake behaviour depend on the desktop session and display.
+On the Pi's Wayland desktop, the helper activates the kiosk saver after 10 minutes without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before showing the saver. Touch the display to wake it. The backlight stays on in this mode.
 
 ## Songs and timed PDF following
 

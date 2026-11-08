@@ -113,12 +113,13 @@
   },
   "Lessons.cs": {
     "before": null,
-    "after": "5c7fa5ba707894d908760915abefebbe96b1b96f1e71aa2913422365f53b7fad",
+    "after": "f9539b5e8bb1f122f07decef104996474752ce69c97ff8a64ccdc81b1d67b3af",
     "compatible": [
       "9297cf00837d3f66de603c50c3bc7073e1ef71db8b88bb5a0720c6a7c8c61568",
       "a7775b824a03d04907f8aaf27ee47cae83ceb6b1c8dfad40be3a48ddc3a61b52",
       "5de9d54a6ad0610d7825b32506a2248b7d373f193d96a793a74b154ec40849af",
-      "81a03cd69dfff26677ebe05745b5d76367438ccede9ed855486a6d43f3225339"
+      "81a03cd69dfff26677ebe05745b5d76367438ccede9ed855486a6d43f3225339",
+      "5c7fa5ba707894d908760915abefebbe96b1b96f1e71aa2913422365f53b7fad"
     ]
   },
   "Desktop/lesson-browser.py": {
@@ -248,12 +249,13 @@
   },
   "Desktop/desktop-session.py": {
     "before": null,
-    "after": "35d0f77bbcbbf1fb914ce0459f6352f1e576ec3549557f4e60461cc22103300a",
+    "after": "4afc837542f0347f71a34708e4f84e16e26ffa56f7e41eb933e3ee68791f2601",
     "compatible": [
       "7ceacc221921186999370970c1bca7d78ad84cc40dbaaf37268d62508cefa8df",
       "0eb7f06def5e60b8988dce2fef3756aa313b787cb6314f529ac02b87a137a507",
       "31e6c4468a517685c3fd99f45fa275e5aa1c9eb2047f13e30c0fd19a1ae2fd23",
-      "c401e6651b0f947617627ad4098985f151aafd02e8fbde9bdba36b920867faf9"
+      "c401e6651b0f947617627ad4098985f151aafd02e8fbde9bdba36b920867faf9",
+      "35d0f77bbcbbf1fb914ce0459f6352f1e576ec3549557f4e60461cc22103300a"
     ]
   },
   "wwwroot/playback-wake-lock.js": {
@@ -262,6 +264,9 @@
   },
   "wwwroot/screen-wake-shield.js": {
     "before": null,
-    "after": "e52a194180aa2668cc12779b3017147987e478515ae4d86efb0ac9956f4c4afe"
+    "after": "b71158e0cad7e9c6fc35d013b3bd06f5f33f6632ee31ca590f2698e494aa6371",
+    "compatible": [
+      "e52a194180aa2668cc12779b3017147987e478515ae4d86efb0ac9956f4c4afe"
+    ]
   }
 }

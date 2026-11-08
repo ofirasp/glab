@@ -1,5 +1,5 @@
 """Exercise the real installer with isolated files and mocked Pi commands."""
-import hashlib,json,os,subprocess,tempfile
+import hashlib,json,os,subprocess,tempfile,xml.etree.ElementTree as ET
 from pathlib import Path
 repo=Path(__file__).resolve().parents[1]
 manifest=json.loads((repo/'tools/chord-update/manifest.json').read_text())
@@ -10,6 +10,10 @@ for mode in ('success','previous-update','preserved-local','build-failure','star
   root=Path(temp);lab=root/'lab';project=lab/'GuitarPracticeLab.Web';published=lab/'published';bins=root/'bin'
   project.mkdir(parents=True);published.mkdir();bins.mkdir()
   autostart=root/'autostart';autostart.mkdir();entry=autostart/'guitar-lab-lessons.desktop';entry.write_text('previous desktop entry')
+  config=root/'config'
+  rc=config/'labwc/rc.xml'
+  rc.parent.mkdir(parents=True)
+  rc.write_text('<labwc_config><keyboard><keybind key="W-x"/></keyboard></labwc_config>')
   (project/'GuitarPracticeLab.Web.csproj').write_text('<Project/>')
   (published/'previous.txt').write_text('previous running app')
   originals={}
@@ -31,7 +35,7 @@ for mode in ('success','previous-update','preserved-local','build-failure','star
    target.write_bytes(local)
   if mode=='local-change':
    (project/'SongLibrary.cs').write_text('// custom Pi edit');originals['SongLibrary.cs']=b'// custom Pi edit'
-  commands={'sudo':'exec "$@"','apt-get':'exit 0','systemctl':'exit 0','sleep':'exit 0',
+  commands={'labwc':'exit 0','sudo':'exec "$@"','apt-get':'exit 0','systemctl':'exit 0','sleep':'exit 0',
    'curl':'[ "$GPL_TEST_MODE" != startup-failure ]',
    'dotnet':'''[ "$GPL_TEST_MODE" != build-failure ] || exit 1
 while [ "$#" -gt 0 ]; do
@@ -42,12 +46,15 @@ done'''}
    f=bins/name;f.write_text('#!/bin/bash\n'+body+'\n');f.chmod(0o755)
   if mode=='desktop-failure':
    blocked=root/'blocked';blocked.write_text('not a directory')
-  env=os.environ.copy();env.update(GPL_LAB_ROOT=str(lab),GPL_AUTOSTART_DIR=str(blocked if mode=='desktop-failure' else autostart),DOTNET_ROOT=str(bins),GPL_TEST_MODE=mode,PATH=str(bins)+':'+env['PATH'])
+  env=os.environ.copy();env.update(XDG_CONFIG_HOME=str(config),GPL_LAB_ROOT=str(lab),GPL_AUTOSTART_DIR=str(blocked if mode=='desktop-failure' else autostart),DOTNET_ROOT=str(bins),GPL_TEST_MODE=mode,PATH=str(bins)+':'+env['PATH'])
   result=subprocess.run(['bash',str(repo/'tools/chord-update/install.sh')],env=env,capture_output=True,text=True)
   assert (result.returncode==0)==(mode in ('success','previous-update','preserved-local')),(mode,result.stdout,result.stderr)
   if mode in ('success','previous-update','preserved-local'):
    assert (published/'new.txt').exists()
    assert 'Desktop/desktop-session.py' in entry.read_text()
+   settings = ET.parse(rc)
+   assert settings.find(".//keybind[@key='W-x']") is not None
+   assert settings.find(".//windowRule/action[@name='HideCursor']") is not None
    for name,hashes in manifest.items():
     contents = (project/name).read_bytes()
     if mode == 'preserved-local' and name == preserved_name:

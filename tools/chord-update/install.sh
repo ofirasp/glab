@@ -15,6 +15,7 @@ test -d "$lab/published" || { echo "Cannot find the existing published app."; ex
 # Repository checkout or extracted update bundle.
 if test -d "$bundle/payload"; then payload="$bundle/payload"; else payload="$bundle/../../src/GuitarPracticeLab.Web"; fi
 export CHORD_AUTOSTART="${GPL_AUTOSTART_DIR:-$HOME/.config/autostart}/guitar-lab-lessons.desktop"
+export CHORD_LABWC_RC="${XDG_CONFIG_HOME:-$HOME/.config}/labwc/rc.xml"
 export CHORD_PROJECT="$project" CHORD_PAYLOAD="$payload" CHORD_MANIFEST="$bundle/manifest.json" CHORD_BACKUP="$backup"
 python3 - <<'PY'
 import hashlib,json,os
@@ -28,7 +29,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[]),*allowed.get('preserve',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
-sudo apt-get install -y poppler-utils alsa-utils swayidle wlopm playerctl
+sudo apt-get install -y poppler-utils alsa-utils swayidle playerctl
 mkdir -p "$backup/source" "$stage"
 python3 - <<'PY'
 import json,os,shutil
@@ -44,6 +45,8 @@ import os,shutil
 from pathlib import Path
 path=Path(os.environ['CHORD_AUTOSTART']);backup=Path(os.environ['CHORD_BACKUP'])/'lesson-browser.desktop'
 if path.exists():shutil.copy2(path,backup)
+rc = Path(os.environ['CHORD_LABWC_RC'])
+if rc.is_file(): shutil.copy2(rc, backup.with_name('labwc-rc.xml'))
 DESKTOP_BACKUP
 desktop_changed=0
 source_changed=0
@@ -60,6 +63,11 @@ from pathlib import Path
 path=Path(os.environ['CHORD_AUTOSTART']);backup=Path(os.environ['CHORD_BACKUP'])/'lesson-browser.desktop'
 if backup.exists():path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(backup,path)
 elif path.exists():path.unlink()
+rc = Path(os.environ['CHORD_LABWC_RC'])
+rc_backup = backup.with_name('labwc-rc.xml')
+if backup.with_name('labwc-cursor-changed').exists():
+    if rc_backup.exists(): shutil.copy2(rc_backup, rc)
+    else: rc.unlink(missing_ok=True)
 DESKTOP_RESTORE
     fi
     if [ "$source_changed" = 1 ]; then
@@ -121,6 +129,48 @@ temporary=path.with_suffix('.tmp')
 temporary.write_text('[Desktop Entry]\nType=Application\nName=Guitar Practice Lab desktop controls\nExec=/usr/bin/python3 '+quoted(script)+'\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n')
 temporary.replace(path)
 DESKTOP_INSTALL
+if command -v labwc >/dev/null; then
+  python3 - <<'CURSOR_INSTALL'
+import os
+from pathlib import Path
+import shutil
+import xml.etree.ElementTree as ET
+
+target = Path(os.environ['CHORD_LABWC_RC'])
+defaults = os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':')
+source = target if target.is_file() else next(
+    (candidate for directory in defaults
+     if (candidate := Path(directory) / 'labwc' / 'rc.xml').is_file()), None
+)
+if source is not None:
+    try:
+        parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True, insert_pis=True))
+        tree = ET.parse(source, parser=parser)
+    except (OSError, ET.ParseError) as error:
+        print(f'Could not add the compositor cursor rule: {error}')
+    else:
+        config = tree.getroot()
+        namespace = config.tag.split('}', 1)[0] + '}' if config.tag.startswith('{') else ''
+        rules = config.find(namespace + 'windowRules')
+        if rules is None:
+            rules = ET.SubElement(config, namespace + 'windowRules')
+        present = any(
+            rule.get('identifier') == '*chromium*' and
+            rule.find(f"{namespace}action[@name='HideCursor']") is not None
+            for rule in rules.findall(namespace + 'windowRule')
+        )
+        if not present:
+            rule = ET.SubElement(rules, namespace + 'windowRule',
+                                 {'identifier': '*chromium*', 'type': 'normal', 'matchOnce': 'true'})
+            ET.SubElement(rule, namespace + 'action', {'name': 'HideCursor'})
+            target.parent.mkdir(parents=True, exist_ok=True)
+            temporary = target.with_name('.guitar-lab-rc.xml.tmp')
+            tree.write(temporary, encoding='utf-8', xml_declaration=True)
+            shutil.copymode(source, temporary)
+            (Path(os.environ['CHORD_BACKUP']) / 'labwc-cursor-changed').touch()
+            temporary.replace(target)
+CURSOR_INSTALL
+fi
 echo "Installed. Backup: $backup"
 echo 'Restart the Pi once to activate desktop controls and the lesson browser.'
 echo 'Close and reopen the app browser. Practice → 1 Minute Changes uses the Pi microphone.'
