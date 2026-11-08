@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Guitar Practice Lab</title>
+<script>
+if (window.parent !== window && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) {
+  document.documentElement.classList.add('touch-kiosk');
+}
+</script>
+<style>
+html.touch-kiosk, html.touch-kiosk * { cursor: none !important; }
+</style>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#101827;color:#eef3ff;font:16px system-ui}

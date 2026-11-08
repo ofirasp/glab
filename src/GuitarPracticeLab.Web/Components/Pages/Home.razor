@@ -1,14 +1,18 @@
 @page "/"
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
 
 <PageTitle>Guitar Practice Lab</PageTitle>
 
 <button id="desktopAction" @onclick="ReturnToDesktop" hidden>Exit to Desktop</button>
 
-<iframe src="/practice.html" title="Guitar Practice Lab"
+<iframe class="@CursorClass" src="/practice.html" title="Guitar Practice Lab"
         style="position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000"></iframe>
 
 @code {
+    private string CursorClass => new Uri(Navigation.Uri).IsLoopback ? "touch-kiosk" : "";
+
+
     private void ReturnToDesktop()
     {
         var command = new System.Diagnostics.ProcessStartInfo("pkill");
@@ -22,4 +26,5 @@
 <style id="outer-screen-fit">
 html,body{margin:0;height:100%;overflow:hidden}
 iframe{display:block}
+iframe.touch-kiosk{cursor:none}
 </style>

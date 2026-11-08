@@ -76,7 +76,7 @@
   },
   "wwwroot/practice.html": {
     "before": "febcbe0d51f4e4a4f6730f776e9b67472e92d540309d9ac1723bd923af71d54d",
-    "after": "6c71869cc2901e0ed8a71105fd9359bc4e0ef22ec5801824a01ad7933e125134",
+    "after": "7a292f94b51945697f30453f9266dd2cf28090a4333db48f8b4561cbaacb7699",
     "compatible": [
       "db76e82ed97d42ca8b82f34e8447bad4d6c3206bdd2d88f3c2068b5588ded804",
       "ea1d2809abc819e6c4bbae4b83b126756a0da97f9a436e397849ae7643277fe9",
@@ -85,7 +85,8 @@
       "bf01acf94319cbecaa32420dbd469bd0ecdd6560b134b87e751f97e711e31399",
       "52d6fda4f035c41b956c85399d0e507939417d412ae2556c6c1c33149d28140c",
       "4301eed69d4d1e7fd59baa0b7fdf1b65dd728c666287d190bbe4016fcf0aa0f5",
-      "3bbd25a86da627f2707cf4a48f3db5d7a5508829f5f61da88a2379ab52595333"
+      "3bbd25a86da627f2707cf4a48f3db5d7a5508829f5f61da88a2379ab52595333",
+      "6c71869cc2901e0ed8a71105fd9359bc4e0ef22ec5801824a01ad7933e125134"
     ]
   },
   "wwwroot/chord-diagram.js": {
@@ -234,7 +235,10 @@
   },
   "Components/Pages/Home.razor": {
     "before": "3a4fcfebead67be403083c3ecd51ccfbd025b5ea2e1d9fbbeb3672b2ce0a668a",
-    "after": "48a5a652840d4f1938209de67895a804654a9fd1dda87faa0b42c4adb5ba9d26"
+    "after": "e301dd842a8e88b4b999787e887c16bdcc27ce6862bcd1fe2cb8d3283d9341fb",
+    "compatible": [
+      "48a5a652840d4f1938209de67895a804654a9fd1dda87faa0b42c4adb5ba9d26"
+    ]
   },
   "wwwroot/guitar-home.jpg": {
     "before": null,
