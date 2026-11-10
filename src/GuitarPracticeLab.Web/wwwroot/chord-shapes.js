@@ -1,4 +1,4 @@
-/* Standard tuning only. Every displayed voicing is checked against its pitch set.
+/* Every displayed voicing is checked against its pitch set.
    No external chord service, image download or third-party chord database. */
 (function (scope) {
   'use strict';
@@ -33,13 +33,14 @@
     if (!notes.includes(bass)) notes.push(bass);
     return { root, bass, quality, notes };
   }
-  function valid(frets, chord) {
-    const sounded = frets.flatMap((f, i) => f < 0 ? [] : [(tuning[i] + f) % 12]);
+  function valid(frets, chord, stringPitches = tuning) {
+    const sounded = frets.flatMap((f, i) => f < 0 ? [] : [(stringPitches[i] + f) % 12]);
     return sounded.length >= 3 && sounded[0] === chord.bass && sounded.every(n => chord.notes.includes(n)) && chord.notes.every(n => sounded.includes(n));
   }
   function fingers(frets) {
     const used = frets.filter(f => f > 0), min = Math.min(...used), max = Math.max(...used);
-    if (!used.length || max - min > 3) return null;
+    if (!used.length) return { labels: Array(6).fill(null), barre: null };
+    if (max - min > 3) return null;
     const atBase = frets.flatMap((f,i) => f === min ? [i] : []);
     let barre = null;
     if (atBase.length >= 2 && frets.slice(atBase[0], atBase.at(-1) + 1).every(f => f >= min)) barre = { fret: min, from: atBase[0], to: atBase.at(-1) };
@@ -51,29 +52,31 @@
     return { labels, barre };
   }
   const cache = new Map();
-  function shapes(name) {
-    if (cache.has(name)) return cache.get(name);
+  function shapes(name, stringPitches = tuning) {
+    const cacheKey = name + '|' + stringPitches.join(',');
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
     const chord = parse(name);
     if (!chord) return [];
     const result = [], seen = new Set();
-    function add(frets, preferred = false) {
-      if (!valid(frets, chord)) return;
+    function add(frets, preferred = false, labels = null) {
+      if (!valid(frets, chord, stringPitches)) return;
       const fingering = fingers(frets);
       if (!fingering) return;
       const key = frets.join(','); if (seen.has(key)) return; seen.add(key);
-      const positive = frets.filter(f => f > 0), min = Math.min(...positive), max = Math.max(...positive);
-      const score = (preferred ? -100 : 0) + max * 2 + (max - min) * 3 + frets.filter(f => f < 0).length * 2 + (fingering.barre ? 5 : 0);
-      result.push({ frets: [...frets], ...fingering, score });
+      const positive = frets.filter(f => f > 0), min = Math.min(...(positive.length ? positive : [0])), max = Math.max(0, ...positive);
+      const score = (preferred ? (labels ? -90 : -100) : 0) + max * 2 + (max - min) * 3 + frets.filter(f => f < 0).length * 2 + (fingering.barre ? 5 : 0);
+      result.push({ frets: [...frets], ...fingering, labels: labels ?? fingering.labels, score });
     }
     if (open[name]) add(open[name], true);
+    if (name === 'G') add([3,-1,0,0,0,3], true, [2,null,null,null,null,3]);
     // Generate compact voicings up to fret 12, with all chord tones and requested bass.
     for (let start = 0; start <= 9; start++) {
-      const choices = tuning.map(n => [-1, ...Array.from({length:4}, (_,i) => start + i).filter(f => chord.notes.includes((n + f) % 12))]);
+      const choices = stringPitches.map(n => [-1, ...Array.from({length:4}, (_,i) => start + i).filter(f => chord.notes.includes((n + f) % 12))]);
       function walk(frets, first) {
         const i = frets.length;
         if (i === 6) { add(frets); return; }
         for (const fret of choices[i]) {
-          if (first && fret >= 0 && (tuning[i] + fret) % 12 !== chord.bass) continue;
+          if (first && fret >= 0 && (stringPitches[i] + fret) % 12 !== chord.bass) continue;
           walk([...frets, fret], first && fret < 0);
         }
       }
@@ -81,7 +84,7 @@
     }
     result.sort((a,b) => a.score - b.score);
     const selected = result.slice(0, 12);
-    cache.set(name, selected);
+    cache.set(cacheKey, selected);
     return selected;
   }
   scope.GuitarChords = { parse, shapes, valid, tuning };

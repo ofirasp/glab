@@ -35,7 +35,6 @@ ssh -S "$socket" "$target" "mkdir -p '$remote'"
 scp -o "ControlPath=$socket" "$archive" "$target:$remote/update.zip"
 ssh -t -S "$socket" "$target" "cd '$remote' && unzip -q update.zip && bash GuitarLab-Chord-Update/install.sh"
 echo 'Done. Restart the Pi once to activate the Lessons browser helper.'
-read -r -p 'Press Return to close.'
 exit 0
 __GPL_PAYLOAD__
 '''

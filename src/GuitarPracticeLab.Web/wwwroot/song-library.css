@@ -9,14 +9,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .top{display:flex;align-items:center;gap:6px;min-width:0}
 .top strong{font-size:18px;margin-right:4px}
 .top .button:first-child{margin-left:0}
-#readerToggle{margin-left:auto}
+#songTitle{flex:1;min-width:0;margin:0;padding:0 4px;display:block;text-align:center;white-space:nowrap;text-overflow:ellipsis}
 .split{display:grid;grid-template-columns:minmax(0,3fr) minmax(180px,1fr);gap:8px;min-height:0}
 .sheet{display:grid;grid-template-rows:40px minmax(0,1fr)42px;min-width:0;min-height:0;background:#19283a;border-radius:10px;overflow:hidden}
-.pagebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px 40px auto;align-items:center;gap:4px;padding:0 4px}
-.pagebar button{min-height:34px;font-size:21px;padding:0}
+.pagebar{position:relative;display:flex;align-items:center;gap:4px;padding:0 4px}
+.pagebar button{min-width:40px;min-height:34px;font-size:21px;padding:0}
 #simpleVersionControl{display:flex;align-items:center;gap:4px;padding:0 6px;min-height:36px;font-size:13px;white-space:nowrap;cursor:pointer}
 #simpleVersion{width:20px;height:20px;margin:0;accent-color:#6aa8ff}
-#pageNumber{text-align:center;font-size:13px;white-space:nowrap}
+#pageNumber{margin-left:auto;text-align:right;font-size:13px;white-space:nowrap}
 #pdfViewport{overflow:auto;position:relative;background:#cbd1d8;scroll-behavior:auto;overscroll-behavior:contain;color:#172238;touch-action:pan-x pan-y}
 #pdfImage{display:block;width:100%;max-width:none;height:auto;user-select:none}
 [hidden]{display:none!important}
@@ -26,9 +26,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .cuebar{display:flex;gap:4px;align-items:center;padding:3px 4px}
 .cuebar button{flex:1;min-height:36px;padding:4px;font-size:13px}
 .companion{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:8px;background:#19283a;border-radius:10px;overflow:hidden}
-.songheading{min-width:0}
-.songheading .tracktoggle{min-height:27px;height:27px;padding:2px 6px;font-size:11px;width:100%;justify-content:flex-start;background:#12273e;border-color:#4b6587}
-.songheading h1{-webkit-line-clamp:1;white-space:nowrap;text-overflow:ellipsis;display:block;font-size:16px}
+#trackToggle{flex-shrink:0;min-height:44px;padding:6px;font-size:12px;width:100%;background:#12273e;border-color:#4b6587}
 .eyebrow{display:block;color:#9eb2cc;font-size:10px;letter-spacing:1.3px}
 h1{font-size:17px;line-height:1.25;margin:3px 0 0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .hint{color:#b5c5da;font-size:13px;line-height:1.45;margin:0}
@@ -38,7 +36,9 @@ h1{font-size:17px;line-height:1.25;margin:3px 0 0;overflow:hidden;display:-webki
 .transport #back,.transport #forward{grid-row:2}
 .transport button{font-size:17px;min-height:38px}
 .transport #play{min-height:46px;font-size:20px}
-.timeline input{width:100%;margin:0;height:30px;accent-color:#77adff}
+.seek-row{display:flex;align-items:center;gap:5px}
+.seek-row #songStart{flex:0 0 34px;min-height:36px;padding:2px;font-size:17px}
+.timeline input{width:100%;min-width:0;margin:0;height:30px;accent-color:#77adff}
 .spread{display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:12px}
 select{font:inherit;min-height:34px;background:#273b55;border:1px solid #586d88;border-radius:7px;color:white;padding:3px}
 .loopcard{padding:6px;background:#112034;border-radius:9px;font-size:12px}
@@ -77,6 +77,7 @@ body.reader .split{grid-template-columns:minmax(0,1fr)}
 body.reader .companion{display:none}
 body.reader .readerbar{display:flex;align-items:center;gap:6px;padding:4px 6px;border-top:1px solid #40546e}
 .readerbar button{min-height:38px}
+.readerbar #readerTrack{min-height:40px}
 #readerClock{margin:auto;font-size:13px;white-space:nowrap}
 .readerbar #readerPlay{min-width:100px}
 @media(max-height:440px){.companion{gap:5px}.loopcard{padding:5px}.hint{font-size:12px}.eyebrow{font-size:9px}h1{font-size:18px}}
@@ -115,3 +116,51 @@ body.reader .reader-volume{display:grid;padding:0 8px;border-top:1px solid #4054
 #chordShapeCount{text-align:center;font-size:13px}
 #chordDialog .dialogfoot button{min-width:110px}
 @media(max-width:480px){.chordbody{grid-template-columns:1fr}.chordsettings{font-size:12px}}
+
+#rhythmDialog[open]{grid-template-rows:44px minmax(0,1fr)}
+
+#stopRecordFollow{margin-left:auto}
+#recordFollowList .cuerow{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+
+
+#takeRecordingBanner{display:flex;align-items:center;gap:6px;margin-left:auto;white-space:nowrap;color:#ffc4c4;font-size:13px}
+
+
+#toolsDialog[open]{
+  --tools-panel:#22364d;--tools-line:#536c89;
+  grid-template-rows:44px 44px minmax(0,1fr);
+}
+.song-tool-tabs{
+  position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:end;gap:3px;margin:0 0 -9px;padding:0 8px;
+}
+.song-tool-tabs button{
+  min-width:0;min-height:40px;padding:4px;font-size:15px;color:#b9cbe2;
+  background:#142234;border:1px solid var(--tools-line);border-radius:9px 9px 0 0;
+}
+.song-tool-tabs button[aria-selected="true"]{
+  min-height:46px;color:#fff;font-weight:750;background:var(--tools-panel);
+  border-top:3px solid #87baff;border-bottom-color:var(--tools-panel);
+}
+#toolsDialog [role="tabpanel"]{
+  padding:14px;gap:10px;background:var(--tools-panel);
+  border:1px solid var(--tools-line);border-radius:0 0 10px 10px;
+}
+
+#chordStrip{position:relative;flex:1;min-width:0;height:32px;overflow:hidden}
+#chordStrip span{position:absolute;top:50%;transform:translate(-50%,-50%);white-space:nowrap;transition:left .1s linear;pointer-events:none}
+.strip-chord{color:#c8dcf6;font-size:14px;font-weight:650}
+.strip-chord.past{color:#a0aec0}
+.strip-chord.next{color:#b7d7ff;font-size:19px;font-weight:750}
+#chordStrip.moving .strip-chord.next{animation:next-chord-blink .85s ease-in-out infinite}
+@keyframes next-chord-blink{50%{color:#fff;text-shadow:0 0 8px #89baff}}
+@media(prefers-reduced-motion:reduce){#chordStrip.moving .strip-chord.next{animation:none}}
+#playingChord{left:50%;z-index:1;background:#19283a;border-radius:5px;color:#ffe28a;font-size:19px;font-weight:750;line-height:28px;padding:0 7px}
+@media(prefers-reduced-motion:reduce){#chordStrip span{transition:none}}
+
+#playingChord.matched-chord{color:#8af0b4}
+
+.follow-down{touch-action:none;background:#245a9b;border-color:#77adff;font-size:23px;min-width:46px;min-height:42px}
+.sectioncard:has(#followDown:not([hidden])){display:grid;grid-template-columns:46px minmax(0,1fr);column-gap:8px;align-content:start}
+.sectioncard #followDown{grid-row:1/span 3;align-self:center;padding:2px}
+.cuebar #readerFollowDown{flex:0 0 46px;font-size:23px;min-height:36px}

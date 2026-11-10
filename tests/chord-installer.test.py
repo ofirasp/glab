@@ -35,8 +35,8 @@ for mode in ('success','previous-update','preserved-local','build-failure','star
    target.write_bytes(local)
   if mode=='local-change':
    (project/'SongLibrary.cs').write_text('// custom Pi edit');originals['SongLibrary.cs']=b'// custom Pi edit'
-  commands={'labwc':'exit 0','sudo':'exec "$@"','apt-get':'exit 0','systemctl':'exit 0','sleep':'exit 0',
-   'curl':'[ "$GPL_TEST_MODE" != startup-failure ]',
+  commands={'labwc':'exit 0','sudo':'exec "$@"','apt-get':'exit 0','systemctl':'[ "$1" != start ] || [ "$GPL_TEST_MODE" != startup-failure ]',
+   'curl':'echo unexpected-url-check >&2; exit 1',
    'dotnet':'''[ "$GPL_TEST_MODE" != build-failure ] || exit 1
 while [ "$#" -gt 0 ]; do
  if [ "$1" = -o ]; then mkdir -p "$2"; echo new > "$2/new.txt"; break; fi
@@ -48,6 +48,7 @@ done'''}
    blocked=root/'blocked';blocked.write_text('not a directory')
   env=os.environ.copy();env.update(XDG_CONFIG_HOME=str(config),GPL_LAB_ROOT=str(lab),GPL_AUTOSTART_DIR=str(blocked if mode=='desktop-failure' else autostart),DOTNET_ROOT=str(bins),GPL_TEST_MODE=mode,PATH=str(bins)+':'+env['PATH'])
   result=subprocess.run(['bash',str(repo/'tools/chord-update/install.sh')],env=env,capture_output=True,text=True)
+  assert 'unexpected-url-check' not in result.stderr
   assert (result.returncode==0)==(mode in ('success','previous-update','preserved-local')),(mode,result.stdout,result.stderr)
   if mode in ('success','previous-update','preserved-local'):
    assert (published/'new.txt').exists()

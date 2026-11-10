@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.Features;
 public static class SongLibrary
 {
     static readonly SemaphoreSlim Gate = new(1, 1);
+    static readonly SemaphoreSlim ChordAnalysisGate = new(1, 1);
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
     static string Root => Environment.GetEnvironmentVariable("GUITAR_SONG_LIBRARY")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "GuitarPracticeLab", "song-library");
@@ -26,9 +27,14 @@ public static class SongLibrary
         await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(song, Json));
         File.Move(temporary, Metadata(song.Id), true);
     }
-    static object View(Song s) => new { s.Id, s.Title, s.PdfStem, s.Pages, s.AudioName, s.Duration, s.Notes, s.LessonUrl, s.Cues, s.Updated,
-        s.BackingName, s.BackingDuration, s.BackingImportMessage,
-        hasAudio = !string.IsNullOrEmpty(s.AudioFile), hasBacking = !string.IsNullOrEmpty(s.BackingFile) };
+    static object View(Song s)
+    {
+        var layout = ReadLayout(Path.Combine(Folder(s.Id), s.PdfFile));
+        return new { s.Id, s.Title, s.PdfStem, pages = layout is null ? s.Pages : 1, pageBreaks = layout?.Breaks,
+            s.AudioName, s.Duration, s.Notes, s.LessonUrl, s.Cues, s.Updated, s.BackingName, s.BackingDuration,
+            s.BackingImportMessage, s.Rhythm, chordAnalysis = s.ChordAnalysis, audioVersion = s.AudioFile,
+            hasAudio = !string.IsNullOrEmpty(s.AudioFile), hasBacking = !string.IsNullOrEmpty(s.BackingFile) };
+    }
 
     static IEnumerable<FileInfo> ScaleBackingTracks()
     {
@@ -100,6 +106,7 @@ public static class SongLibrary
                     }
                 }
                 var pages = await ReadPdfPageCount(pdf);
+                await PrepareContinuousPdf(pdf, pages);
                 var name = request.Query["name"].ToString();
                 var title = Path.GetFileNameWithoutExtension(name);
                 var song = new Song { Id = id, Title = Clean(title, 160, "Untitled song"), Pages = pages, PdfHash = hash, PdfStem = Clean(title, 255, "") };
@@ -138,13 +145,14 @@ public static class SongLibrary
                 string hash;
                 await using (var stream = File.OpenRead(path)) hash = Convert.ToHexString(await SHA256.HashDataAsync(stream));
                 if (song.PdfHash == hash) return Results.Ok(View(song));
+                await PrepareContinuousPdf(path, pages);
                 // Save the new pointer last. Failed validation never changes the old PDF.
                 // Prior PDF files remain available for recovery.
                 song.PdfFile = name; song.PdfHash = hash; song.Pages = pages;
                 var uploadedName = request.Query["name"].ToString();
                 if (!string.IsNullOrWhiteSpace(uploadedName))
                     song.PdfStem = Clean(Path.GetFileNameWithoutExtension(uploadedName), 255, "");
-                song.Cues.Clear();
+                song.Cues.Clear(); song.ChordAnalysis = null;
                 await Save(song);
                 committed = true;
                 return Results.Ok(View(song));
@@ -204,7 +212,7 @@ public static class SongLibrary
                 {
                     // Keep prior files on disk. A different recording needs different timing cues.
                     song.AudioFile = name; song.AudioName = uploadName; song.AudioHash = hash;
-                    song.Duration = duration; song.Cues.Clear();
+                    song.Duration = duration; song.Cues.Clear(); song.ChordAnalysis = null; song.Rhythm = null;
                     song.BackingFile = song.BackingName = ""; song.BackingDuration = 0;
                     await AttachMatchingBacking(song, uploadName);
                 }
@@ -213,6 +221,28 @@ public static class SongLibrary
                 return Results.Ok(View(song));
             }
             finally { if (!committed && File.Exists(path)) File.Delete(path); }
+        }));
+        api.MapPost("/{id:guid}/rhythm/analyze", (Guid id, HttpContext context) => Guard(async () =>
+        {
+            var song = Read(id);
+            if (string.IsNullOrEmpty(song.AudioFile))
+                throw new ArgumentException("Attach an original MP3 first.");
+            var estimate = await SongRhythm.Analyze(Path.Combine(Folder(id), song.AudioFile), context.RequestAborted);
+            return Results.Ok(new { estimate, audioVersion = song.AudioFile });
+        }));
+        api.MapPut("/{id:guid}/rhythm", (Guid id, RhythmEdit edit) => Guard(async () =>
+        {
+            var song = Read(id);
+            if (string.IsNullOrEmpty(song.AudioFile) || edit.AudioVersion != song.AudioFile)
+                return Results.Conflict(new { message = "The original MP3 changed. Reopen Rhythm and try again." });
+            var rhythm = edit.Rhythm;
+            if (rhythm is null || !double.IsFinite(rhythm.Bpm) || rhythm.Bpm < 30 || rhythm.Bpm > 300 ||
+                SongRhythm.BeatsPerBar(rhythm.Meter) == 0 ||
+                (rhythm.FirstDownbeat is double start && (!double.IsFinite(start) || start < 0 || start >= song.Duration)))
+                throw new ArgumentException("Choose a meter and enter a BPM between 30 and 300. The downbeat must be inside the song.");
+            song.Rhythm = rhythm with { Confirmed = true };
+            await Save(song);
+            return Results.Ok(View(song));
         }));
         api.MapPut("/{id:guid}", (Guid id, SongSettings settings) => Guard(async () =>
         {
@@ -259,12 +289,17 @@ public static class SongLibrary
         api.MapGet("/{id:guid}/simple", (Guid id) => Guard(async () =>
         {
             var file = FindSimplePdf(Read(id));
-            return Results.Ok(new { pages = await ReadPdfPageCount(file.FullName), updated = PdfRevision(file) });
+            var pages = await ReadPdfPageCount(file.FullName);
+            await PrepareContinuousPdf(file.FullName, pages);
+            var layout = ReadLayout(file.FullName);
+            return Results.Ok(new { pages = layout is null ? pages : 1, pageBreaks = layout?.Breaks, updated = PdfRevision(file) });
         }));
+        api.MapPost("/{id:guid}/analyze-chords", (Guid id, AnalyzeChordsRequest request, HttpContext context) =>
+            AnalyzeSongChords(id, request.Shift, context.RequestAborted));
         api.MapGet("/{id:guid}/chords", (Guid id, HttpRequest request) => Guard(async () =>
         {
             var song = Read(id);
-            var (path, revision) = ResolvePdf(song, request.Query["variant"].ToString());
+            var (path, revision, _) = ResolvePdf(song, request.Query["variant"].ToString());
             var cache = Path.Combine(Folder(id), "chords-v1-" + revision + ".json");
             if (!File.Exists(cache))
             {
@@ -280,14 +315,60 @@ public static class SongLibrary
         {
             var song = Read(id);
             string variant = request.Query["variant"].ToString();
-            var (path, revision) = ResolvePdf(song, variant);
-            if (page < 1 || page > (variant == "simple" ? 100 : song.Pages))
+            var (path, revision, layout) = ResolvePdf(song, variant);
+            if (page < 1 || page > (layout is not null ? 1 : variant == "simple" ? 100 : song.Pages))
                 throw new ArgumentException("Page outside this PDF.");
             var prefix = Path.Combine(Folder(id), "page-" + revision + "-" + page);
             if (!File.Exists(prefix + ".png"))
-                await Run("pdftoppm", "-f", page.ToString(), "-l", page.ToString(), "-singlefile", "-scale-to", "1600", "-png", path, prefix);
+            {
+                var size = layout is null ? new[] { "-scale-to", "1600" } : new[]
+                {
+                    "-scale-to-x", Math.Clamp((int)Math.Min(Math.Sqrt(12_000_000 / layout.Aspect), 28_000 / layout.Aspect), 1, 1450).ToString(),
+                    "-scale-to-y", "-1"
+                };
+                await Run("pdftoppm", ["-f", page.ToString(), "-l", page.ToString(), "-singlefile", ..size, "-png", path, prefix]);
+            }
             return Results.File(prefix + ".png", "image/png");
         }));
+    }
+
+    public sealed record AnalyzeChordsRequest(int Shift);
+
+    static async Task<IResult> AnalyzeSongChords(Guid id, int shift, CancellationToken cancellation)
+    {
+        if (shift is < -12 or > 12)
+            return Results.BadRequest(new { message = "Choose a pitch shift between −12 and +12 semitones." });
+        if (!ChordAnalysisGate.Wait(0))
+            return Results.Conflict(new { message = "A song is already being analyzed. Try again when it finishes." });
+        try
+        {
+            var song = Read(id);
+            if (string.IsNullOrEmpty(song.AudioFile))
+                throw new ArgumentException("Attach an original MP3 first.");
+            if (song.Duration > 900)
+                throw new ArgumentException("Chord analysis supports recordings up to 15 minutes.");
+            var (pdf, _, _) = ResolvePdf(song, "");
+            var pages = PdfChords.Parse(await Run("pdftotext", "-bbox-layout", pdf, "-"));
+            var analysis = await SongChordAnalysis.Analyze(Path.Combine(Folder(id), song.AudioFile),
+                pages.SelectMany(page => page.Chords).Select(hit => hit.Name), shift, cancellation);
+            return await Guard(async () =>
+            {
+                var latest = Read(id);
+                if (latest.AudioFile != song.AudioFile || latest.PdfFile != song.PdfFile)
+                    return Results.Conflict(new { message = "The MP3 or PDF changed during analysis. Try again." });
+                latest.ChordAnalysis = analysis;
+                await Save(latest);
+                return Results.Ok(analysis);
+            });
+        }
+        catch (ArgumentException error) { return Results.BadRequest(new { message = error.Message }); }
+        catch (FileNotFoundException error) { return Results.NotFound(new { message = error.Message }); }
+        catch (Exception error) when (error is IOException or System.ComponentModel.Win32Exception or System.Xml.XmlException)
+        {
+            Console.Error.WriteLine(error);
+            return Results.Problem("Chord analysis could not read the PDF or MP3. Check that Poppler and FFmpeg are installed.");
+        }
+        finally { ChordAnalysisGate.Release(); }
     }
 
     static FileInfo FindSimplePdf(Song song)
@@ -337,13 +418,44 @@ public static class SongLibrary
 
     static string PdfRevision(FileInfo file) => $"simple-{file.LastWriteTimeUtc.Ticks}-{file.Length}";
 
-    static (string Path, string Revision) ResolvePdf(Song song, string variant)
+    sealed record PdfLayout(double[] Breaks, double Aspect);
+    static string ContinuousPath(string source) => Path.Combine(Path.GetDirectoryName(source)!, ".continuous", Path.GetFileName(source));
+
+    static PdfLayout? ReadLayout(string source)
     {
+        string converted = ContinuousPath(source);
+        string layout = Path.ChangeExtension(converted, ".layout.json");
+        if (!File.Exists(source) || !File.Exists(converted) || !File.Exists(layout) || File.GetLastWriteTimeUtc(layout) < File.GetLastWriteTimeUtc(source))
+            return null;
+        return JsonSerializer.Deserialize<PdfLayout>(File.ReadAllText(layout), Json);
+    }
+
+    static async Task PrepareContinuousPdf(string source, int pages)
+    {
+        if (pages == 1 || ReadLayout(source) is not null) return;
+        var script = Path.Combine(AppContext.BaseDirectory, "continuous-pdf.py");
+        if (!File.Exists(script)) script = Path.Combine(Directory.GetCurrentDirectory(), "continuous-pdf.py");
+        await Run("python3", script, "--file", source);
+    }
+
+    static (string Path, string Revision, PdfLayout? Layout) ResolvePdf(Song song, string variant)
+    {
+        string source, revision;
         if (variant == "")
-            return (Path.Combine(Folder(song.Id), song.PdfFile), Path.GetFileNameWithoutExtension(song.PdfFile));
-        if (variant != "simple") throw new ArgumentException("Choose the standard or simple PDF.");
-        var file = FindSimplePdf(song);
-        return (file.FullName, PdfRevision(file));
+        {
+            source = Path.Combine(Folder(song.Id), song.PdfFile);
+            revision = Path.GetFileNameWithoutExtension(song.PdfFile);
+        }
+        else if (variant == "simple")
+        {
+            var file = FindSimplePdf(song);
+            source = file.FullName;
+            revision = PdfRevision(file);
+        }
+        else throw new ArgumentException("Choose the standard or simple PDF.");
+
+        var layout = ReadLayout(source);
+        return layout is null ? (source, revision, null) : (ContinuousPath(source), revision + "-continuous-v1", layout);
     }
 
     static async Task<int> ReadPdfPageCount(string path)
@@ -456,6 +568,7 @@ public static class SongLibrary
         { Console.Error.WriteLine(e); return Results.Problem("Library operation failed. Check disk space and install poppler-utils and ffmpeg."); }
         finally { Gate.Release(); }
     }
+    public sealed record RhythmEdit(string AudioVersion, SongRhythm Rhythm);
     public sealed class Song
     {
         public Guid Id { get; set; }
@@ -473,6 +586,8 @@ public static class SongLibrary
         [System.Text.Json.Serialization.JsonIgnore]
         public string BackingImportMessage { get; set; } = "";
         public double Duration { get; set; }
+        public SongRhythm? Rhythm { get; set; }
+        public SongChordAnalysis? ChordAnalysis { get; set; }
         public string Notes { get; set; } = "";
         public string LessonUrl { get; set; } = "";
         public List<Cue> Cues { get; set; } = new();

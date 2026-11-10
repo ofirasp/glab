@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Microphone practice · Guitar Practice Lab</title>
+<link rel="stylesheet" href="/scale-practice.css">
+<style>
+main{grid-template-rows:40px auto minmax(0,1fr) auto auto}
+.settings{flex-wrap:wrap}.settings label{flex:1;min-width:125px}
+.exercise{min-height:0;overflow:auto;background:#192639;border-radius:12px;padding:10px}
+#cleanPanel{display:grid;grid-template-columns:minmax(120px,1fr) minmax(180px,1.6fr);gap:12px}
+#cleanBoard{display:grid;grid-template-rows:minmax(0,1fr) 42px;min-height:0;gap:4px}
+#cleanDiagram{min-height:0}#cleanDiagram svg{max-height:100%}
+#shapeNav{display:flex;align-items:center;justify-content:center;gap:10px}
+#shapeNav button{min-width:46px}
+#cleanStrings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:center}
+.string{background:#293950;padding:8px 4px;border-radius:8px;text-align:center;font-size:14px}
+.string.current,.beat.current{outline:2px solid #ffd677}
+.string.correct,.beat.on-time{background:#205b49}.string.muted{color:#a4b1c5}
+#beatPulse{font-size:24px;font-weight:750;color:#ffd677;min-height:34px}#beatGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.beat{text-align:center;background:#293950;border-radius:5px;padding:3px;font-size:13px}
+.beat.early,.beat.late{background:#714c22}.beat.missed{background:#62333e}
+footer button{min-width:105px}#message{white-space:normal;min-height:20px}
+</style>
+<script src="/pi-microphone.js?v=tuning-presets" defer></script>
+<script src="/chord-shapes.js?v=alternate-tuning" defer></script>
+<script src="/chord-diagram.js?v=tuning-labels" defer></script>
+<script src="/mic-practice.js?v=tuning-presets" defer></script>
+</head>
+<body><main>
+<header><a href="/practice.html?tab=practice">‹ Back</a><h1 id="title"></h1></header>
+<div class="settings">
+  <label>Microphone<select id="device"></select></label>
+  <label id="chordLabel">Chord shape<select id="chord"></select></label>
+  <label id="tuningLabel">Tuning<select id="tuning"><option value="standard">Standard</option><option value="dropD">Drop D</option><option value="halfDown">Half step down</option><option value="wholeDown">Whole step down</option><option value="dadgad">DADGAD</option><option value="openG">Open G</option></select></label>
+  <label id="capoLabel">Capo<select id="capo"></select></label>
+  <label id="beatModeLabel" hidden>Metronome<select id="beatMode"><option value="visual">Visual only</option><option value="audio">Visual + headphone clicks</option></select></label>
+  <label id="tempoLabel" hidden>Tempo (BPM)<select id="tempo"><option>40</option><option>50</option><option selected>60</option><option>70</option><option>80</option><option>90</option><option>100</option><option>120</option></select></label>
+</div>
+<section class="exercise" id="cleanPanel"><div id="cleanBoard"><div id="cleanDiagram"></div><div id="shapeNav"><button id="previousShape" aria-label="Previous chord shape">‹</button><span id="shapeCount"></span><button id="nextShape" aria-label="Next chord shape">›</button></div></div><div id="cleanStrings"></div></section>
+<section class="exercise" id="timingPanel" hidden><strong id="timingResult">One strum per beat · 8 bars</strong><div id="beatPulse" hidden></div><div id="beatGrid"></div></section>
+<footer><button id="start" class="primary" disabled>Start</button><span id="instruction"></span></footer>
+<p id="message" role="status"></p>
+</main></body></html>

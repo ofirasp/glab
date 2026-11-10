@@ -29,7 +29,7 @@ for name,allowed in json.loads(m.read_text()).items():
  if value not in [allowed['before'],allowed['after'],*allowed.get('compatible',[]),*allowed.get('preserve',[])]:raise SystemExit('Local changes found in '+name+'. Please sync the Pi source before installing. No app files changed.')
 print('Source compatibility checked.')
 PY
-sudo apt-get install -y poppler-utils alsa-utils swayidle playerctl
+sudo apt-get install -y poppler-utils alsa-utils swayidle playerctl python3-pymupdf
 mkdir -p "$backup/source" "$stage"
 python3 - <<'PY'
 import json,os,shutil
@@ -106,18 +106,13 @@ for name,allowed in json.loads(m.read_text()).items():
 PYCODE
 # Build before touching the running service.
 dotnet publish "$project" -c Release -o "$stage"
+install -m 644 "$project/continuous-pdf.py" "$stage/continuous-pdf.py"
 sudo systemctl stop guitar-practice-lab
 service_stopped=1
 mv "$lab/published" "$backup/published"
 published_swapped=1
 mv "$stage" "$lab/published"
 sudo systemctl start guitar-practice-lab
-ready=0
-for attempt in $(seq 1 60); do
-  if curl -fsS --max-time 3 http://127.0.0.1:5080/api/song-library >/dev/null && curl -fsS --max-time 3 http://127.0.0.1:5080/chord-viewer.js >/dev/null; then ready=1;break;fi
-  sleep 1
-done
-[ "$ready" = 1 ] || { echo 'App did not become ready.'; exit 1; }
 desktop_changed=1
 python3 - <<'DESKTOP_INSTALL'
 import os

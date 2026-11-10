@@ -37,6 +37,7 @@ background:white;transform:translateX(-50%);transition:left .15s}
 input[type=range]{width:90%;height:36px;accent-color:#65a4ff}
 #pulse{display:inline-block;width:22px;height:22px;border-radius:50%;
 background:#40536b;margin-right:12px}
+@media(max-width:650px){.tuner-controls{flex-wrap:wrap}.tuner-controls .tunerinput select{max-width:160px}}
 #status{min-height:24px;color:#aebbd0}
 </style>
 
@@ -56,15 +57,41 @@ nav{margin:0;gap:8px}
 button{min-height:48px;font-size:18px;padding:8px 14px}
 section{min-height:0;padding:12px}
 #tuner{
-  display:grid;
-  grid-template-rows:minmax(44px,1fr)20px 16px 22px 48px 48px;
-  gap:8px;align-items:center;
+  display:grid;grid-template-columns:minmax(210px,1.05fr) minmax(180px,1fr);
+  grid-template-rows:minmax(0,1fr) auto;gap:10px;align-items:stretch;
 }
 .note{font-size:60px;line-height:1}
 .track{height:16px;margin:0 8px}
 .row{margin:0;flex-wrap:nowrap;gap:8px}
-.strings button{min-width:0}
-#tuner>.row:last-child button{flex:1;white-space:nowrap;font-size:17px}
+#strings.tuner-neck{
+  display:grid;grid-template-rows:repeat(6,minmax(0,1fr));align-items:center;
+  gap:4px;padding:8px 12px;min-height:0;overflow:hidden;border:2px solid #926947;border-radius:18px 9px 9px 18px;
+  background:repeating-linear-gradient(90deg,transparent 0 58px,#f8ddae55 58px 61px,#18110b66 61px 63px),
+    repeating-linear-gradient(3deg,#442a20 0 5px,#4d3124 5px 10px,#583729 10px 14px);
+  box-shadow:inset 0 0 26px #1f120d;
+}
+.tuner-neck button{
+  position:relative;width:75px;min-width:0;min-height:32px;padding:3px 8px;font-size:16px;
+  border-radius:20px;background:#252d3a;border-color:#a68c73;color:#f7efe4;
+}
+.tuner-neck button::after{
+  content:"";position:absolute;top:50%;left:100%;width:100vw;height:var(--string-weight,1px);
+  background:#d3c4b1;opacity:.65;pointer-events:none;
+}
+.tuner-neck button.active{border-color:#ffcf78}
+.tuner-neck button.string-in-tune{background:#235a43;border-color:#8af0b4;color:#fff;--tuning-color:#8af0b4}
+.tuner-neck button.string-out-of-tune{background:#683c1e;border-color:#ffac5d;color:#fff;--tuning-color:#ffac5d}
+.tuner-neck button::after{background:var(--tuning-color,#d3c4b1)}
+.tuner-neck button.heard::after{height:3px;opacity:1;box-shadow:0 0 8px var(--tuning-color,#d3c4b1)}
+#guitarInTune{color:#8af0b4;font-weight:800}
+.tuner-readout{display:grid;align-content:center;gap:9px;min-width:0}
+.tuner-score{display:grid;gap:4px;margin:0 8px;font-size:14px;color:#c7d6eb}
+.tuner-score meter{width:100%;height:15px;accent-color:#72dfa5}
+.tuner-controls{grid-column:1/-1;justify-content:center;align-items:center}
+.tuner-controls button{white-space:nowrap;font-size:16px}
+#tuning.in-tune{color:#72dfa5;font-weight:750}
+.tunerinput{display:flex;align-items:center;gap:8px;min-width:0;font-size:14px}
+.tunerinput select{min-width:0;max-width:200px;min-height:40px;background:#293950;color:#eef3ff;border:1px solid #536981;border-radius:8px;padding:5px;font:inherit}
 #status{
   margin:0;min-height:0;font-size:12px;line-height:24px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -162,10 +189,10 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </dialog>
 <section id="toolsMenu" class="menu-screen" aria-label="Tools menu" hidden>
   <div class="menu-grid">
-    <button id="tunerTab">Tuner<small>Reference tones and WAV analysis</small></button>
+    <button id="tunerTab">Guitar tuner<small>Live microphone and reference tones</small></button>
     <button id="fretboardMap" onclick="location.href='/fretboard-map.html'">Fretboard Map<small>Explore and find notes</small></button>
     <button id="metroTab">Metronome<small>Set a steady tempo</small></button>
-    <button id="followNotes" onclick="location.href='/scale-practice.html'">Scales<small>Follow the Notes</small></button>
+    <button onclick="location.href='/looper.html'">Looper<small>Record and replay guitar loops</small></button>
   </div>
   <button id="saverSettingsButton" hidden>Screen saver</button>
 </section>
@@ -195,16 +222,23 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </dialog>
 
 <section id="tuner" hidden>
-<div class="note" id="note">E2</div>
-<div class="muted" id="freq">82.41 Hz · reference</div>
-<div class="track"><span id="needle"></span></div>
-<div id="tuning">Simulated: in tune</div>
-<div class="row strings" id="strings"></div>
-<div class="row">
-<button id="flat">← Flatter</button>
-<button id="center">In tune</button>
-<button id="sharp">Sharper →</button>
-<button id="tone">Play tone</button><button id="analyze">Analyze</button><button id="wavUpload">Load WAV</button>
+<div id="strings" class="strings tuner-neck" aria-label="Guitar strings, low E to high E"></div>
+<div class="tuner-readout">
+  <div class="note" id="note">E2</div>
+  <div class="muted" id="freq">82.41 Hz · reference</div>
+  <div class="track"><span id="needle"></span></div>
+  <div id="tuning">Pluck one string at a time</div>
+  <strong id="guitarInTune" role="status" hidden>✓ Guitar in tune</strong>
+  <div class="tuner-score">
+    <output id="tunerLastScore">Last string · —</output>
+    <meter id="tunerScoreMeter" min="0" max="100" value="0" aria-label="Last string tuning score" hidden></meter>
+  </div>
+</div>
+<div class="row tuner-controls">
+  <label class="tunerinput">Microphone <select id="tunerDevice"><option value="default">default</option></select></label>
+  <label class="tunerinput">Tuning <select id="tunerTuning"></select></label>
+  <button id="tunerAuto" aria-pressed="true">Auto string</button>
+  <button id="tone">Play tone</button>
 </div>
 </section>
 
@@ -220,7 +254,11 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </section>
 
 <section id="practice" hidden>
-  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="playAlong" onclick="location.href='/scale-practice.html?mode=along'">Play Along</button><button id="findNotes" onclick="location.href='/fretboard-map.html?mode=quiz'">Find the Notes</button></div>
+  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Scales</button><button id="findNotes" onclick="location.href='/fretboard-map.html?mode=quiz'">Find the Notes</button></div>
+  <div class="row exercise-menu">
+    <button onclick="location.href='/mic-practice.html?mode=chord'">Chord Clean Check</button>
+    <button onclick="location.href='/mic-practice.html?mode=timing'">Strumming Timing</button>
+  </div>
   <div class="row">
     <button data-minutes="5">5 min</button>
     <button data-minutes="10" class="active">10 min</button>
@@ -254,8 +292,12 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
         <fieldset class="chordchoice"><legend>First chord · <span id="changesFirstName">C</span></legend><div><label>Root<select id="changesFirst" aria-label="First chord root"></select></label><label>Type<select id="changesFirstType" aria-label="First chord type"></select></label></div></fieldset>
         <fieldset class="chordchoice"><legend>Second chord · <span id="changesSecondName">G</span></legend><div><label>Root<select id="changesSecond" aria-label="Second chord root"></select></label><label>Type<select id="changesSecondType" aria-label="Second chord type"></select></label></div></fieldset>
       </div>
+      <div id="changesPairScores" role="status"></div>
       <div class="changespair"><label>Microphone<select id="changesDevice"><option>default</option></select></label><label>Room<select id="changesSensitivity"><option value="0.0015">Quiet</option><option value="0.003" selected>Normal</option><option value="0.007">Noisy</option></select></label></div>
-      <label class="changesconfirm"><input id="changesTuning" type="checkbox"> Standard tuning, no capo</label>
+      <div class="changespair">
+        <label>Recent <select id="changesRecent"><option value="">Recent chord pairs…</option></select></label>
+        <span class="hint">Standard tuning · no capo</span>
+      </div>
       <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="changesHistory">Results</button><button id="changesRetry" hidden>Retry save</button></div>
       <meter id="changesLevel" min="0" max="0.1" value="0" aria-label="Microphone level"></meter>
       <div id="changesMessage" role="status">Choose two chords. Each detected chord counts once, then the target changes.</div>
@@ -264,13 +306,13 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </section>
 <dialog id="changesResults"><div class="changesresulthead"><h2>1 Minute Changes · Results</h2><button id="changesCloseResults">Close</button></div><div id="changesResultsList"></div></dialog>
 
-<p id="status" role="status">Demo input only. Reference tones use the Pi’s audio output.</p>
+<p id="status" role="status"></p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
 const names=['E2','A2','D3','G3','B3','E4'];
 const freqs=[82.4069,110,146.8324,195.9977,246.9417,329.6276];
-let selected=0,cents=0,ctx,toneOsc,toneGain,toneTimer;
+let selected=0,ctx,toneOsc,toneGain,toneTimer;
 let running=false,timer,nextBeat=0,beat=0;
 const flashes=new Set();
 
@@ -300,20 +342,16 @@ function stopTone(){
 function update(){
   $('note').textContent=names[selected];
   $('freq').textContent=freqs[selected].toFixed(2)+' Hz · reference';
-  $('needle').style.left=(50+cents)+'%';
-  $('tuning').textContent='Simulated: '+(Math.abs(cents)<=5?'in tune':
-    cents<0?'flat — tune up ↑':'sharp — tune down ↓')+' ('+cents+' cents)';
+  $('needle').style.left='50%';
+  $('tuning').textContent='Pluck one string at a time';
   [...$('strings').children].forEach((b,i)=>b.classList.toggle('active',i===selected));
 }
 names.forEach((name,i)=>{
   const b=document.createElement('button');b.textContent=name;
-  b.onclick=()=>{stopTone();selected=i;cents=0;update()};
+  b.style.setProperty('--string-weight',i<3?'2px':'1px');
+  b.onclick=()=>{stopTone();selected=i;update();document.dispatchEvent(new Event('guitar-tuner-string'));};
   $('strings').append(b);
 });
-$('flat').onclick=()=>{cents=Math.max(-45,cents-5);update()};
-$('sharp').onclick=()=>{cents=Math.min(45,cents+5);update()};
-$('center').onclick=()=>{cents=0;update()};
-
 function stopMetro(){
   running=false;clearInterval(timer);
   flashes.forEach(clearTimeout);flashes.clear();
@@ -374,7 +412,8 @@ function showPage(page){
   $('pageTitle').textContent=pageTitles[page];
   $('menuBack').hidden=page==='homeMenu';
   $('status').hidden=page==='homeMenu'||page==='toolsMenu'||page==='practice';
-  $('status').textContent=page==='tuner'?'Demo input and WAV analysis · reference tones use the Pi audio output.':'';
+  $('status').textContent=page==='tuner'?'Connecting to the Pi microphone…':'';
+  document.dispatchEvent(new Event('guitar-page-change'));
 }
 $('toolsTab').onclick=()=>showPage('toolsMenu');
 $('tunerTab').onclick=()=>showPage('tuner');
@@ -550,92 +589,12 @@ update();
 </script>
 
 
-<script>
-document.getElementById('analyze').onclick=async()=>{
-  const button=document.getElementById('analyze');
-  const stringIndex=selected,offset=cents;
-  button.disabled=true;
-  button.textContent='Testing…';
-  try{
-    const response=await fetch(
-      '/api/pitch-test/'+stringIndex+'/'+offset,
-      {cache:'no-store',signal:AbortSignal.timeout(15000)});
-    if(!response.ok)throw new Error('Server returned '+response.status);
-    const result=await response.json();
-    if(result.frequency===null)throw new Error('No pitch detected');
-    if(selected!==stringIndex||cents!==offset){
-      document.getElementById('status').textContent=
-        'Selection changed during analysis. Tap Analyze again.';
-      return;
-    }
-    document.getElementById('freq').textContent=
-      result.frequency.toFixed(2)+' Hz · measured by C#';
-    const tuning=Math.abs(result.cents)<=5?'in tune':
-      result.cents<0?'flat — tune up ↑':'sharp — tune down ↓';
-    document.getElementById('tuning').textContent=
-      'Test audio: '+tuning+' ('+result.cents.toFixed(1)+' cents)';
-    document.getElementById('needle').style.left=
-      (50+Math.max(-45,Math.min(45,result.cents)))+'%';
-    document.getElementById('status').textContent=
-      'C# analyzed generated '+result.note+' audio in '+
-      result.analysisMs.toFixed(1)+' ms. Microphone is not in use.';
-  }catch(error){
-    document.getElementById('status').textContent=
-      'Analysis failed: '+error.message;
-  }finally{
-    button.disabled=false;button.textContent='Analyze';
-  }
-};
-</script>
-
-
-<input id="wavFile" type="file" accept=".wav,audio/wav" hidden>
-<script>
-(()=>{
-  const el=id=>document.getElementById(id);
-  el('wavUpload').onclick=()=>el('wavFile').click();
-  el('wavFile').onchange=async()=>{
-    const file=el('wavFile').files[0];
-    if(!file)return;
-    showPage('tuner');
-    el('wavUpload').disabled=true;
-    el('status').textContent='Analyzing '+file.name+'…';
-    try{
-      if(file.size>8*1024*1024)throw new Error('Maximum file size is 8 MB.');
-      const response=await fetch('/api/analyze-wav',{
-        method:'POST',headers:{'Content-Type':'audio/wav'},body:file,
-        signal:AbortSignal.timeout(60000)
-      });
-      const result=await response.json();
-      if(!response.ok)throw new Error(result.message||'Upload failed');
-      if(!result.detected){
-        el('note').textContent='—';
-        el('freq').textContent='No clear pitch';
-        el('tuning').textContent='WAV analysis';
-        el('needle').style.left='50%';
-        el('status').textContent=result.message;
-        return;
-      }
-      el('note').textContent=result.note;
-      el('freq').textContent=result.frequency.toFixed(2)+' Hz · WAV recording';
-      el('tuning').textContent='Measured: '+result.cents.toFixed(1)+' cents';
-      el('needle').style.left=(50+Math.max(-45,Math.min(45,result.cents)))+'%';
-      [...el('strings').children].forEach(b=>b.classList.remove('active'));
-      el('status').textContent=file.name+' · analyzed near '+
-        result.analyzedAtSeconds.toFixed(1)+' seconds · single-note estimate';
-    }catch(error){
-      el('status').textContent='WAV analysis: '+error.message;
-    }finally{
-      el('wavUpload').disabled=false;el('wavFile').value='';
-    }
-  };
-})();
-</script>
-
-<link rel="stylesheet" href="/one-minute-changes.css">
-<script src="/chord-shapes.js" defer></script>
-<script src="/chord-diagram.js" defer></script>
-<script src="/one-minute-changes.js" defer></script>
+<link rel="stylesheet" href="/one-minute-changes.css?v=standard-tuning">
+<script src="/chord-shapes.js?v=alternate-tuning" defer></script>
+<script src="/chord-diagram.js?v=tuning-labels" defer></script>
+<script src="/pi-microphone.js?v=tuning-presets" defer></script>
+<script src="/live-tuner.js?v=tuning-presets" defer></script>
+<script src="/one-minute-changes.js?v=recent-shapes" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 <script>

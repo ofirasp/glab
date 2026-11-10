@@ -4,12 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Songs · Guitar Practice Lab</title>
-<link rel="stylesheet" href="song-library.css">
-<script src="chord-shapes.js" defer></script>
-<script src="chord-viewer.js" defer></script>
+<link rel="stylesheet" href="song-library.css?v=ordered-chord-strip">
+<script src="chord-shapes.js?v=alternate-tuning" defer></script>
+<script src="chord-viewer.js?v=chord-display" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/playback-wake-lock.js" defer></script>
-<script src="song-library.js" defer></script>
+<script src="song-library.js?v=continuous-chord-motion" defer></script>
+<script src="/pi-microphone.js?v=wave" defer></script>
+<script src="/song-recording.js?v=wave" defer></script>
+<script src="/song-chord-match.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 </head>
 <body>
@@ -18,17 +21,23 @@
   <strong>Songs</strong>
   <button id="libraryButton">Library</button>
   <button id="toolsButton">Tools</button>
+  <h1 id="songTitle" dir="auto">Choose a song</h1>
+  <div id="takeRecordingBanner" hidden><span id="takeRecordingStatus" role="status"></span><button id="stopTake" class="danger">Stop</button></div>
+  <button id="stopRecordFollow" class="danger" hidden>Stop recording</button>
   <button id="readerToggle" aria-pressed="false">FullScreen</button>
 </header>
 <main class="split">
   <section class="sheet" aria-label="Chord sheet">
     <div id="readerPageControls" class="pagebar">
       <button id="previous" aria-label="Previous page" disabled>‹</button>
-      <span id="pageNumber">No PDF selected</span>
       <button id="next" aria-label="Next page" disabled>›</button>
+      <label id="simpleVersionControl" hidden><input id="simpleVersion" type="checkbox" role="switch"> Simple version</label>
+      <div id="chordStrip" hidden aria-label="Previous, current and upcoming chords">
+        <span id="playingChord" hidden></span>
+      </div>
+      <span id="pageNumber">No PDF selected</span>
       <button id="zoomOut" aria-label="Zoom out" disabled>−</button>
       <button id="zoomIn" aria-label="Zoom in" disabled>+</button>
-      <label id="simpleVersionControl" hidden><input id="simpleVersion" type="checkbox" role="switch"> Simple version</label>
     </div>
     <div id="pdfViewport" tabindex="0" aria-label="Scroll chord sheet">
       <div id="emptySheet">Import a chord PDF<br><small>Then attach its MP3 recording.</small></div>
@@ -37,6 +46,7 @@
     </div>
     <div id="readerControls">
       <div class="cuebar">
+        <button id="readerFollowDown" class="follow-down" aria-label="Scroll PDF down" hidden>↓</button>
         <button id="follow" aria-pressed="false" disabled>Follow off</button>
         <button id="markCue" disabled>Mark here</button>
         <button id="watchLesson" hidden disabled>Watch lesson ↗</button>
@@ -61,7 +71,7 @@
     <button id="readerControlsToggle" type="button" aria-expanded="false" aria-controls="readerPageControls readerControls" hidden>▴ Controls</button>
   </section>
   <section class="companion" aria-label="Play along controls">
-    <div class="songheading"><button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button><h1 id="songTitle">Choose a song</h1></div>
+    <button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button>
     <div id="audioEmpty" class="hint">Your PDF and audio stay on this Pi. Add an MP3 to start practising.</div>
     <div class="transport">
       <button id="back" disabled>−5s</button>
@@ -69,7 +79,10 @@
       <button id="forward" disabled>+5s</button>
     </div>
     <div class="timeline">
-      <input id="seek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Song position" disabled>
+      <div class="seek-row">
+        <button id="songStart" aria-label="Go to start" title="Go to start" disabled>|&lt;</button>
+        <input id="seek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Song position" disabled>
+      </div>
       <div class="spread"><span id="clock">0:00 / 0:00</span><span id="speedLabel">1×</span></div>
     </div>
     <div class="volumecontrols " aria-label="Song volume">
@@ -81,7 +94,7 @@
       <span id="loopTimes">A — · B —</span>
       <div class="loopbuttons"><button id="loop" aria-pressed="false" disabled>Loop off</button><button id="loopTools">Set A/B</button></div>
     </div>
-    <div class="sectioncard"><span class="eyebrow">CURRENT SECTION</span><strong id="currentSection">No cue yet</strong><small id="nextSection">Move the PDF to a section, then tap Mark here.</small></div>
+    <div class="sectioncard"><button id="followDown" class="follow-down" aria-label="Scroll PDF down" hidden>↓</button><span class="eyebrow">CURRENT SECTION</span><strong id="currentSection">No cue yet</strong><small id="nextSection">Move the PDF to a section, then tap Mark here.</small></div>
   </section>
 </main>
 <footer id="status" role="status">Loading library…</footer>
@@ -91,18 +104,81 @@
 
 <dialog id="toolsDialog">
   <div class="dialoghead"><h2>Song tools</h2><button data-close="toolsDialog">Close</button></div>
-  <div class="dialogbody stack">
-    <div class="toolactions"><button id="importButton">Import PDF</button><button id="audioButton" disabled>Add MP3</button><button id="notesButton" disabled>Song notes</button></div>
-    <div class="toolactions"><button id="replacePdfButton" disabled>Replace PDF</button><button id="deleteSongButton" class="danger" disabled>Delete song</button></div>
-    <div class="toolactions"><button id="originalTrack" aria-pressed="true" disabled>Original</button><button id="backingTrack" aria-pressed="false" disabled>Backing</button><button id="addBacking" disabled>Add backing MP3</button></div>
-    <p id="backingHint" class="hint">Create a backing from the exact original MP3 with the Mac helper, then attach it here. PDF cues are shared by both versions.</p>
+  <div class="song-tool-tabs" role="tablist" aria-label="Song tool categories">
+    <button id="toolsTabFiles" role="tab" aria-selected="true" aria-controls="toolsFiles">Files</button>
+    <button id="toolsTabAudio" role="tab" aria-selected="false" aria-controls="toolsAudio" tabindex="-1">Audio</button>
+    <button id="toolsTabPlayback" role="tab" aria-selected="false" aria-controls="toolsPlayback" tabindex="-1">Playback</button>
+    <button id="toolsTabPractice" role="tab" aria-selected="false" aria-controls="toolsPractice" tabindex="-1">Practice</button>
+  </div>
+  <div class="dialogbody stack" id="toolsFiles" role="tabpanel" aria-labelledby="toolsTabFiles">
+    <div class="toolactions"><button id="importButton">Import PDF</button><button id="replacePdfButton" disabled>Replace PDF</button></div>
+    <div class="toolactions"><button id="notesButton" disabled>Song notes</button><button id="deleteSongButton" class="danger" disabled>Delete song</button></div>
+  </div>
+  <div class="dialogbody stack" id="toolsAudio" role="tabpanel" aria-labelledby="toolsTabAudio" hidden>
+    <div class="toolactions"><button id="audioButton" disabled>Add MP3</button><button id="addBacking" disabled>Add backing MP3</button></div>
+    <div class="toolactions"><button id="originalTrack" aria-pressed="true" disabled>Original</button><button id="backingTrack" aria-pressed="false" disabled>Backing</button></div>
+    <p id="backingHint" class="hint"></p>
+  </div>
+  <div class="dialogbody stack" id="toolsPlayback" role="tabpanel" aria-labelledby="toolsTabPlayback" hidden>
     <label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label>
     <div class="toolactions"><button id="setA" disabled>Set A here</button><button id="setB" disabled>Set B here</button><button id="clearLoop" disabled>Clear A/B</button></div>
     <p id="toolsLoopTimes" class="hint">A — · B —</p>
     <p class="hint">Use −5s / +5s or the song position slider to find a passage. Set A at its start, B at its end, then turn Loop on.</p>
-    <p class="hint">Zoom stays at your chosen size while Follow moves between saved passages. Read PDF gives the sheet the full screen width.</p>
   </div>
-  <div class="dialogfoot"><button id="toolsPlay" class="primary" disabled>Play</button><span id="toolsClock">0:00 / 0:00</span></div>
+  <div class="dialogbody stack" id="toolsPractice" role="tabpanel" aria-labelledby="toolsTabPractice" hidden>
+    <div class="toolactions"><button id="recordReviewButton" disabled>Record &amp; Review</button><button id="analyzeChordsButton" disabled>Analyze chords</button></div>
+    <div class="toolactions"><button id="rhythmButton" disabled>Rhythm</button><button id="chordMatchButton" aria-pressed="false" disabled>Chord match</button></div>
+    <p id="rhythmSummary" class="hint"></p>
+  </div>
+</dialog>
+
+<dialog id="chordMatchDialog" aria-labelledby="chordMatchTitle">
+  <div class="dialoghead"><h2 id="chordMatchTitle">Chord match</h2><button data-close="chordMatchDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Use headphones so the mic hears your guitar. Match the chord on screen in the recording’s key. Each chord section counts once. Play from start to finish without seeking to save a personal best.</p>
+    <label>Microphone <select id="chordMatchDevice"></select></label>
+    <p id="chordMatchBest"></p><p id="chordMatchResult" role="status"></p>
+  </div>
+  <div class="dialogfoot"><button id="startChordMatch" class="primary" disabled>Start from beginning</button></div>
+</dialog>
+<dialog id="analyzeChordsDialog" aria-labelledby="analyzeChordsTitle">
+  <div class="dialoghead"><h2 id="analyzeChordsTitle">Analyze chords</h2><button data-close="analyzeChordsDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Compare the original MP3 with chord names found in the main PDF. The detected chord appears above the PDF as the track plays and stays visible until the next chord is detected.</p>
+    <label>Recording pitch relative to PDF <select id="chordAnalysisShift"></select></label>
+    <p class="hint">If a sheet says G but the recording sounds A, select +2. A capo at fret 2 commonly needs this shift.</p>
+    <p id="chordAnalysisStatus" role="status"></p>
+  </div>
+  <div class="dialogfoot"><button id="runChordAnalysis" class="primary">Analyze original MP3</button></div>
+</dialog>
+<dialog id="recordReviewDialog" aria-labelledby="recordReviewTitle">
+  <div class="dialoghead"><h2 id="recordReviewTitle">Record &amp; Review</h2><button data-close="recordReviewDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Use headphones so the mic hears your guitar clearly. Takes are up to 60 seconds. Download the WAV to keep it.</p>
+    <label>Start at <select id="recordReviewCue"></select></label>
+    <label>Microphone <select id="recordReviewDevice"></select></label>
+    <p id="recordReviewStatus" class="hint" role="status"></p>
+    <div id="recordReviewPlayback" class="toolactions" hidden>
+      <button id="reviewGuitar">Guitar only</button><button id="reviewMix">With backing</button>
+      <a class="button" id="downloadTake" download="guitar-take.wav">Download WAV</a>
+    </div>
+  </div>
+  <div class="dialogfoot"><button id="startTake" class="primary" disabled>Record take</button></div>
+</dialog>
+
+<dialog id="rhythmDialog" aria-labelledby="rhythmTitle">
+  <div class="dialoghead"><h2 id="rhythmTitle">Song rhythm</h2><button data-close="rhythmDialog">Close</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Analyze the original MP3 for a tempo and a possible time signature. Listen and adjust before saving.</p>
+    <div class="toolactions"><button id="analyzeRhythm">Analyze Rhythm</button><button id="previewRhythm">Preview clicks</button></div>
+    <form id="rhythmForm" class="stack">
+      <label>Tempo (BPM) <input id="rhythmBpm" type="number" min="30" max="300" step="0.1" required inputmode="decimal"></label>
+      <label>Time signature <select id="rhythmMeter" required><option value="">Choose meter</option><option>2/4</option><option>3/4</option><option>4/4</option><option>5/4</option><option>6/8</option><option>7/4</option><option>9/8</option><option>12/8</option></select></label>
+      <p id="rhythmBeatUnit" class="hint"></p>
+      <p id="rhythmStatus" class="hint" role="status"></p>
+      <button id="saveRhythm" class="primary" type="submit">Save rhythm</button>
+    </form>
+  </div>
 </dialog>
 
 <dialog id="replacePdfDialog">
@@ -139,8 +215,16 @@
 </dialog>
 <dialog id="cueDialog">
   <div class="dialoghead"><h2>Song cues</h2><button data-close="cueDialog">Close</button></div>
-  <div class="dialogbody"><p class="hint">A cue links the current recording time to a position on the PDF. Tap a cue to jump there; your reading zoom is preserved.</p><div id="cueList"></div></div>
-  <div class="dialogfoot"><button id="cueMark" class="primary">Mark current position</button></div>
+  <div class="dialogbody"><p class="hint">A cue links the current recording time to a position on the PDF. Tap a cue to jump there; your reading zoom is preserved. Record Follow starts from the current playback position and captures where you stop scrolling or turn a page. Tap or hold ↓, then pause for one second to record a mark.</p><div id="cueList"></div></div>
+  <div class="dialogfoot"><button id="cueMark" class="primary">Mark current position</button><button id="recordFollow">Record Follow</button></div>
+</dialog>
+<dialog id="recordFollowReview" aria-labelledby="recordFollowTitle">
+  <div class="dialoghead"><h2 id="recordFollowTitle">Review Follow recording</h2><button data-close="recordFollowReview">Discard</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Remove any unwanted marks. Saving adds the remaining marks to your existing cues. Marks at the same time as an existing cue are skipped.</p>
+    <div id="recordFollowList"></div>
+  </div>
+  <div class="dialogfoot"><span id="recordFollowCount" role="status"></span><button id="saveRecordedFollow" class="primary">Save marks</button></div>
 </dialog>
 <dialog id="markDialog">
   <div class="dialoghead"><h2>Mark this section</h2><button data-close="markDialog">Cancel</button></div>

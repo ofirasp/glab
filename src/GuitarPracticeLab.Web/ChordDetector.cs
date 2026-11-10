@@ -25,7 +25,7 @@ public sealed record GuitarChord(string Name, int[] Notes, int[] Required)
 // Harmonic note templates are fit by non-negative least squares before pitch-class matching.
 public sealed class ChordDetector
 {
-    public const int Rate=16000, Size=8192, Hop=2048;
+    public const int Rate=16000, Size=4096, Hop=1024;
     const int FirstMidi=40, Count=45, Bins=1300;
     readonly double[][] templates=new double[Count][];
     readonly double[,] gram=new double[Count,Count];
@@ -49,9 +49,21 @@ public sealed class ChordDetector
     public sealed record Reading(string? Name, double Rms, double Confidence);
     public Reading Analyze(double[] samples, GuitarChord first, GuitarChord second, double noiseFloor=.003)
     {
+        var (rms, chroma) = Measure(samples, noiseFloor);
+        if (chroma is null) return new(null,rms,0);
+        double total=chroma.Sum(), peak=chroma.Max();if(total<1e-9)return new(null,rms,0);
+        double Score(GuitarChord c)=>c.Notes.Sum(n=>chroma[n])/total;
+        bool Complete(GuitarChord c)=>c.Required.All(n=>chroma[n]>=peak*.10);
+        double a=Complete(first)?Score(first):-1,b=Complete(second)?Score(second):-1;
+        if(a>=.82 && a-b>=.10 && Complete(first))return new(first.Name,rms,a);
+        if(b>=.82 && b-a>=.10 && Complete(second))return new(second.Name,rms,b);
+        return new(null,rms,Math.Max(0,Math.Max(a,b)));
+    }
+    public (double Rms, double[]? Chroma) Measure(double[] samples, double noiseFloor)
+    {
         if(samples.Length!=Size)throw new ArgumentException("Expected a complete audio window.");
         double rms=Math.Sqrt(samples.Sum(v=>v*v)/Size);
-        if(rms<noiseFloor)return new(null,rms,0);
+        if(rms<noiseFloor)return (rms, null);
         double mean=samples.Average();for(int i=0;i<Size;i++)fft[i]=new((samples[i]-mean)*hann[i],0);
         for(int i=1,j=0;i<Size;i++){int bit=Size>>1;for(;(j&bit)!=0;bit>>=1)j^=bit;j^=bit;if(i<j)(fft[i],fft[j])=(fft[j],fft[i]);}
         for(int len=2;len<=Size;len<<=1){var step=Complex.FromPolarCoordinates(1,-2*Math.PI/len);for(int i=0;i<Size;i+=len){Complex w=1;for(int j=0;j<len/2;j++){var u=fft[i+j];var v=fft[i+j+len/2]*w;fft[i+j]=u+v;fft[i+j+len/2]=u-v;w*=step;}}}
@@ -63,14 +75,27 @@ public sealed class ChordDetector
             for(int j=0;j<Count;j++)residual[j]-=gram[j,i]*delta;
         }
         var chroma=new double[12];for(int i=0;i<Count;i++)chroma[(FirstMidi+i)%12]+=amplitudes[i];
-        double total=chroma.Sum(), peak=chroma.Max();if(total<1e-9)return new(null,rms,0);
-        double Score(GuitarChord c)=>c.Notes.Sum(n=>chroma[n])/total;
-        bool Complete(GuitarChord c)=>c.Required.All(n=>chroma[n]>=peak*.10);
-        double a=Complete(first)?Score(first):-1,b=Complete(second)?Score(second):-1;
-        if(a>=.82 && a-b>=.10 && Complete(first))return new(first.Name,rms,a);
-        if(b>=.82 && b-a>=.10 && Complete(second))return new(second.Name,rms,b);
-        return new(null,rms,Math.Max(0,Math.Max(a,b)));
+        return (rms, chroma);
     }
+
+    public double[] BassChroma()
+    {
+        var chroma = new double[12];
+        for (int bin = 12; bin <= 40; bin++)
+        {
+            double left = fft[bin - 1].Magnitude, middle = fft[bin].Magnitude, right = fft[bin + 1].Magnitude;
+            if (middle <= left || middle <= right) continue;
+            double correction = .5 * (left - right) / (left - 2 * middle + right);
+            double midi = 69 + 12 * Math.Log2((bin + correction) * Rate / Size / 440.0);
+            int note = (int)Math.Round(midi);
+            if (Math.Abs(midi - note) <= .40) chroma[note % 12] += middle * middle;
+        }
+        double sum = chroma.Sum();
+        if (sum > 0)
+            for (int pitch = 0; pitch < chroma.Length; pitch++) chroma[pitch] /= sum;
+        return chroma;
+    }
+
 }
 
 public sealed class OneMinuteRound
