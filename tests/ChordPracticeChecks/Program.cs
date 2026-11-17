@@ -32,3 +32,42 @@ Console.WriteLine($"{frames} polyphonic frames in {clock.Elapsed.TotalMillisecon
 
 var noise=new Random(123);Check(detector.Analyze(Enumerable.Range(0,ChordDetector.Size).Select(_=>(noise.NextDouble()-.5)*.12).ToArray(),GuitarChord.Parse("C"),GuitarChord.Parse("G")).Name is null,"broadband noise rejected");
 var input=Signal([48,52,55,60,64]);var bench=Stopwatch.StartNew();for(int i=0;i<50;i++)detector.Analyze(input,GuitarChord.Parse("C"),GuitarChord.Parse("G"));Console.WriteLine($"Detector-only average on this Mac: {bench.Elapsed.TotalMilliseconds/50:F2} ms/frame (Pi timing not measured).");
+
+var songCandidates = SongChordAnalysis.Candidates(["A", "D", "E"], 0);
+(double[] Chroma, double[] Bass)? SongFrame(int[] notes)
+{
+    var (_, chroma) = detector.Measure(Signal(notes), .003);
+    return (chroma!.Select(value => value / chroma.Sum()).ToArray(), detector.BassChroma());
+}
+var aFrame = SongFrame([45, 52, 57, 61, 64]);
+var dFrame = SongFrame([50, 57, 62, 66]);
+var eFrame = SongFrame([40, 47, 52, 56, 59, 64]);
+var timeline = SongChordAnalysis.BuildTimeline([aFrame, aFrame, aFrame, dFrame, dFrame, eFrame, eFrame, eFrame], songCandidates);
+Check(timeline.Select(change => change.Name).SequenceEqual(["A", "D", "E"]), "a brief D survives between longer A and E sections");
+Check(SongChordAnalysis.MatchLive(dFrame!.Value.Chroma, songCandidates) == "D", "live song match recognizes D");
+var (_, loneNote) = detector.Measure(Signal([62]), .003);
+Check(SongChordAnalysis.MatchLive(loneNote!, songCandidates) is null, "live song match rejects a single note");
+
+var bassD = Signal([26]);
+detector.Measure(bassD, .003);
+var lowBass = detector.BassChroma();
+Check(lowBass[2] > .55, "bass chroma includes a low D below the guitar range");
+
+var majorSong = SongChordAnalysis.Candidates(["G", "C", "D", "Em"], 0);
+var gFrame = SongFrame([43, 47, 50, 55, 59, 67]);
+var cFrame = SongFrame([48, 52, 55, 60, 64]);
+var maskedD = new double[12];
+maskedD[2] = .23;
+maskedD[4] = .34;
+maskedD[6] = .09;
+maskedD[9] = .06;
+maskedD[1] = .07;
+maskedD[7] = .05;
+maskedD[5] = .16;
+var softD = (maskedD, lowBass);
+timeline = SongChordAnalysis.BuildTimeline(
+    [gFrame, gFrame, gFrame, gFrame, softD, softD, softD, softD, softD,
+        gFrame, gFrame, gFrame, gFrame, cFrame, cFrame, cFrame, cFrame,
+        gFrame, gFrame, gFrame, gFrame, softD, softD, softD, softD, softD], majorSong);
+Check(timeline.Select(change => change.Name).SequenceEqual(["G", "D", "G", "C", "G", "D"]),
+    "neighboring frames recover short D and G changes in order");

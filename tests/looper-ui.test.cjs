@@ -10,6 +10,7 @@ const server=http.createServer((req,res)=>{
  if(url.pathname==='/api/chord-practice/record-loop'){
   res.setHeader('Content-Type','application/octet-stream');
   const block=Buffer.alloc(2048);
+  for(let i=0;i<block.length;i+=2)block.writeInt16LE(32767,i);
   const send=()=>res.write(block);
   send();const clock=setInterval(send,40);res.on('close',()=>clearInterval(clock));return;
  }
@@ -19,6 +20,9 @@ const server=http.createServer((req,res)=>{
   req.on('data',chunk=>chunks.push(chunk));
   req.on('end',()=>{
    wav=Buffer.concat(chunks);assert.equal(wav.toString('ascii',0,4),'RIFF');
+   assert.equal(wav.readInt16LE(44),0);
+   assert.equal(wav.readInt16LE(44+80*2),32767);
+   assert.equal(wav.readInt16LE(wav.length-2),0);
    take={id,name:url.searchParams.get('name'),seconds:(wav.length-44)/32000};json(take);
   });return;
  }
@@ -43,6 +47,9 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>document.querySelector('#message').textContent.startsWith('● Recording'));
   await page.waitForTimeout(200);
   await page.evaluate(()=>document.dispatchEvent(new Event('guitar-looper-toggle')));
+  assert.match(await page.locator('#loopInputLevel').textContent(),/Input hit maximum level/);
+  await page.locator('#loopVolume').fill('40');
+  assert.equal(await page.locator('#loopAudio').evaluate(audio=>audio.volume),0.4);
   await page.locator('#loopName').fill('Fingerpicking');
   await page.locator('#previewLoop').tap();
   await page.waitForFunction(()=>!document.querySelector('#loopAudio').paused);

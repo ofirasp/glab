@@ -7,9 +7,7 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
 
     public static async Task<SongChordAnalysis> Analyze(string audio, IEnumerable<string> names, int shift, CancellationToken cancellation)
     {
-        var occurrences = names.GroupBy(name => name, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-        var candidates = Candidates(occurrences.Keys, shift);
+        var candidates = Candidates(names, shift);
         if (candidates.Count == 0)
             throw new ArgumentException("No supported chord names were found in the PDF text.");
 
@@ -58,10 +56,7 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
             if (!process.HasExited) process.Kill(entireProcessTree: true);
             await errors;
         }
-        int mostCommon = candidates.Max(chord => occurrences[chord.Name]);
-        var rarity = candidates.ToDictionary(chord => chord.Name,
-            chord => Math.Min(.16, .045 * Math.Log((double)mostCommon / occurrences[chord.Name])));
-        return new(shift, BuildTimeline(frames, candidates, rarity));
+        return new(shift, BuildTimeline(frames, candidates));
     }
 
     public static List<GuitarChord> Candidates(IEnumerable<string> names, int shift)
@@ -82,61 +77,88 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
         return candidates;
     }
 
-    static List<SongChordChange> BuildTimeline(List<(double[] Chroma, double[] Bass)?> frames, List<GuitarChord> candidates, Dictionary<string, double> rarity)
+    internal static List<SongChordChange> BuildTimeline(List<(double[] Chroma, double[] Bass)?> frames, List<GuitarChord> candidates)
     {
         const double secondsPerWindow = (double)ChordDetector.Size / ChordDetector.Rate;
         var changes = new List<SongChordChange>();
         var neighborhood = new double[12];
         var bass = new double[12];
-        string? last = null, proposed = null;
-        const int confirmationWindows = 3;
-        int stable = 0;
+        if (frames.Count == 0) return changes;
+        // Choose a path through the whole track. Brief weak frames can support a
+        // change without having to independently win two hard classification gates.
+        const double changeCost = .30;
+        int count = candidates.Count;
+        var previous = new double[count];
+        var scores = new double[count];
+        var parents = new int[frames.Count, count];
         for (int frame = 0; frame < frames.Count; frame++)
         {
             Array.Clear(neighborhood);
             Array.Clear(bass);
-            // Smooth across roughly a second to reduce the effect of individual melody notes.
-            for (int offset = -2; offset <= 2; offset++)
+            // Keep smoothing local so longer neighboring chords do not bury brief changes.
+            for (int offset = -1; offset <= 1; offset++)
             {
                 int index = frame + offset;
                 if (index < 0 || index >= frames.Count || frames[index] is not { } reading) continue;
-                int weight = 3 - Math.Abs(offset);
+                int weight = 2 - Math.Abs(offset);
                 for (int pitch = 0; pitch < neighborhood.Length; pitch++)
                 {
                     neighborhood[pitch] += weight * reading.Chroma[pitch];
                     bass[pitch] += weight * reading.Bass[pitch];
                 }
             }
-            string? match = frames[frame] is null ? null : Match(neighborhood, candidates, bass: bass, rarity: rarity);
-            if (match != proposed) { proposed = match; stable = 0; }
-            if (++stable < confirmationWindows || proposed is null || last == proposed) continue;
-            changes.Add(new(Math.Round((frame - confirmationWindows + 1) * secondsPerWindow, 3), proposed));
-            last = proposed;
+            double total = neighborhood.Sum(), bassTotal = bass.Sum();
+            int strongest = 0;
+            for (int index = 1; index < count; index++)
+                if (previous[index] > previous[strongest]) strongest = index;
+            for (int index = 0; index < count; index++)
+            {
+                var chord = candidates[index];
+                int root = chord.Required[0];
+                double evidence = total > 0
+                    ? chord.Notes.Sum(note => neighborhood[note]) / total
+                        + .34 * (bassTotal > 0 ? bass[root] / bassTotal : 0)
+                        - (neighborhood[chord.Required[1]] < total * .035 ? .12 : 0)
+                    : 0;
+                bool change = previous[strongest] - changeCost > previous[index];
+                int parent = change ? strongest : index;
+                scores[index] = previous[parent] + evidence - (change ? changeCost : 0);
+                parents[frame, index] = parent;
+            }
+            (previous, scores) = (scores, previous);
+        }
+
+        int last = Array.IndexOf(previous, previous.Max());
+        var path = new int[frames.Count];
+        for (int frame = frames.Count - 1; frame >= 0; frame--)
+        {
+            path[frame] = last;
+            last = parents[frame, last];
+        }
+        last = -1;
+        for (int frame = 0; frame < frames.Count; frame++)
+        {
+            if (frames[frame] is null || path[frame] == last) continue;
+            last = path[frame];
+            changes.Add(new(Math.Round(frame * secondsPerWindow, 3), candidates[last].Name));
         }
         return changes;
     }
 
-    public static string? Match(double[] chroma, List<GuitarChord> candidates, bool live = false, double[]? bass = null, Dictionary<string, double>? rarity = null)
+    public static string? MatchLive(double[] chroma, List<GuitarChord> candidates)
     {
         double total = chroma.Sum(), peak = chroma.Max();
         if (total <= 1e-9) return null;
-        double bassTotal = bass?.Sum() ?? 0;
         string? best = null;
         double highest = 0, second = 0;
         foreach (var chord in candidates)
         {
-            int heard = chord.Required.Count(note => chroma[note] >= peak * .12);
-            if (heard < (live ? chord.Required.Length : 2)) continue;
-            // Root and defining interval distinguish lookalikes such as Asus2 and Asus4.
-            double bassSupport = bassTotal > 0 ? bass![chord.Required[0]] / bassTotal : 0;
-            if (!live && chroma[chord.Required[0]] < peak * .12 && bassSupport < .18) continue;
+            if (chord.Required.Any(note => chroma[note] < peak * .12)) continue;
             double coverage = chord.Notes.Sum(note => chroma[note]) / total;
-            if (coverage < (live ? .78 : .50)) continue;
-            double score = coverage + .12 * heard / chord.Required.Length + .30 * bassSupport - (rarity?.GetValueOrDefault(chord.Name) ?? 0);
-            if (!live && chroma[chord.Required[1]] < peak * .12) score -= .12;
-            if (score > highest) { second = highest; highest = score; best = chord.Name; }
-            else if (score > second) second = score;
+            if (coverage < .70) continue;
+            if (coverage > highest) { second = highest; highest = coverage; best = chord.Name; }
+            else if (coverage > second) second = coverage;
         }
-        return highest - second >= (live ? .08 : .045) ? best : null;
+        return highest - second >= .045 ? best : null;
     }
 }

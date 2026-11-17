@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'../src/GuitarPracticeLab.Web/wwwroot');
 const sheet='<svg xmlns="http://www.w3.org/2000/svg" width="500" height="2000"><rect width="500" height="2000" fill="white"/></svg>';
 // A small valid WAV recording, generated locally, is served as audio for the test.
 const samples=48000*20,wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
-const make=(id,cues)=>({id,title:cues.length?'With cues':'Without cues',pages:1,hasAudio:true,hasBacking:false,audioName:'test.wav',duration:20,notes:'',cues,updated:'test'});
+const make=(id,cues)=>({id,title:cues.length?'With cues':'Without cues',pages:1,hasAudio:true,hasBacking:false,audioName:'test.wav',audioVersion:'test-audio',duration:20,notes:'',cues,updated:'test'});
 const songs=[make('11111111-1111-1111-1111-111111111111',[{time:0,page:1,position:0,pageAnchor:0,label:'Intro',zoom:1}]),make('22222222-2222-2222-2222-222222222222',[])];
 songs.push({...make('33333333-3333-3333-3333-333333333333',[]),title:'יוצא לאור',pages:2,cues:[{time:0,page:2,position:0,pageAnchor:0,label:'Intro',zoom:1}]});
 songs.push({...make('44444444-4444-4444-4444-444444444444',[{time:5,page:2,position:.5,pageAnchor:.5,label:'Page two',zoom:1},{time:8,page:2,position:.8,pageAnchor:.8,label:'Later',zoom:1}]),title:'Continuous sheet',pageBreaks:[0,.4,1]});
@@ -39,9 +39,9 @@ const server=http.createServer((req,res)=>{
    const {names,shift}=JSON.parse(body);
    assert.deepEqual(names,['G','C']);assert.equal(shift,2);
    res.setHeader('Content-Type','application/x-ndjson');
-   const send=()=>res.write('{"chord":"G"}\n');
-   send();const timer=setInterval(send,90);
-   res.on('close',()=>clearInterval(timer));
+   res.write('{"chord":null}\n');
+   const timer=setTimeout(()=>res.write('{"chord":"G"}\n'),650);
+   res.on('close',()=>clearTimeout(timer));
   });
   return;
  }
@@ -62,9 +62,10 @@ const server=http.createServer((req,res)=>{
   req.on('end',()=>{
    const {audioVersion,rhythm}=JSON.parse(body);
    assert.equal(audioVersion,'test-audio');
-   songs[0].rhythm=rhythm;
+   const selected=songs.find(song=>url.pathname.includes(song.id));
+   selected.rhythm=rhythm;
    res.setHeader('Content-Type','application/json');
-   res.end(JSON.stringify(songs[0]));
+   res.end(JSON.stringify(selected));
   });
   return;
  }
@@ -183,9 +184,83 @@ const server=http.createServer((req,res)=>{
  await page.reload();await page.waitForFunction(()=>!document.querySelector('#markCue').disabled);await page.locator('#readerControlsToggle').tap();
  check('restoring last song does not autoplay',await page.locator('#audio').evaluate(a=>a.paused));
  await page.locator('#readerPlay').tap();await page.waitForFunction(()=>document.querySelector('#follow').getAttribute('aria-pressed')==='true');check('Play after browser reload enables Follow',await isOn());
- await page.locator('#readerTools').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#rhythmButton').tap();await page.locator('#analyzeRhythm').tap();
- await page.waitForFunction(()=>document.querySelector('#rhythmStatus').textContent.includes('No consistent 3/4 or 4/4 pattern found'));
+ await page.locator('#readerTools').tap();await page.locator('#toolsTabAnalyze').tap();await page.locator('#rhythmButton').tap();await page.locator('#analyzeRhythm').tap();
+ await page.waitForFunction(()=>document.querySelector('#rhythmStatus').textContent.includes('Time signature unclear'));
+ await page.locator('#doubleRhythmTempo').tap();
+ check('double tempo corrects a half-time estimate',await page.locator('#rhythmBpm').inputValue()==='192');
+ await page.locator('#halfRhythmTempo').tap();
+ check('rhythm dialog keeps Save visible without scrolling',await page.locator('#rhythmDialog').evaluate(dialog=>{
+  const body=dialog.querySelector('.dialogbody'),save=document.querySelector('#saveRhythm').getBoundingClientRect();
+  return body.scrollHeight<=body.clientHeight+1&&save.bottom<=innerHeight&&save.top>=dialog.getBoundingClientRect().top;
+ }));
  check('uncertain meter leaves the selector blank',await page.locator('#rhythmBpm').inputValue()==='96'&&await page.locator('#rhythmMeter').inputValue()==='');
+ await page.locator('#rhythmBpm').tap();
+ await page.locator('#gplTouchKeyboard').waitFor();
+ await page.locator('#gplTouchKeyboard').getByRole('button',{name:'Select all',exact:true}).tap();
+ for(const digit of ['1','2','0','.','5'])await page.locator('#gplTouchKeyboard').getByRole('button',{name:digit,exact:true}).tap();
+ await page.locator('#gplTouchKeyboard').getByRole('button',{name:'Done',exact:true}).tap();
+ check('tempo opens a decimal keypad and retains numeric validation',await page.locator('#rhythmBpm').evaluate(field=>field.type==='number'&&field.valueAsNumber===120.5&&field.checkValidity()));
+ await page.waitForTimeout(250);
+ await page.locator('#rhythmBpm').evaluate(field=>{field.blur();field.focus();});
+ await page.waitForTimeout(120);
+ check('restoring focus does not reopen the keypad',await page.locator('#gplTouchKeyboard').isHidden());
+ await page.locator('#rhythmMeter').selectOption('6/8');
+ await page.locator('#saveRhythm').tap();
+ await page.waitForFunction(()=>document.querySelector('#rhythmStatus').textContent.includes('Rhythm saved'));
+ check('saving directly after keypad entry persists tempo without reopening',songs[0].rhythm.bpm===120.5&&await page.locator('#gplTouchKeyboard').isHidden());
+ await page.locator('#rhythmTapUnit').selectOption('bar');
+ await page.locator('#rhythmMeter').selectOption('4/4');
+ check('two beat-one taps a bar apart calculate tempo without restarting',await page.evaluate(()=>{
+  const original=performance.now;
+  let now=1000;performance.now=()=>now;
+  try{
+   document.querySelector('#tapRhythmTempo').click();
+   now+=2400;document.querySelector('#tapRhythmTempo').click();
+   return document.querySelector('#rhythmBpm').value==='100'
+    &&document.querySelector('#tapRhythmTempo').textContent.includes('Tap 2');
+  }finally{performance.now=original;}
+ }));
+ await page.locator('#rhythmTapUnit').selectOption('beat');
+ check('tap tempo updates after two taps and restarts visibly after a pause',await page.evaluate(()=>{
+  const original=performance.now;
+  let now=2000;
+  performance.now=()=>now;
+  try {
+   document.querySelector('#tapRhythmTempo').click();
+   const first=document.querySelector('#tapRhythmTempo').textContent.includes('Tap 1');
+   now+=600;document.querySelector('#tapRhythmTempo').click();
+   const second=document.querySelector('#rhythmBpm').value==='100';
+   now+=2300;document.querySelector('#tapRhythmTempo').click();
+   const restarted=document.querySelector('#tapRhythmTempo').textContent.includes('Tap 1');
+   now+=500;document.querySelector('#tapRhythmTempo').click();
+   return first&&second&&restarted&&document.querySelector('#rhythmBpm').value==='120';
+  }finally{performance.now=original;}
+ }));
+ check('tapping four half-second beats estimates 120 BPM',await page.evaluate(()=>{
+  const original=performance.now;
+  let now=10000;
+  performance.now=()=>now;
+  try {
+   for(let index=0;index<4;index++){document.querySelector('#tapRhythmTempo').click();now+=500;}
+   return document.querySelector('#rhythmBpm').value==='120';
+  }finally{performance.now=original;}
+ }));
+ check('tempo stays constant through 30 taps with varying release delays',await page.evaluate(()=>{
+  const original=performance.now;let now=20000;performance.now=()=>now;
+  const button=document.querySelector('#tapRhythmTempo');
+  try {
+   const estimates=[];
+   for(let index=0;index<30;index++){
+    now=20000+index*500;
+    button.dispatchEvent(new PointerEvent('pointerdown',{isPrimary:true,button:0}));
+    now+=index%2?240:40;
+    button.click();
+    if(index>0)estimates.push(Number(document.querySelector('#rhythmBpm').value));
+   }
+   return estimates.every(bpm=>bpm===120)&&button.textContent.includes('Tap 30');
+  }finally{performance.now=original;}
+ }));
+ await page.locator('#rhythmBpm').fill('96');
  await page.locator('#rhythmMeter').selectOption('6/8');await page.locator('#previewRhythm').tap();
  await page.waitForFunction(()=>document.querySelector('#rhythmStatus').textContent.includes('Playing two bars over the song'));
  check('click preview keeps the song playing',await page.locator('#audio').evaluate(a=>!a.paused));
@@ -195,6 +270,7 @@ const server=http.createServer((req,res)=>{
  await page.waitForFunction(()=>document.querySelector('#rhythmStatus').textContent.includes('Rhythm saved'));
  check('edited rhythm is saved with the current audio version',songs[0].rhythm.bpm===96&&songs[0].rhythm.meter==='6/8');
  await page.locator('#rhythmDialog [data-close]').tap();
+ await page.locator('#toolsDialog [data-close]').tap();
  await page.locator('#readerTools').tap();
  check('saved meter and tempo appear in song tools',await page.locator('#rhythmSummary').textContent()==='6/8 · 96 BPM');
  await page.locator('#toolsDialog [data-close]').tap();
@@ -272,7 +348,7 @@ const server=http.createServer((req,res)=>{
  await page.locator('#markCue').tap();
  check('marking on the continuous sheet keeps original cue coordinates',(await page.locator('#markSummary').textContent()).includes('PDF page 2'));
  await page.locator('#markDialog [data-close]').tap();
- await page.locator('#readerTools').tap();await page.locator('#recordReviewButton').tap();
+ await page.locator('#readerTools').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#recordReviewButton').tap();
  await page.waitForFunction(()=>!document.querySelector('#startTake').disabled);
  await page.locator('#recordReviewCue').selectOption({label:'0:05 · Page two'});
  await page.locator('#startTake').tap();
@@ -294,23 +370,118 @@ const server=http.createServer((req,res)=>{
  await page.waitForFunction(()=>document.querySelector('#recordReviewStatus').textContent.includes('Playing your take with the song track'));
  check('guitar-only and mixed review both play',true);
  await page.locator('#recordReviewDialog [data-close]').tap();
- await page.locator('#readerTools').tap();await page.locator('#analyzeChordsButton').tap();
+ await page.locator('#toolsDialog [data-close]').tap();
+ await page.locator('#readerTools').tap();await page.locator('#toolsTabAnalyze').tap();await page.locator('#analyzeChordsButton').tap();
  await page.locator('#chordAnalysisShift').selectOption('2');await page.locator('#runChordAnalysis').tap();
  await page.waitForFunction(()=>document.querySelector('#chordAnalysisStatus').textContent.includes('Saved 2'));
  await page.locator('#analyzeChordsDialog [data-close]').tap();
+ await page.locator('#toolsDialog').waitFor();
+ check('closing Analyze chords returns to Song tools',await page.locator('#toolsDialog').isVisible());
+ await page.locator('#toolsDialog [data-close]').tap();
  await page.locator('#audio').evaluate(a=>{a.currentTime=1;});
  await page.waitForFunction(()=>document.querySelector('#playingChord').textContent==='G');
  await page.locator('#readerControlsToggle').tap();
- check('FullScreen chord strip replaces the title even with controls hidden',await page.locator('.top #playingChord').isVisible()
-  &&await page.locator('#songTitle').isHidden()&&await page.locator('#pageNumber').isHidden());
+ check('FullScreen shows the chord stage and song title with controls hidden',await page.locator('#fullscreenChords').isVisible()
+  &&await page.locator('#songTitle').isVisible()&&await page.locator('#pageNumber').isHidden());
+ check('fullscreen includes a chord diagram and next-change countdown',await page.locator('#stageDiagram svg').count()===1&&await page.locator('#stageNext').textContent()==='C'
+  &&await page.locator('#stageSeconds').textContent().then(text=>text.includes('s')));
+ await page.locator('#chordFocusToggle').tap();
+ check('Chord Focus enlarges the diagram and hides the PDF',await page.locator('#pdfViewport').isHidden()&&await page.locator('#stageDiagram').evaluate(el=>el.getBoundingClientRect().height>150));
+ check('beat strip groups two bars and updates completed and current beats',await page.evaluate(()=>{
+  const saved=song.rhythm;
+  song.rhythm={bpm:120,meter:'4/4',firstDownbeat:0};
+  showChordBeats(2.6,0,4,'D');
+  const svg=document.querySelector('#stageBeatGraphic svg');
+  const okay=svg.querySelectorAll('circle').length===8
+    &&svg.querySelectorAll('[data-state="done"]').length===5
+    &&svg.querySelectorAll('[data-state="current"]').length===1
+    &&svg.textContent.includes('Bar 1')&&svg.textContent.includes('Bar 2');
+  showChordBeats(.4,0,1,'D');
+  const half=document.querySelectorAll('#stageBeatGraphic circle[data-in-chord="true"]').length===2;
+  song.rhythm=saved;
+  showPlayingChord(audio.currentTime);
+  return okay&&half;
+ }));
+ check('6/8 displays six pulses with accents on one and four',await page.evaluate(()=>{
+  const saved=song.rhythm;
+  song.rhythm={bpm:60,meter:'6/8',firstDownbeat:0};
+  showChordBeats(.8,0,2,'D');
+  const dots=[...document.querySelectorAll('#stageBeatGraphic circle')];
+  const okay=dots.length===12
+   &&dots.filter(dot=>dot.dataset.accent==='true').map(dot=>dot.dataset.pulse).join(',')==='1,4,1,4'
+   &&dots.find(dot=>dot.dataset.state==='current')?.dataset.pulse==='3';
+  showChordBeats(1.2,1,2,'G');
+  const fixedBefore=dots.find(dot=>dot.dataset.pulse==='4').getAttribute('cx');
+  const continuing=document.querySelector('#stageBeatGraphic circle[data-state="current"]')?.dataset.pulse==='4'
+    &&document.querySelector('#stageBeatGraphic circle[data-state="current"]').getAttribute('cx')===fixedBefore;
+  song.rhythm={bpm:60,meter:'6/8',firstDownbeat:null};
+  showChordBeats(1.2,1,2,'G');
+  const fallback=document.querySelector('#stageBeatGraphic circle[data-state="current"]')?.dataset.pulse==='4';
+  song.rhythm=saved;showPlayingChord(audio.currentTime);
+  return okay&&continuing&&fallback;
+ }));
+ await page.evaluate(()=>{
+  song.rhythm={bpm:120,meter:'4/4',firstDownbeat:null};
+  showPlayingChord(audio.currentTime);
+ });
+ await page.locator('#stageSyncBar').tap();
+ await page.waitForFunction(()=>document.querySelector('#stageBeatCaption').textContent.includes('bar aligned'));
+ check('bar alignment saves at the current song position',await page.evaluate(()=>Number.isFinite(song.rhythm.firstDownbeat)&&Math.abs(song.rhythm.firstDownbeat-audio.currentTime)<.5));
+ check('two chords in one bar render as two half-bar segments',await page.evaluate(()=>{
+  const saved=song.rhythm,analysis=song.chordAnalysis;
+  song.rhythm={bpm:120,meter:'4/4',firstDownbeat:0};
+  song.chordAnalysis={shift:0,changes:[{time:0,name:'G'},{time:1,name:'D'},{time:2,name:'C'}]};
+  showChordBeats(.4,0,1,'D');
+  const parts=[...document.querySelectorAll('#stageBeatGraphic [data-chord-segment]')];
+  const before=parts.slice(0,2).map(part=>[part.dataset.chordSegment,Number(part.dataset.barFraction),part.getAttribute('x')]);
+  showChordBeats(1.2,1,2,'C');
+  const after=[...document.querySelectorAll('#stageBeatGraphic [data-chord-segment]')].slice(0,2);
+  const okay=before[0][0]==='G'&&before[1][0]==='D'&&before.every(part=>part[1]===.5)
+    &&after.every((part,index)=>part.getAttribute('x')===before[index][2]);
+  song.rhythm=saved;song.chordAnalysis=analysis;showPlayingChord(audio.currentTime);
+  return okay;
+ }));
+ check('small chord timing errors do not create fragments across a bar line',await page.evaluate(()=>{
+  const saved=song.rhythm,analysis=song.chordAnalysis;
+  song.rhythm={bpm:120,meter:'4/4',firstDownbeat:0};
+  song.chordAnalysis={shift:0,changes:[{time:0,name:'Am7'},{time:1.96,name:'C'},{time:3.5,name:'D7'}]};
+  showChordBeats(3.7,3.5,4,'G');
+  const parts=[...document.querySelectorAll('#stageBeatGraphic [data-chord-segment]')];
+  const okay=parts.map(part=>part.dataset.chordSegment).join(',')==='Am7,C,D7'
+    &&parts.map(part=>Number(part.dataset.barFraction)).join(',')==='1,0.75,0.25';
+  song.rhythm=saved;song.chordAnalysis=analysis;showPlayingChord(audio.currentTime);
+  return okay;
+ }));
+ check('a late chord boundary cannot leave a highlighted sliver in the next bar',await page.evaluate(()=>{
+  const saved=song.rhythm,analysis=song.chordAnalysis;
+  song.rhythm={bpm:120,meter:'4/4',firstDownbeat:0};
+  song.chordAnalysis={shift:0,changes:[{time:0,name:'C'},{time:2.13,name:'Bm'},{time:3.5,name:'Am7'}]};
+  showChordBeats(1.8,0,2.13,'Bm');
+  const parts=[...document.querySelectorAll('#stageBeatGraphic [data-chord-segment]')];
+  const okay=parts.map(part=>part.dataset.chordSegment).join(',')==='C,Bm,Am7'
+   &&parts.map(part=>Number(part.dataset.barFraction)).join(',')==='1,0.75,0.25'
+   &&parts.filter(part=>part.getAttribute('fill')==='#375743').length===1;
+  song.rhythm=saved;song.chordAnalysis=analysis;showPlayingChord(audio.currentTime);
+  return okay;
+ }));
+ check('missing rhythm offers setup instead of guessing beats',await page.evaluate(()=>{
+  const saved=song.rhythm;
+  song.rhythm=null;
+  showChordBeats(1,0,4,'D');
+  const okay=!document.querySelector('#stageBeatGraphic svg')&&document.querySelector('#stageBeatCaption').textContent.includes('Set tempo');
+  song.rhythm=saved;showPlayingChord(audio.currentTime);
+  return okay;
+ }));
+ await page.screenshot({path:'/tmp/glab-chord-focus.png'});
+ await page.locator('#chordFocusToggle').tap();
+ check('PDF View restores the sheet',await page.locator('#pdfViewport').isVisible());
+ await page.screenshot({path:'/tmp/glab-pdf-chords.png'});
  await page.locator('#readerToggle').tap();
  check('the chord strip is on the same row as the zoom readout',await page.locator('#playingChord').evaluate(badge=>{
   const chord=badge.getBoundingClientRect(),zoom=document.querySelector('#pageNumber').getBoundingClientRect();
   return Math.abs(chord.y+chord.height/2-zoom.y-zoom.height/2)<2;
  })&&await page.locator('#chordTargets .playing-chord').count()===0);
  check('zoom readout sits beside the zoom buttons',await page.locator('#pageNumber').evaluate(readout=>readout.nextElementSibling.id==='zoomOut'));
- await page.locator('#readerToggle').tap();
- await page.locator('#readerControlsToggle').tap();
  const centered=()=>page.locator('#playingChord').evaluate(badge=>{
   const chord=badge.getBoundingClientRect(),strip=badge.parentElement.getBoundingClientRect();
   return Math.abs(chord.x+chord.width/2-strip.x-strip.width/2)<2;
@@ -349,6 +520,23 @@ const server=http.createServer((req,res)=>{
   song.chordAnalysis=previous;
   if(visible<4)throw Error('Chord strip should show several nearby chords');
  });
+ check('a long completed chord appears immediately on the left and moves left',await page.evaluate(()=>{
+  const original=song.chordAnalysis;
+  song.chordAnalysis={shift:0,changes:[{time:0,name:'G'},{time:40,name:'Bm'},{time:44,name:'C'},{time:44.3,name:'D'},{time:48,name:'Em'}]};
+  showPlayingChord(40.001);
+  const past=document.querySelector('#chordStrip .past');
+  const start=parseFloat(past?.style.left);
+  const correct=past?.textContent==='G';
+  showPlayingChord(40.501);
+  const moved=parseFloat(document.querySelector('#chordStrip .past')?.style.left);
+  showPlayingChord(44.301);
+  const history=[...document.querySelectorAll('#chordStrip .past')]
+    .sort((a,b)=>parseFloat(b.style.left)-parseFloat(a.style.left)).map(label=>label.textContent);
+  const ordered=history[0]==='C'&&history[1]==='Bm';
+  song.chordAnalysis=original;
+  showPlayingChord(audio.currentTime);
+  return correct&&moved<start&&ordered;
+ }));
  check('closely spaced chords stay in consecutive order through the handoff',await page.evaluate(()=>{
   const original=song.chordAnalysis;
   song.chordAnalysis={shift:0,changes:[{time:0,name:'Am'},{time:4,name:'G'},{time:4.4,name:'D'},{time:5.2,name:'C'},{time:6.2,name:'Em'}]};
@@ -359,7 +547,7 @@ const server=http.createServer((req,res)=>{
   });
   song.chordAnalysis=original;
   showPlayingChord(audio.currentTime);
-  return previews.slice(0,3).every(value=>value.startsWith('G,D,C'))&&previews[3].startsWith('D,C')&&previews[4].startsWith('C,Em');
+  return previews.slice(0,3).every(value=>value.startsWith('G,D')&&'G,D,C,Em'.startsWith(value))&&previews[3].startsWith('D,C')&&'D,C,Em'.startsWith(previews[3])&&previews[4].startsWith('C,Em');
  }));
  check('an upcoming chord never jumps right when it becomes next',await page.evaluate(()=>{
   const original=song.chordAnalysis;
@@ -379,20 +567,21 @@ const server=http.createServer((req,res)=>{
  await page.locator('#audio').evaluate(a=>{a.currentTime=9;});
  await page.waitForFunction(()=>document.querySelector('#clock').textContent.startsWith('0:09'));
  check('an unclear stretch holds the last detected chord',await page.locator('#playingChord').textContent()==='C');
- await page.locator('#readerTools').tap();await page.locator('#chordMatchButton').tap();
+ await page.locator('#readerToggle').tap();
+ await page.locator('#toolsButton').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#chordMatchButton').tap();
  await page.locator('#startChordMatch').tap();
  await page.waitForFunction(()=>document.querySelector('#playingChord').classList.contains('matched-chord'));
- check('the next chord blinks at the current chord size during playback',await page.locator('#chordStrip .next').evaluate(next=>
-  getComputedStyle(next).fontSize===getComputedStyle(document.querySelector('#playingChord')).fontSize
-  &&getComputedStyle(next).animationName==='next-chord-blink'
- ));
- check('matching guitar audio turns the expected chord green',await page.locator('#playingChord').textContent()==='G');
+ check('fullscreen gives green feedback and a running score for a match',await page.locator('#stageCurrentCard').evaluate(el=>el.classList.contains('matched'))
+  &&await page.locator('#stageScore').textContent()==='Matched 1 / 2');
+ check('one confident match later in the section turns the expected chord green',await page.locator('#playingChord').textContent()==='G');
  await page.locator('#audio').evaluate(a=>{a.pause();a.dispatchEvent(new Event('ended'));});
  await page.waitForFunction(()=>document.querySelector('#chordMatchResult').textContent.includes('50%'));
  check('end-of-song score saves a personal best',await page.locator('#chordMatchBest').textContent()==='Personal best · 50% (1 / 2)');
  await page.locator('#chordMatchDialog [data-close]').tap();
- await page.locator('#readerTools').tap();await page.locator('#chordMatchButton').tap();
+ await page.locator('#toolsDialog [data-close]').tap();
+ await page.locator('#toolsButton').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#chordMatchButton').tap();
  check('the song personal best is available when reopening chord match',await page.locator('#chordMatchBest').textContent()==='Personal best · 50% (1 / 2)');
+ check('the latest completed score is also available',await page.locator('#chordMatchLast').textContent()==='Last score · 50% (1 / 2)');
  check('no JavaScript errors',!errors.length);
  console.log(`${checks.length} auto-follow checks passed.`);
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}

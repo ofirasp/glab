@@ -175,11 +175,13 @@ public static class ChordPractice
             var bytes = new byte[record ? 2048 : window.Length * 2];
             int recordingBytes = recordSeconds * 16000 * 2;
             int captured = 0;
+            int overlapBytes = detector is null ? 0 : bytes.Length / 2;
+            int retainedBytes = 0;
             while (!lifetime.IsCancellationRequested && (!record || captured < recordingBytes))
             {
                 using var read = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
                 read.CancelAfter(TimeSpan.FromSeconds(8));
-                var buffer = bytes.AsMemory(0, record ? Math.Min(bytes.Length, recordingBytes - captured) : bytes.Length);
+                var buffer = record ? bytes.AsMemory(0, Math.Min(bytes.Length, recordingBytes - captured)) : bytes.AsMemory(retainedBytes);
                 await process.StandardOutput.BaseStream.ReadExactlyAsync(buffer, read.Token);
                 if (record)
                 {
@@ -194,7 +196,9 @@ public static class ChordPractice
                 else
                 {
                     var (_, chroma) = detector.Measure(window, .004);
-                    await Write(new { chord = chroma is null ? null : SongChordAnalysis.Match(chroma, chords!, live: true) });
+                    await Write(new { chord = chroma is null ? null : SongChordAnalysis.MatchLive(chroma, chords!) });
+                    bytes.AsSpan(overlapBytes).CopyTo(bytes);
+                    retainedBytes = overlapBytes;
                 }
             }
         }

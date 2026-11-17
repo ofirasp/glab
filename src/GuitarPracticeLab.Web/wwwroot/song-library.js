@@ -46,7 +46,7 @@ for (const prefix of ['song', 'reader']) {
 }
 audio.addEventListener('volumechange', syncVolume);
 syncVolume();
-let preferredZoom = 1.5, readerMode = false, readerControlsOpen = false;
+let preferredZoom = 1.5, readerMode = false, readerControlsOpen = false, chordFocus = false;
 try {
   const saved = Number(localStorage.getItem('guitar-reading-zoom'));
   if (saved >= 1 && saved <= 3) preferredZoom = saved;
@@ -653,23 +653,19 @@ function showPlayingChord(time) {
   }
   strip.hidden = !changes?.length;
   strip.classList.toggle('moving', !(takePlayback ?? audio).paused);
-  $('songTitle').hidden = readerMode && !strip.hidden;
+  $('songTitle').hidden = false;
   badge.hidden = !current?.name;
   if (badge.textContent !== (current?.name || '')) badge.textContent = current?.name || '';
   window.SongChordMatch?.show(index);
+  showFullscreenChords(time, changes, index);
 
   const width = strip.clientWidth;
   if (!width || !changes?.length) return;
   const center = width / 2, gap = 7;
-  const position = change => center + (change.time - time) * 24;
   const labelWidth = name => Math.max(20, name.length * 8 + 4);
   const visible = new Set();
   function place(offset, x, past, next = false) {
     let label = stripLabels.get(offset);
-    if (label && label.classList.contains('past') !== past) {
-      label.remove();
-      label = null;
-    }
     if (!label) {
       label = document.createElement('span');
       label.className = 'strip-chord';
@@ -684,15 +680,18 @@ function showPlayingChord(time) {
   }
   const currentHalf = current ? badge.offsetWidth / 2 : 0;
   let left = center - currentHalf - gap;
+  let endedAt = current?.time ?? time;
   for (let offset = index - 1; offset >= 0; offset--) {
     const change = changes[offset];
     if (!change.name) continue;
     const half = labelWidth(change.name) / 2;
-    const x = position(change);
+    // A completed chord leaves at its end time, regardless of how long it played.
+    // Keep earlier chords behind it so short sections cannot hide their neighbors.
+    const x = Math.min(left - half, center - currentHalf - gap - half - Math.max(0, time - endedAt) * 24);
     if (x < half) break;
-    if (x + half > left) break;
     place(offset, x, true);
     left = x - half - gap;
+    endedAt = change.time;
   }
   // Reserve the same approach lane for the entire timeline. A chord's position
   // on this lane survives the change from a later chord to the blinking next one.
@@ -719,6 +718,197 @@ function showPlayingChord(time) {
     if (!visible.has(offset)) { label.remove(); stripLabels.delete(offset); }
   }
 }
+let stageDiagramName = '', focusPdfPoint = null, syncingBar = false, syncTapTime = null;
+function showFullscreenChords(time, changes, index) {
+  const ready = readerMode && Boolean(changes?.some(change => change.name));
+  $('fullscreenChords').hidden = $('stageTransport').hidden = $('chordFocusToggle').hidden = $('stageBeats').hidden = !ready;
+  document.body.classList.toggle('chord-focus', ready && chordFocus);
+  if (!ready) return;
+  const named = changes.map((change, offset) => ({...change, offset})).filter(change => change.name);
+  const currentPosition = named.findIndex(change => change.offset === index);
+  const current = changes[index];
+  const upcoming = named.filter(change => change.offset > index);
+  $('stagePrevious').textContent = named[currentPosition - 1]?.name || '—';
+  $('stageCurrent').textContent = current?.name || '—';
+  $('stageNext').textContent = upcoming[0]?.name || '—';
+  $('stageLater').textContent = upcoming[1]?.name || '—';
+  const remaining = upcoming[0] ? Math.max(0, upcoming[0].time - time) : 0;
+  const duration = upcoming[0] ? Math.max(.001, upcoming[0].time - (current?.time || 0)) : 1;
+  $('stageCountdown').value = upcoming[0] ? 1 - Math.min(1, remaining / duration) : 0;
+  $('stageSeconds').textContent = upcoming[0] ? 'Change in ' + remaining.toFixed(1) + ' s' : 'Last chord';
+  showChordBeats(time, current?.time, upcoming[0]?.time ?? song?.duration, upcoming[0]?.name);
+  const matched = $('playingChord').classList.contains('matched-chord');
+  $('stageCurrentCard').classList.toggle('matched', matched);
+  $('stageMatch').textContent = matched ? '✓ Matched' : '';
+  if (stageDiagramName !== (current?.name || '')) {
+    stageDiagramName = current?.name || '';
+    $('stageDiagram').replaceChildren();
+    const shapes = window.GuitarChords?.shapes(stageDiagramName) || [];
+    let preferred;
+    try { preferred = JSON.parse(localStorage.getItem('guitar-chords-' + song.id) || '{}').preferred?.[stageDiagramName]; } catch {}
+    const shape = shapes.find(option => option.frets.join(',') === preferred) || shapes[0];
+    if (shape) $('stageDiagram').append(GuitarChordDiagram(shape, stageDiagramName));
+  }
+  const player = takePlayback ?? audio;
+  $('stagePlay').textContent = player.paused ? 'Play' : 'Pause';
+  $('stagePlay').disabled = !song?.hasAudio || Boolean(takingSongRecording);
+  $('stageClock').textContent = clock(time) + ' / ' + clock(song?.duration || 0);
+  $('stageSeek').max = song?.duration || 1;
+  $('stageSeek').value = time;
+  $('stageSeek').disabled = Boolean(takingSongRecording) || Boolean(takePlayback) || isRecordingFollow();
+  const score = window.SongChordMatch?.progress?.();
+  $('stageScore').textContent = score ? 'Matched ' + score.hits + ' / ' + score.total : 'Chord match off';
+}
+function showChordBeats(time, start, end, nextName) {
+  const rhythm = song?.rhythm;
+  const beats = rhythmBeats[rhythm?.meter];
+  const bpm = rhythm?.bpm;
+  $('stageSyncBar').disabled = !beats || !Number.isFinite(bpm) || syncingBar || Boolean(takePlayback) || Boolean(takingSongRecording);
+  const graphic = $('stageBeatGraphic');
+  graphic.replaceChildren();
+  if (!beats || !Number.isFinite(bpm) || bpm <= 0) {
+    $('stageBeatCaption').textContent = 'Set tempo and time signature to show the beats.';
+    return;
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    $('stageBeatCaption').textContent = 'Waiting for the first chord';
+    return;
+  }
+  const subdivisions = rhythm.meter.endsWith('/8') ? 3 : 1;
+  const pulses = beats * subdivisions;
+  const beat = 60 / bpm, pulse = beat / subdivisions, bar = beat * beats;
+  const aligned = Number.isFinite(rhythm.firstDownbeat);
+  if (!syncingBar) $('stageSyncBar').textContent = aligned ? '✓ Bar synced' : 'Bar starts now';
+  const anchor = aligned ? rhythm.firstDownbeat : 0;
+  const currentBar = Math.floor((time - anchor) / bar + 1e-6);
+  // Keep song-time coordinates fixed through chord changes.
+  const windowBar = Math.floor(currentBar / 2) * 2;
+  const windowStart = anchor + windowBar * bar;
+  const windowEnd = windowStart + 2 * bar;
+  const length = Math.max(.001, windowEnd - windowStart);
+  $('stageBeatCaption').textContent = 'Estimated · ' + rhythm.meter + ' · ' + bpm + ' BPM'
+    + (aligned ? ' · bar aligned at ' + clock(rhythm.firstDownbeat) : ' · tap Bar starts now on beat 1');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 740 52');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Chord beat progress in ' + rhythm.meter);
+  const add = (tag, attrs, text) => {
+    const node = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    if (text !== undefined) node.textContent = text;
+    svg.append(node);
+    return node;
+  };
+  const x = moment => 18 + (moment - windowStart) / length * 650;
+  // This is an estimated rhythmic diagram: use whole displayed pulses for
+  // chord sections instead of rendering fractional slivers from audio analysis.
+  const displayStart = anchor + Math.round((start - anchor) / pulse) * pulse;
+  const displayEnd = anchor + Math.round((end - anchor) / pulse) * pulse;
+  const timeline = [];
+  for (const change of song?.chordAnalysis?.changes || []) {
+    if (!change.name) continue;
+    const nearest = anchor + Math.round((change.time - anchor) / pulse) * pulse;
+    const boundary = nearest;
+    const previous = timeline.at(-1);
+    if (previous?.time === boundary) {
+      previous.name = change.name;
+    } else if (previous?.name !== change.name) timeline.push({time: boundary, name: change.name});
+  }
+
+  for (let group = windowBar; group <= windowBar + 1; group++) {
+    const left = Math.max(windowStart, anchor + group * bar);
+    const right = Math.min(windowEnd, anchor + (group + 1) * bar);
+    if (right <= left) continue;
+    add('rect', {x:x(left), y:3, width:Math.max(1,x(right)-x(left)-4), height:46, rx:8, fill:'#192f45', stroke:'#54758c'});
+    const label = group - windowBar + 1;
+    const cuts = [left, ...timeline.filter(change => change.time > left + .001 && change.time < right - .001).map(change => change.time), right];
+    for (let part = 0; part < cuts.length - 1; part++) {
+      const from = cuts[part], to = cuts[part + 1];
+      const chordIndex = chordIndexAt(from + .001, timeline);
+      const name = timeline[chordIndex]?.name || (from >= start && from < end ? $('stageCurrent').textContent : '');
+      const activeChord = from < displayEnd && to > displayStart;
+      const width = Math.max(1, x(to) - x(from) - 4);
+      add('rect', {x:x(from)+1,y:16,width,height:31,rx:5,
+        fill:activeChord?'#375743':'#203247',stroke:activeChord?'#91d6a5':'#647e96','stroke-width':1,
+        'data-chord-segment':name,'data-bar-fraction':(to-from)/bar});
+      if (name && width > 25)
+        add('text', {x:(x(from)+x(to))/2,y:14,'text-anchor':'middle',fill:activeChord?'#ffe28a':'#cad9eb','font-size':10,'font-weight':700},name);
+    }
+    add('text', {x:x(left)+5,y:11,fill:'#b9cde6','font-size':7}, 'Bar ' + label);
+    for (let count = 0; count < pulses; count++) {
+      const onset = anchor + group * bar + count * pulse;
+      const a = Math.max(onset, windowStart), b = Math.min(onset + pulse, windowEnd);
+      if (b <= a) continue;
+      const cx = (x(a) + x(b)) / 2;
+      const active = time >= a && time < b;
+      const complete = time >= b;
+      const mainBeat = count % subdivisions === 0;
+      if (subdivisions > 1 && mainBeat && count > 0 && onset > windowStart)
+        add('line', {x1:x(onset)-2,x2:x(onset)-2,y1:18,y2:46,stroke:'#54758c','stroke-dasharray':'2 2'});
+      add('circle', {cx,cy:27,r:active?7:mainBeat?6:4,fill:complete?'#70e89a':active?'#ffd677':'#617c9b',
+        stroke:active?'#fff0b0':'none','stroke-width':2,'data-state':complete?'done':active?'current':'remaining','data-pulse':count+1,'data-accent':mainBeat,'data-in-chord':onset < displayEnd && onset + pulse > displayStart});
+      add('text', {x:cx,y:44,'text-anchor':'middle',fill:'#d5e3f3','font-size':9},count+1);
+    }
+  }
+  const progress = Math.max(0,Math.min(1,(time-windowStart)/length));
+  add('line', {x1:18,x2:18+650*progress,y1:50,y2:50,stroke:'#ffd677','stroke-width':2});
+  add('text', {x:704,y:31,'text-anchor':'middle',fill:'#ffe28a','font-size':16,'font-weight':700}, '→ ' + (nextName || 'End'));
+  graphic.append(svg);
+  if (nextName) {
+    const remaining = Math.max(0,(end-time)/pulse);
+    $('stageSeconds').textContent = 'Change in ' + remaining.toFixed(1) + (subdivisions > 1 ? ' pulses' : ' beats');
+  }
+}
+$('stageSyncBar').onpointerdown = () => { syncTapTime = audio.currentTime; };
+$('stageSyncBar').onclick = async () => {
+  const id = song?.id, rhythm = song?.rhythm;
+  const firstDownbeat = syncTapTime ?? audio.currentTime;
+  syncTapTime = null;
+  if (syncingBar || !id || !rhythm || !rhythmBeats[rhythm.meter] || !Number.isFinite(firstDownbeat)) return;
+  const audioVersion = song.audioVersion;
+  syncingBar = true;
+  song.rhythm = {...rhythm, firstDownbeat};
+  showPlayingChord(audio.currentTime);
+  $('stageSyncBar').textContent = 'Saving…';
+  try {
+    const result = await request(`/${id}/rhythm`, {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({audioVersion, rhythm: {...rhythm, firstDownbeat}})
+    });
+    if (song?.id !== id || song.audioVersion !== audioVersion) return;
+    song.rhythm = result.rhythm;
+    songs = songs.map(item => item.id === id ? {...item, rhythm: result.rhythm} : item);
+    $('stageSyncBar').textContent = '✓ Bar synced';
+    status('Bar synced at ' + clock(firstDownbeat) + '. Beat 1 starts at your tap.');
+  } catch (error) {
+    if (song?.id === id && song.audioVersion === audioVersion) song.rhythm = rhythm;
+    message(error);
+  } finally {
+    syncingBar = false;
+    $('stageSyncBar').textContent = Number.isFinite(song?.rhythm?.firstDownbeat) ? '✓ Bar synced' : 'Bar starts now';
+    showPlayingChord((takePlayback ?? audio).currentTime);
+  }
+};
+$('stageSetRhythm').onclick = () => $('rhythmButton').click();
+$('chordFocusToggle').onclick = () => {
+  if (!chordFocus) focusPdfPoint = pagePoint();
+  chordFocus = !chordFocus;
+  $('chordFocusToggle').textContent = chordFocus ? 'PDF View' : 'Chord Focus';
+  $('chordFocusToggle').setAttribute('aria-pressed', String(chordFocus));
+  showPlayingChord((takePlayback ?? audio).currentTime);
+  if (!chordFocus) {
+    if (following) { activeCue = null; tick(); }
+    else if (focusPdfPoint) restorePosition(0, focusPdfPoint.y, focusPdfPoint.x);
+  }
+};
+$('stagePlay').onclick = () => $('readerPlay').click();
+$('stageSeek').oninput = () => {
+  audio.currentTime = Number($('stageSeek').value);
+  activeCue = null;
+  tick();
+};
+
 function tick() {
   if (!song?.hasAudio || switchingTrack) return;
   const time = audio.currentTime;
@@ -747,11 +937,25 @@ function tick() {
     scrollBetweenCues(cue, nextCue, now);
   }
 }
+const songToolDialogs = new Set([
+  'analyzeChordsDialog', 'rhythmDialog', 'chordMatchDialog', 'recordReviewDialog',
+  'notesDialog', 'replacePdfDialog', 'deleteSongDialog'
+]);
+function dismissDialog(id) {
+  closeDialog(id);
+  if (song && songToolDialogs.has(id)) openDialog('toolsDialog');
+}
 document.querySelectorAll('[data-close]').forEach(button => {
-  button.onclick = () => { if (!busy) closeDialog(button.dataset.close); };
+  button.onclick = () => { if (!busy) dismissDialog(button.dataset.close); };
 });
 document.querySelectorAll('dialog').forEach(dialog => {
-  dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+  dialog.addEventListener('cancel', event => {
+    if (busy) event.preventDefault();
+    else if (song && songToolDialogs.has(dialog.id)) {
+      event.preventDefault();
+      dismissDialog(dialog.id);
+    }
+  });
 });
 $('libraryButton').onclick = () => { renderLibrary(); openDialog('libraryDialog'); };
 $('search').oninput = renderLibrary;
@@ -971,16 +1175,88 @@ $('rhythmDialog').addEventListener('close', stopRhythmClicks);
 $('rhythmMeter').onchange = updateBeatUnit;
 $('analyzeRhythm').onclick = () => operation(async () => {
   stopRhythmClicks();
-  rhythmStatus('Listening to the original MP3…');
+  rhythmStatus('Analyzing up to 90 seconds of the original MP3…');
   try {
     const {estimate, audioVersion} = await request(`/${song.id}/rhythm/analyze`, { method: 'POST' });
     rhythmAudioVersion = audioVersion;
+    const chosenMeter = $('rhythmMeter').value;
     fillRhythm(estimate);
+    if (!estimate.meter && chosenMeter) {
+      $('rhythmMeter').value = chosenMeter;
+      updateBeatUnit();
+    }
     rhythmStatus(estimate.meter
       ? `Estimated ${estimate.meter} · ${estimate.bpm} BPM. Confirm by ear before saving.`
-      : `Estimated ${estimate.bpm} BPM. No consistent 3/4 or 4/4 pattern found. Choose a time signature to preview it.`);
+      : `Estimated ${estimate.bpm} BPM. Time signature unclear. Choose or keep a time signature, then preview. Use ½ or 2× tempo if the clicks feel too fast or slow.`);
   } catch (error) { rhythmStatus(error.message); }
 });
+let rhythmTaps = [], rhythmTapDown = null, rhythmTapCount = 0;
+$('tapRhythmTempo').onpointerdown = event => {
+  if (event.isPrimary && event.button === 0) rhythmTapDown = performance.now();
+};
+$('tapRhythmTempo').onpointercancel = () => { rhythmTapDown = null; };
+$('tapRhythmTempo').onclick = () => {
+  const now = rhythmTapDown ?? performance.now();
+  rhythmTapDown = null;
+  if (rhythmTaps.length && now - rhythmTaps.at(-1) < 150) return;
+  const perBar = $('rhythmTapUnit').value === 'bar';
+  const beatsPerTap = perBar ? rhythmBeats[$('rhythmMeter').value] : 1;
+  if (!beatsPerTap) {
+    rhythmStatus('Choose the time signature first, then tap beat 1 of each bar.');
+    return;
+  }
+  const timeout = perBar ? beatsPerTap * 2000 + 500 : 2200;
+  const fresh = !rhythmTaps.length || now - rhythmTaps.at(-1) > timeout;
+  if (fresh) { rhythmTaps = []; rhythmTapCount = 0; }
+  rhythmTaps.push(now);
+  rhythmTapCount++;
+  rhythmTaps = rhythmTaps.slice(-9);
+  const button = $('tapRhythmTempo');
+  if (rhythmTaps.length < 2) {
+    button.textContent = 'Tap 1 · tap again';
+    rhythmStatus(perBar ? 'Tap 1 received. Tap again on beat 1 of the NEXT bar.' : 'First tap received. Tap again on the next main beat.');
+    return;
+  }
+  const gaps = rhythmTaps.slice(1).map((value, index) => value - rhythmTaps[index]).sort((a, b) => a - b);
+  const middle = Math.floor(gaps.length / 2);
+  const interval = gaps.length % 2 ? gaps[middle] : (gaps[middle - 1] + gaps[middle]) / 2;
+  const bpm = 60000 * beatsPerTap / interval;
+  if (bpm < 30 || bpm > 300) {
+    button.textContent = 'Tap beat again';
+    rhythmStatus(perBar ? 'Tap once per bar. Choose the correct time signature first.' : 'Tap a steady beat between 30 and 300 BPM. In 6/8 tap on 1 and 4.');
+    rhythmTaps = [now];
+    return;
+  }
+  stopRhythmClicks();
+  const rounded = Math.round(bpm * 10) / 10;
+  $('rhythmBpm').value = rounded;
+  $('rhythmBpm').dispatchEvent(new Event('input', {bubbles:true}));
+  button.textContent = 'Tap ' + rhythmTapCount + ' · ' + rounded + ' BPM';
+  rhythmStatus((perBar ? 'One tap per bar' : 'One tap per beat') + ' · interval ' + (interval / 1000).toFixed(2)
+    + ' s → ' + rounded + ' BPM. Save rhythm when steady.');
+};
+$('rhythmTapUnit').onchange = () => {
+  rhythmTaps = []; rhythmTapCount = 0; rhythmTapDown = null;
+  $('tapRhythmTempo').textContent = $('rhythmTapUnit').value === 'bar' ? 'Tap beat 1' : 'Tap beat';
+  rhythmStatus($('rhythmTapUnit').value === 'bar' ? 'Tap beat 1 of two consecutive bars.' : 'Tap on each main beat. In 6/8 tap on 1 and 4.');
+};
+$('rhythmMeter').addEventListener('change', () => { rhythmTaps = []; });
+$('rhythmDialog').addEventListener('close', () => {
+  rhythmTaps = []; rhythmTapCount = 0; rhythmTapDown = null;
+  $('tapRhythmTempo').textContent = $('rhythmTapUnit').value === 'bar' ? 'Tap beat 1' : 'Tap beat';
+});
+for (const [id, factor] of [['halfRhythmTempo', .5], ['doubleRhythmTempo', 2]]) {
+  $(id).onclick = () => {
+    const bpm = $('rhythmBpm').valueAsNumber * factor;
+    if (!Number.isFinite(bpm) || bpm < 30 || bpm > 300) {
+      rhythmStatus('Tempo must be between 30 and 300 BPM.');
+      return;
+    }
+    stopRhythmClicks();
+    $('rhythmBpm').value = Math.round(bpm * 10) / 10;
+    rhythmStatus('Tempo adjusted. Preview the clicks before saving.');
+  };
+}
 $('previewRhythm').onclick = async () => {
   if (previewing) {
     stopRhythmClicks();
@@ -1082,9 +1358,10 @@ $('runChordAnalysis').onclick = () => operation(async () => {
     song.chordAnalysis = result;
     songs = songs.map(item => item.id === id ? song : item);
     showPlayingChord(audio.currentTime);
-    const matches = result.changes.filter(change => change.name).length;
-    $('chordAnalysisStatus').textContent = matches
-      ? `Saved ${matches} estimated chord sections. Close this window and tap Play.`
+    const matches = result.changes.filter(change => change.name);
+    const detected = [...new Set(matches.map(change => change.name))];
+    $('chordAnalysisStatus').textContent = matches.length
+      ? `Saved ${matches.length} estimated chord sections. Detected: ${detected.join(', ')}.`
       : 'No clear chord matches. Check the pitch shift and try again.';
   } catch (error) { $('chordAnalysisStatus').textContent = error.message; }
 });

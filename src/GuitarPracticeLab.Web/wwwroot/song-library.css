@@ -131,11 +131,11 @@ body.reader .reader-volume{display:grid;padding:0 8px;border-top:1px solid #4054
   grid-template-rows:44px 44px minmax(0,1fr);
 }
 .song-tool-tabs{
-  position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
   align-items:end;gap:3px;margin:0 0 -9px;padding:0 8px;
 }
 .song-tool-tabs button{
-  min-width:0;min-height:40px;padding:4px;font-size:15px;color:#b9cbe2;
+  min-width:0;min-height:40px;padding:4px 2px;font-size:14px;color:#b9cbe2;
   background:#142234;border:1px solid var(--tools-line);border-radius:9px 9px 0 0;
 }
 .song-tool-tabs button[aria-selected="true"]{
@@ -164,3 +164,53 @@ body.reader .reader-volume{display:grid;padding:0 8px;border-top:1px solid #4054
 .sectioncard:has(#followDown:not([hidden])){display:grid;grid-template-columns:46px minmax(0,1fr);column-gap:8px;align-content:start}
 .sectioncard #followDown{grid-row:1/span 3;align-self:center;padding:2px}
 .cuebar #readerFollowDown{flex:0 0 46px;font-size:23px;min-height:36px}
+
+#readerStage{min-height:0;display:flex;flex-direction:column}
+#readerStage>#pdfViewport{flex:1;min-height:0}
+body.reader .top>#chordStrip{display:none}
+body.reader #songTitle{display:block}
+body.reader .top>strong{display:none}
+#fullscreenChords{display:grid;grid-template-columns:1.5fr 2fr 1fr .5fr;gap:7px;padding:6px;flex:0 0 112px;min-height:0}
+.chord-card{border:1px solid #405976;border-radius:12px;background:linear-gradient(140deg,#233c55,#142236);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;overflow:hidden}
+.chord-card small{font-size:12px;color:#bed0e5}
+.chord-card strong{font-size:32px;line-height:1.1}
+.chord-card.history{color:#8da6c0}
+.chord-card.current{flex-direction:row;border-color:#d5b55e;color:#ffe28a}
+.chord-card.current>div:first-child{display:flex;flex-direction:column;align-items:center;min-width:0}
+.chord-card.current strong{font-size:44px}
+#stageDiagram{height:98px;aspect-ratio:1}
+#stageDiagram svg{width:100%;height:100%;display:block}
+#stageMatch{font-size:12px;color:#8af0b4}
+#stageCurrentCard.matched{border:2px solid #78e59e;box-shadow:inset 0 0 16px #42c37b26}
+#stageCountdown{width:80%;height:10px;accent-color:#ffd677}
+#stageTransport{display:flex;align-items:center;gap:8px;padding:4px 8px;flex:0 0 44px;background:#112034}
+#stageTransport button{min-height:36px;min-width:58px}
+#stageSeek{flex:1;min-width:0;accent-color:#ffd677}
+#stageClock,#stageScore{font-size:12px;white-space:nowrap}
+body.chord-focus #pdfViewport{display:none}
+body.chord-focus #fullscreenChords{flex:1}
+body.chord-focus #stageDiagram{height:min(190px,36vh)}
+body.chord-focus .current strong{font-size:64px}
+body.chord-focus .current{gap:8px}
+@media(max-width:700px){#fullscreenChords{grid-template-columns:.6fr 2fr 1fr}.chord-card.later{display:none}#stageScore{max-width:110px;overflow:hidden}.top button{padding:5px 7px}}
+#stageBeats{flex:0 0 70px;padding:2px 12px 4px;background:#142438;min-height:0}
+.beat-heading{display:flex;align-items:center;justify-content:space-between;height:22px;font-size:11px;color:#b9cde6}
+#stageSetRhythm{min-height:22px;padding:0 8px;font-size:11px}
+#stageBeatGraphic{height:42px}
+#stageBeatGraphic svg{width:100%;height:100%;display:block}
+body.chord-focus #stageBeats{flex-basis:90px}
+body.chord-focus #stageBeatGraphic{height:62px}
+
+#stageSyncBar{min-height:26px;padding:0 8px;font-size:11px;margin-right:6px}
+
+#stageSyncBar{min-height:26px;padding:0 8px;font-size:11px;margin-right:6px}
+#rhythmDialog[open]{grid-template-rows:40px minmax(0,1fr)42px;gap:6px}
+#rhythmDialog .dialogbody{overflow:hidden;padding:0;gap:6px}
+#rhythmForm{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-items:start}
+#rhythmForm>label{font-size:12px}
+#rhythmForm input,#rhythmForm select{min-height:36px;height:36px;margin-top:3px;padding:3px 7px}
+#rhythmForm>.toolactions{grid-column:1/-1;grid-row:2;gap:6px}
+#rhythmForm>.toolactions button{min-height:34px;padding:3px 8px}
+#rhythmBeatUnit,#rhythmStatus{grid-column:1/-1;font-size:12px;line-height:1.3;margin:0}
+#rhythmDialog>.dialogfoot{justify-content:flex-end}
+#saveRhythm{min-width:140px}

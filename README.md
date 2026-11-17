@@ -6,7 +6,7 @@ Guitar Practice Lab is a touchscreen app for practising with chord sheets, backi
 
 | Menu | What's inside |
 | --- | --- |
-| **Songs** | Import chord PDFs and MP3s, switch between original and backing audio, and follow timed cues. **FullScreen** expands the PDF. **Split view** restores the playback panel. |
+| **Songs** | Import chord PDFs and MP3s, switch between original and backing audio, and follow timed cues. **FullScreen** offers PDF + Chords and Chord Focus. **Split view** restores the playback panel. |
 | **Tools** | Live Guitar Tuner, metronome, Fretboard Map, Scales, and Looper. |
 | **Lessons** | Open JustinGuitar or GuitarZero2Hero, save lesson links with notes, and revisit them later. |
 | **Practice** | **1 Minute Changes**, **Find the Notes**, **Chord Clean Check**, **Strumming Timing**, and a practice timer. |
@@ -27,20 +27,38 @@ Tap a detected chord name or **Chords** to see fingering alternatives and manual
 
 The app builds continuous reading copies for multi-page PDFs when PyMuPDF is available, and keeps the original files. Hebrew song titles start the PDF view at the right edge. Other titles start at the left edge.
 
-Analyze the original MP3 to estimate the song rhythm or build the scrolling chord display. **Preview clicks** lets you hear the proposed beat before saving it. Optional chord matching uses the microphone to compare your guitar with the displayed chord and save high scores. **Record & Review** captures a take of up to 60 seconds while the song and Follow continue. Replay the guitar alone or with backing, or download the take as WAV.
+Song tools has five tabs on one row, **Files**, **Audio**, **Playback**, **Analyze**, and **Practice**. **Analyze chords** and **Rhythm** are in **Analyze**. **Record & Review** and **Chord match** are in **Practice**. Closing a tool dialog returns to the same tools tab.
+
+**Analyze chords** compares the original MP3 with the main PDF’s chord names and estimates a timeline. Reanalyze a song to replace an older estimate after updating the analyzer. Chord matching listens throughout each current chord section and counts a confident match once per section. Its **Last score** and **Personal best** are stored in that browser. Completed runs with seeking or looping save a last score, while uninterrupted runs can qualify for a personal best. **Record & Review** captures a take of up to 60 seconds while the song and Follow continue. Replay the guitar alone or with backing, or download the take as WAV.
+
+## Fullscreen chords and rhythm
+
+For a song with analyzed chords, **FullScreen** shows the current chord and diagram, previous and upcoming chords, a countdown, playback controls, and the running match score. A correct guitar match gives the current card a green outline and checkmark. **Chord Focus** enlarges the diagram, and **PDF View** restores the sheet. The diagram uses a preferred saved shape when available.
+
+The beat strip displays two bars on a fixed grid. Chord sections are labeled and split within a bar, so two chords lasting half a bar each appear as two halves. The diagram rounds estimated change positions to displayed pulses to avoid tiny fragments. Completed pulses are green, the current pulse is yellow, and future pulses are dim. In 6/8, six pulses are grouped 3 + 3, with accents on 1 and 4.
+
+Open **Song tools → Analyze → Rhythm** to set up the beat grid.
+
+1. Use **Analyze Rhythm** for an estimated tempo and possible time signature. Confirm the result by ear. **½ tempo** and **2× tempo** correct half-time or double-time estimates.
+2. To set tempo by tapping, choose **Tap beat 1 each bar** or **Tap every beat**. Bar tapping is the default and requires a selected time signature. Two taps give an initial BPM, and further taps refine it. The display shows the tap count, measured interval, and BPM.
+3. In 6/8, BPM counts dotted-quarter beats. Tap twice per bar in every-beat mode, on 1 and 4, or once per bar in bar mode.
+4. Use **Preview clicks** to check the tempo, then **Save rhythm**. The numeric touch keypad supports decimal BPM values.
+5. During playback, tap **Bar starts now** exactly on beat 1. **✓ Bar synced** and the saved time confirm alignment. If the grid gradually drifts, adjust the tempo and synchronize again.
+
+Automatic tempo, meter, chord names, and bar alignment are estimates. A saved tempo and bar start determine the displayed beat grid.
 
 ## Live tuner and practice exercises
 
-In **Tools → Guitar Tuner**, choose a tuning from the dropdown. **Standard** is the default, with Drop D, Half Step Down, Whole Step Down, DADGAD, and Open G also available. The selected tuning determines the string labels, reference tones, and target pitches. In-tune strings turn green and play a confirmation chime. The tuner shows a checkmark when all six strings are in tune.
+In **Tools → Guitar Tuner**, choose a tuning from the dropdown. Each visit starts with **Auto string** and **Standard tuning**, with Drop D, Half Step Down, Whole Step Down, DADGAD, and Open G also available. The selected tuning determines the string labels, reference tones, and target pitches. In-tune strings turn green and play a confirmation chime. Green strings stay confirmed until you tap their circle to restore its neutral color and tune again. The tuner shows a checkmark when all six strings are in tune.
 
 - **1 Minute Changes** shows both chord diagrams before Start. Choose each chord's root and type and use the arrows to select its shape. The exercise assumes standard tuning with no capo. **Recent** restores both chords and their selected shapes. The app uses the saved microphone and counts a stable match before moving to the other chord. Completed rounds save on the Pi, and the app shows the pair’s last score and personal best. Recognition is experimental and works best with clean guitar sound and headphones.
 - **Follow the Notes** highlights scale notes on the beat with a count-in, tempo control, and optional reference tones. It supports major and minor pentatonic in all 12 keys. For the open C major pattern, choose **C → Major → Open position**. The up-and-down sequence starts at the A string, fret 3, and passes through open low E before returning to C.
 - **Play Along** shows a scale beside a generated chord loop, an MP3 from the Pi’s `recordings/Scale-Backing-Tracks` folder, or a local audio file. The built-in loop follows the selected key and scale. Choose the key yourself for recorded tracks.
-- **Fretboard Map** shows five fret positions at a time through fret 24. Tap to hear a note, highlight a pitch or scale, switch between note names and intervals, or use **Find the Note** to practise identifying positions.
+- **Fretboard Map** shows five fret positions at a time through fret 24. Tap to hear a note, highlight a pitch or scale, switch between note names and intervals, or use **Find the Note** to practise identifying positions. Open-string circles sit beside the nut. Enable **Use mic** in Find the Note to answer by playing the requested note in any octave using the saved Pi microphone. A stable correct note advances the question. **Hear target** plays a reference tone, with feedback for muted or zero volume.
 
 - **Chord Clean Check** checks the notes of a chosen shape one string at a time. Use the arrows to change shapes and set the tuning and capo to match your guitar.
 - **Strumming Timing** scores strums as on time, early, late, or missed. It starts with a silent visual beat and also offers audible clicks.
-- **Looper** records the guitar from the Pi microphone. Stop, name and save the take, then replay it on a loop or delete it from the list.
+- **Looper** records the guitar from the Pi microphone. Stop, name and save the take, then replay it on a loop or delete it from the list. The input peak reading warns when captured samples reach maximum level. Playback has its own volume slider, and short edge fades reduce clicks at the loop boundary.
 
 The live microphone tools use a USB microphone on the Pi and `alsa-utils`. Capture runs on the Pi through ALSA. If the default device fails, try the USB microphone's `plughw:CARD=…,DEV=…` entry. Only completed 1 Minute Changes scores are saved. Looper saves audio when you name and save a take.
 

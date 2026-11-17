@@ -126,8 +126,20 @@ for(const [note,frequency] of [['E2',82.41],['D3',146.83],['G3',196],['B3',246.9
 }
 check('all six green strings show Guitar in tune',await page.locator('#guitarInTune').isVisible());
 liveFrequency=324;
+await page.waitForFunction(()=>document.querySelector('#tuning').textContent.includes('Tap string to retune'));
+check('a later out-of-tune reading leaves confirmed strings green',await page.locator('#guitarInTune').isVisible()&&await page.locator('#strings .string-in-tune').count()===6);
+liveFrequency=null;
+await page.waitForFunction(()=>!document.querySelector('#strings .heard'));
+const highE=page.locator('#strings').getByRole('button',{name:'E4'});
+await highE.tap();
+check('tapping a confirmed string restores its neutral color',
+ await page.locator('#guitarInTune').isHidden()&&await page.locator('#strings .string-in-tune').count()===5
+ &&!await highE.evaluate(button=>button.classList.contains('string-out-of-tune')));
+liveFrequency=324;
 await page.waitForFunction(()=>document.querySelector('#strings .string-out-of-tune')?.textContent==='E4');
-check('a later out-of-tune reading clears the guitar checkmark',await page.locator('#guitarInTune').isHidden()&&await page.locator('#strings .string-in-tune').count()===5);
+liveFrequency=329.63;
+await page.waitForFunction(()=>!document.querySelector('#guitarInTune').hidden);
+check('the reset string can turn green again',await page.locator('#strings .string-in-tune').count()===6);
 liveFrequency=110;
 await page.locator('#strings').getByRole('button',{name:'D3'}).tap();
 await page.waitForFunction(()=>document.querySelector('#tuning').textContent.includes('Flat'));
@@ -144,6 +156,12 @@ liveFrequency=110;
 await page.locator('#menuBack').tap();
 for(let tries=0;!closedStreams&&tries<20;tries++)await page.waitForTimeout(50);
 check('leaving tuner stops microphone capture',closedStreams>0);
+await page.locator('#tunerTab').tap();
+check('returning to tuner restores Auto string and Standard tuning',
+ await page.locator('#tunerAuto').getAttribute('aria-pressed')==='true'
+ &&await page.locator('#tunerTuning').inputValue()==='standard'
+ &&await page.locator('#strings button').first().textContent()==='E2');
+await page.locator('#menuBack').tap();
 await page.goto(`http://127.0.0.1:${server.address().port}/scale-practice.html`);
 await page.locator('#scaleMic').check();
 await page.locator('#play').tap();

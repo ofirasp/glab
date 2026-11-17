@@ -5,6 +5,10 @@
   let capture = null, draft = null, draftUrl = '', loops = [], playing = '', available = false;
   let busy = false, pendingDelete = null, playbackVersion = 0;
   const say = text => { el('message').textContent = text; };
+  const volume = el('loopVolume');
+  const updateVolume = () => { audio.volume = Number(volume.value) / 100; };
+  volume.oninput = updateVolume;
+  updateVolume();
 
   async function request(path = '', options) {
     const response = await fetch(api + path, options);
@@ -83,16 +87,44 @@
     draft = null;
     draftUrl = '';
     el('loopName').value = '';
+    el('loopInputLevel').textContent = '';
     draw();
   }
+  function prepareTake(chunks, size) {
+    const bytes = new Uint8Array(size - size % 2);
+    let offset = 0;
+    for (const chunk of chunks) {
+      const part = chunk.subarray(0, bytes.length - offset);
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    const pcm = new DataView(bytes.buffer);
+    const samples = bytes.length / 2;
+    let peak = 0;
+    for (let index = 0; index < samples; index++)
+      peak = Math.max(peak, Math.abs(pcm.getInt16(index * 2, true)));
+
+    // Fade only the edges (5 ms at 16 kHz) to avoid a click at the loop seam.
+    const fade = Math.min(80, Math.floor(samples / 2));
+    for (let index = 0; index < fade; index++) {
+      for (const position of [index, samples - 1 - index]) {
+        const byte = position * 2;
+        pcm.setInt16(byte, Math.round(pcm.getInt16(byte, true) * index / fade), true);
+      }
+    }
+    el('loopInputLevel').textContent = peak >= 32760
+      ? 'Input hit maximum level. Lower the microphone input level or move it farther away.'
+      : `Input peak · ${Math.round(peak * 100 / 32768)}%`;
+    return PiMicrophone.wave([bytes], bytes.length);
+  }
+
   function stopRecording({keep = true, reason = ''} = {}) {
     const current = capture;
     if (!current) return;
     capture = null;
     current.controller.abort();
     if (keep && current.bytes >= 2) {
-      if (current.bytes % 2) { current.chunks.push(new Uint8Array(1)); current.bytes++; }
-      draft = PiMicrophone.wave(current.chunks, current.bytes);
+      draft = prepareTake(current.chunks, current.bytes);
       draftUrl = URL.createObjectURL(draft);
       say(reason || 'Take ready. Preview it or give it a name and save.');
     } else say(reason || 'No audio recorded.');

@@ -1,18 +1,64 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../src/GuitarPracticeLab.Web/wwwroot');
-const server=http.createServer((req,res)=>{const p=new URL(req.url,'http://local').pathname,file=path.resolve(root,'.'+p);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.statusCode=404;return res.end();}res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':'text/css');res.end(fs.readFileSync(file));});
+let micFrequency=null,micClosed=0;
+const server=http.createServer((req,res)=>{
+ const url=new URL(req.url,'http://local');
+ if(url.pathname==='/api/chord-practice/devices'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({available:true,devices:['default']}));}
+ if(url.pathname==='/api/chord-practice/listen'){
+  res.setHeader('Content-Type','application/x-ndjson');
+  const send=()=>res.write(JSON.stringify({frequency:micFrequency})+'\n');
+  send();const timer=setInterval(send,100);
+  res.on('close',()=>{clearInterval(timer);micClosed++;});return;
+ }
+ const p=new URL(req.url,'http://local').pathname,file=path.resolve(root,'.'+p);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.statusCode=404;return res.end();}res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':'text/css');res.end(fs.readFileSync(file));});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser,count=0;const check=(name,value)=>{assert.ok(value,name);console.log('PASS '+name);count++;};try{
  browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage({viewport:{width:800,height:480},hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));const base=`http://127.0.0.1:${server.address().port}`;
  await page.goto(base+'/practice.html?tab=tools');await page.locator('#fretboardMap').waitFor();check('Tools menu fits touchscreen',await page.evaluate(()=>document.querySelector('#fretboardMap').getBoundingClientRect().bottom<=document.querySelector('#toolsMenu').getBoundingClientRect().bottom&&document.body.scrollHeight<=480));await page.locator('#fretboardMap').tap();await page.waitForURL('**/fretboard-map.html');await page.locator('#mapBoard svg').waitFor();
+ await page.evaluate(()=>{
+  window.playedMapNotes=[];
+  const create=AudioContext.prototype.createOscillator;
+  AudioContext.prototype.createOscillator=function(){
+   const oscillator=create.call(this),start=oscillator.start.bind(oscillator);
+   oscillator.start=(...args)=>{window.playedMapNotes.push({frequency:oscillator.frequency.value,type:oscillator.type});start(...args);};
+   return oscillator;
+  };
+ });
+ check('open notes sit beside the nut without a separate fret column',await page.locator('[data-fret="0"] circle').first().getAttribute('cx')==='48');
  check('map fits 800×480 without scrollbars',await page.evaluate(()=>document.body.scrollHeight<=480&&document.documentElement.scrollWidth<=800&&document.querySelector('footer').getBoundingClientRect().bottom<=480));check('open strings and natural notes shown initially',await page.locator('#lower').isDisabled()&&await page.locator('[data-fret="0"]').count()===6&&await page.locator('[data-pc="1"]').count()===0);
  await page.locator('[data-string="0"][data-fret="0"]').tap();check('tap identifies the exact string and fret',await page.locator('#mapTarget').textContent()==='E'&&await page.locator('#mapDetail').textContent()==='String 6 · open string');await page.locator('#hearMap').tap();await page.locator('#mapMute').tap();check('mute feedback works',await page.locator('#mapMute').getAttribute('aria-pressed')==='true');await page.locator('#mapMute').tap();
  await page.locator('#highlight').selectOption('1');check('sharp selection includes accidentals',await page.locator('#accidentals').isChecked()&&await page.locator('[data-pc="1"]').count()>0);await page.locator('#accidentals').uncheck();check('natural filter clears invisible sharp highlight',await page.locator('#highlight').inputValue()==='');
  await page.locator('#mapKey').selectOption('9');await page.locator('#mapScale').selectOption('minorPentatonic');await page.locator('#labels').tap();check('scale filter supplies interval labels and includes accidentals',await page.locator('#accidentals').isDisabled()&&await page.locator('#accidentals').isChecked()&&await page.locator('#mapBoard').textContent().then(t=>t.includes('♭3')));
  await page.locator('#mapScale').selectOption('');await page.locator('#accidentals').check();for(let i=0;i<4;i++)await page.locator('#higher').tap();check('fret navigation reaches 24 and stops at boundary',await page.locator('#range').textContent()==='20–24'&&await page.locator('#higher').isDisabled());for(let i=0;i<4;i++)await page.locator('#lower').tap();check('fret navigation returns to open strings',await page.locator('#range').textContent()==='Open–4');await page.locator('#labels').tap();await page.screenshot({path:process.env.GPL_MAP_SCREENSHOT||'/tmp/glab-fretboard-map.png'});
  await page.locator('#quiz').tap();check('quiz hides names and disables answer highlighting',await page.locator('#highlight').isDisabled()&&await page.locator('#labels').isDisabled()&&await page.locator('#mapBoard [role="button"]').first().textContent()==='?');
- const targetName=(await page.locator('#mapTarget').textContent()).slice(5),names=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'],pc=names.indexOf(targetName);assert.ok(pc>=0);await page.locator(`#mapBoard [data-pc]:not([data-pc="${pc}"])`).first().tap();check('wrong answer gives feedback without advancing target',await page.locator('#mapTarget').textContent()==='Find '+targetName&&await page.locator('#score').textContent()==='0 correct / 1 taps');await page.locator('#hearMap').tap();await page.locator(`#mapBoard [data-pc="${pc}"]`).first().tap();check('correct answer counted once',await page.locator('#score').textContent()==='1 correct / 2 taps');await page.waitForFunction(previous=>document.querySelector('#mapTarget').textContent!==previous,'Find '+targetName);check('correct answer advances automatically to a different note',await page.locator('#mapTarget').textContent()!=='Find '+targetName);await page.locator('#skip').tap();check('skip does not change score',await page.locator('#score').textContent()==='1 correct / 2 taps');
+ const targetName=(await page.locator('#mapTarget').textContent()).slice(5),names=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'],pc=names.indexOf(targetName);assert.ok(pc>=0);await page.locator(`#mapBoard [data-pc]:not([data-pc="${pc}"])`).first().tap();check('wrong answer gives feedback without advancing target',await page.locator('#mapTarget').textContent()==='Find '+targetName&&await page.locator('#score').textContent()==='0 correct / 1 taps');await page.locator('#hearMap').tap();
+ await page.waitForFunction(()=>document.querySelector('#mapMessage').textContent.startsWith('Playing '));
+ check('Hear target schedules an audible reference for the requested pitch',await page.evaluate(pc=>{
+  const last=window.playedMapNotes.at(-1);
+  const midi=Math.round(69+12*Math.log2(last.frequency/440));
+  return midi%12===pc&&last.type==='triangle';
+ },pc));
+ await page.locator(`#mapBoard [data-pc="${pc}"]`).first().tap();check('correct answer counted once',await page.locator('#score').textContent()==='1 correct / 2 taps');await page.waitForFunction(previous=>document.querySelector('#mapTarget').textContent!==previous,'Find '+targetName);check('correct answer advances automatically to a different note',await page.locator('#mapTarget').textContent()!=='Find '+targetName);await page.locator('#skip').tap();check('skip does not change score',await page.locator('#score').textContent()==='1 correct / 2 taps');
  await page.locator('#mapScale').selectOption('major');await page.locator('#mapKey').selectOption('4');check('quiz target belongs to the selected scale',await page.locator('#mapTarget').textContent().then(t=>['E','F♯','G♯','A','B','C♯','D♯'].some(n=>t==='Find '+n)));await page.screenshot({path:process.env.GPL_QUIZ_SCREENSHOT||'/tmp/glab-fretboard-quiz.png'});
- await page.locator('#explore').tap();check('explore restores labels and clears quiz score',await page.locator('#score').textContent()===''&&!(await page.locator('#highlight').isDisabled()));await page.locator('#mapHelp').tap();check('touch help opens',await page.locator('#mapHelpDialog').isVisible());await page.locator('#mapCloseHelp').tap();await page.getByRole('link',{name:'‹ Back'}).tap();await page.waitForURL('**/practice.html?tab=tools');await page.locator('#fretboardMap').waitFor();check('back returns to Tools',await page.locator('#fretboardMap').isVisible());await page.goto(base+'/practice.html?tab=practice');await page.locator('#findNotes').tap();await page.waitForURL('**/fretboard-map.html?mode=quiz');
+ await page.locator('#mapMic').check();
+ await page.waitForFunction(()=>document.querySelector('#mapMessage').textContent.startsWith('Listening.'));
+ const targetMic=(await page.locator('#mapTarget').textContent()).slice(5);
+ const pitchNames=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+ const targetPc=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'].indexOf(targetMic);
+ const beforeMic=await page.locator('#score').textContent();
+ micFrequency=440*2**((60+(targetPc+1)%12-69)/12);
+ await page.waitForFunction(()=>document.querySelector('#mapMessage').textContent.startsWith('Heard '));
+ check('a wrong played note leaves the question and score unchanged',await page.locator('#mapTarget').textContent()==='Find '+targetMic&&await page.locator('#score').textContent()===beforeMic);
+ micFrequency=440*2**((72+targetPc-69)/12);
+ await page.waitForFunction(()=>document.querySelector('#mapMessage').textContent.startsWith('Correct!'));
+ check('microphone accepts the requested pitch in another octave',await page.locator('#score').textContent().then(text=>text.startsWith('2 correct')));
+ micFrequency=null;
+ await page.waitForFunction(old=>document.querySelector('#mapTarget').textContent!==old,'Find '+targetMic);
+ check('microphone answer advances to the next question',true);
+ await page.screenshot({path:'/tmp/glab-mic-note-quiz.png'});
+ await page.locator('#explore').tap();check('explore restores labels and clears quiz score',await page.locator('#score').textContent()===''&&!(await page.locator('#highlight').isDisabled()));await page.waitForFunction(()=>document.querySelector('#mapMicOption').hidden);
+ for(let i=0;micClosed===0&&i<20;i++)await page.waitForTimeout(50);
+ check('leaving the quiz releases the microphone',micClosed>0);
+ await page.locator('#mapHelp').tap();check('touch help opens',await page.locator('#mapHelpDialog').isVisible());await page.locator('#mapCloseHelp').tap();await page.getByRole('link',{name:'‹ Back'}).tap();await page.waitForURL('**/practice.html?tab=tools');await page.locator('#fretboardMap').waitFor();check('back returns to Tools',await page.locator('#fretboardMap').isVisible());await page.goto(base+'/practice.html?tab=practice');await page.locator('#findNotes').tap();await page.waitForURL('**/fretboard-map.html?mode=quiz');
  await page.locator('#quiz.active').waitFor();
  check('Practice shortcut opens the note quiz directly',await page.locator('#mapTarget').textContent().then(t=>t.startsWith('Find ')));
  await page.locator('#mapBack').tap();await page.waitForURL('**/practice.html?tab=practice');await page.locator('#findNotes').waitFor();

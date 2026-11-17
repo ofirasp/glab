@@ -4,16 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Songs · Guitar Practice Lab</title>
-<link rel="stylesheet" href="song-library.css?v=ordered-chord-strip">
+<link rel="stylesheet" href="song-library.css?v=five-tool-tabs">
 <script src="chord-shapes.js?v=alternate-tuning" defer></script>
+<script src="chord-diagram.js" defer></script>
 <script src="chord-viewer.js?v=chord-display" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/playback-wake-lock.js" defer></script>
-<script src="song-library.js?v=continuous-chord-motion" defer></script>
+<script src="song-library.js?v=steady-tap-timing" defer></script>
 <script src="/pi-microphone.js?v=wave" defer></script>
 <script src="/song-recording.js?v=wave" defer></script>
-<script src="/song-chord-match.js" defer></script>
-<script src="/touch-keyboard.js" defer></script>
+<script src="/song-chord-match.js?v=fullscreen-stage" defer></script>
+<script src="/touch-keyboard.js?v=explicit-tap" defer></script>
 </head>
 <body>
 <header class="top">
@@ -24,6 +25,7 @@
   <h1 id="songTitle" dir="auto">Choose a song</h1>
   <div id="takeRecordingBanner" hidden><span id="takeRecordingStatus" role="status"></span><button id="stopTake" class="danger">Stop</button></div>
   <button id="stopRecordFollow" class="danger" hidden>Stop recording</button>
+  <button id="chordFocusToggle" hidden aria-pressed="false">Chord Focus</button>
   <button id="readerToggle" aria-pressed="false">FullScreen</button>
 </header>
 <main class="split">
@@ -39,10 +41,28 @@
       <button id="zoomOut" aria-label="Zoom out" disabled>−</button>
       <button id="zoomIn" aria-label="Zoom in" disabled>+</button>
     </div>
+    <div id="readerStage">
+      <section id="fullscreenChords" hidden aria-label="Play along chords">
+        <div class="chord-card history"><small>Previous</small><strong id="stagePrevious">—</strong></div>
+        <div id="stageCurrentCard" class="chord-card current"><div><small>Current</small><strong id="stageCurrent">—</strong><span id="stageMatch"></span></div><div id="stageDiagram"></div></div>
+        <div class="chord-card upcoming"><small>Next</small><strong id="stageNext">—</strong><progress id="stageCountdown" max="1" value="0" aria-label="Time until next chord"></progress><small id="stageSeconds"></small></div>
+        <div class="chord-card later"><small>Upcoming</small><strong id="stageLater">—</strong></div>
+      </section>
+      <section id="stageBeats" hidden aria-label="Chord beats and bars">
+        <div class="beat-heading"><span id="stageBeatCaption"></span><div><button id="stageSyncBar" title="Tap on beat 1">Bar starts now</button><button id="stageSetRhythm">Set rhythm</button></div></div>
+        <div id="stageBeatGraphic"></div>
+      </section>
     <div id="pdfViewport" tabindex="0" aria-label="Scroll chord sheet">
       <div id="emptySheet">Import a chord PDF<br><small>Then attach its MP3 recording.</small></div>
       <div id="pdfSurface"><img id="pdfImage" alt="Selected chord sheet page" hidden><div id="chordTargets"></div></div>
       <span id="pageLoading" hidden>Loading page…</span>
+    </div>
+      <div id="stageTransport" hidden>
+        <button id="stagePlay" aria-label="Play or pause">Play</button>
+        <span id="stageClock">0:00 / 0:00</span>
+        <input id="stageSeek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Fullscreen song position">
+        <span id="stageScore">Chord match off</span>
+      </div>
     </div>
     <div id="readerControls">
       <div class="cuebar">
@@ -108,6 +128,7 @@
     <button id="toolsTabFiles" role="tab" aria-selected="true" aria-controls="toolsFiles">Files</button>
     <button id="toolsTabAudio" role="tab" aria-selected="false" aria-controls="toolsAudio" tabindex="-1">Audio</button>
     <button id="toolsTabPlayback" role="tab" aria-selected="false" aria-controls="toolsPlayback" tabindex="-1">Playback</button>
+    <button id="toolsTabAnalyze" role="tab" aria-selected="false" aria-controls="toolsAnalyze" tabindex="-1">Analyze</button>
     <button id="toolsTabPractice" role="tab" aria-selected="false" aria-controls="toolsPractice" tabindex="-1">Practice</button>
   </div>
   <div class="dialogbody stack" id="toolsFiles" role="tabpanel" aria-labelledby="toolsTabFiles">
@@ -126,8 +147,10 @@
     <p class="hint">Use −5s / +5s or the song position slider to find a passage. Set A at its start, B at its end, then turn Loop on.</p>
   </div>
   <div class="dialogbody stack" id="toolsPractice" role="tabpanel" aria-labelledby="toolsTabPractice" hidden>
-    <div class="toolactions"><button id="recordReviewButton" disabled>Record &amp; Review</button><button id="analyzeChordsButton" disabled>Analyze chords</button></div>
-    <div class="toolactions"><button id="rhythmButton" disabled>Rhythm</button><button id="chordMatchButton" aria-pressed="false" disabled>Chord match</button></div>
+    <div class="toolactions"><button id="recordReviewButton" disabled>Record &amp; Review</button><button id="chordMatchButton" aria-pressed="false" disabled>Chord match</button></div>
+  </div>
+  <div class="dialogbody stack" id="toolsAnalyze" role="tabpanel" aria-labelledby="toolsTabAnalyze" hidden>
+    <div class="toolactions"><button id="analyzeChordsButton" disabled>Analyze chords</button><button id="rhythmButton" disabled>Rhythm</button></div>
     <p id="rhythmSummary" class="hint"></p>
   </div>
 </dialog>
@@ -137,7 +160,7 @@
   <div class="dialogbody stack">
     <p class="hint">Use headphones so the mic hears your guitar. Match the chord on screen in the recording’s key. Each chord section counts once. Play from start to finish without seeking to save a personal best.</p>
     <label>Microphone <select id="chordMatchDevice"></select></label>
-    <p id="chordMatchBest"></p><p id="chordMatchResult" role="status"></p>
+    <p id="chordMatchLast"></p><p id="chordMatchBest"></p><p id="chordMatchResult" role="status"></p>
   </div>
   <div class="dialogfoot"><button id="startChordMatch" class="primary" disabled>Start from beginning</button></div>
 </dialog>
@@ -173,12 +196,13 @@
     <div class="toolactions"><button id="analyzeRhythm">Analyze Rhythm</button><button id="previewRhythm">Preview clicks</button></div>
     <form id="rhythmForm" class="stack">
       <label>Tempo (BPM) <input id="rhythmBpm" type="number" min="30" max="300" step="0.1" required inputmode="decimal"></label>
+      <div class="toolactions"><button id="halfRhythmTempo" type="button">½ tempo</button><button id="doubleRhythmTempo" type="button">2× tempo</button><select id="rhythmTapUnit" aria-label="Tap timing"><option value="bar" selected>Tap beat 1 each bar</option><option value="beat">Tap every beat</option></select><button id="tapRhythmTempo" type="button">Tap beat 1</button></div>
       <label>Time signature <select id="rhythmMeter" required><option value="">Choose meter</option><option>2/4</option><option>3/4</option><option>4/4</option><option>5/4</option><option>6/8</option><option>7/4</option><option>9/8</option><option>12/8</option></select></label>
       <p id="rhythmBeatUnit" class="hint"></p>
       <p id="rhythmStatus" class="hint" role="status"></p>
-      <button id="saveRhythm" class="primary" type="submit">Save rhythm</button>
     </form>
   </div>
+  <div class="dialogfoot"><button id="saveRhythm" class="primary" type="submit" form="rhythmForm">Save rhythm</button></div>
 </dialog>
 
 <dialog id="replacePdfDialog">

@@ -18,7 +18,11 @@
     buttons[heard].classList.toggle('string-in-tune', inTune);
     buttons[heard].classList.toggle('string-out-of-tune', !inTune);
     buttons[heard].title = inTune ? 'In tune' : 'Needs tuning';
-    $('guitarInTune').hidden = ![...buttons].every(button => button.classList.contains('string-in-tune'));
+    updateGuitarInTune();
+  }
+
+  function updateGuitarInTune() {
+    $('guitarInTune').hidden = ![...$('strings').children].every(button => button.classList.contains('string-in-tune'));
   }
 
   function resetConfirmation() {
@@ -90,6 +94,16 @@
       Math.abs(Math.log2(frequency / reference)) < Math.abs(Math.log2(frequency / freqs[closest]))
         ? index : closest, selected);
     if (automatic) selected = heard;
+    if ($('strings').children[selected].classList.contains('string-in-tune')) {
+      resetConfirmation();
+      $('note').textContent = names[selected];
+      $('freq').textContent = '';
+      $('needle').style.left = '50%';
+      $('tuning').textContent = '✓ In tune · Tap string to retune';
+      $('tuning').classList.add('in-tune');
+      highlightString(heard);
+      return;
+    }
     const offset = 1200 * Math.log2(frequency / freqs[selected]);
     const measured = PiMicrophone.noteName(Math.round(PiMicrophone.midi(frequency)));
     $('note').textContent = names[selected];
@@ -146,6 +160,11 @@
   };
   document.addEventListener('guitar-tuner-string', () => {
     resetConfirmation();
+    const button = $('strings').children[selected];
+    button.classList.remove('string-in-tune', 'string-out-of-tune');
+    button.removeAttribute('title');
+    highlightString(-1);
+    updateGuitarInTune();
     automatic = false;
     autoButton.setAttribute('aria-pressed', 'false');
     autoButton.textContent = 'Manual string';
@@ -163,7 +182,16 @@
     } finally { if (capture === controller) stop(); }
   }
   $('tunerTab').addEventListener('click', () => { void audio().catch(() => {}); });
-  document.addEventListener('guitar-page-change', show);
+  document.addEventListener('guitar-page-change', () => {
+    if (currentPage === 'tuner') {
+      automatic = true;
+      autoButton.setAttribute('aria-pressed', 'true');
+      autoButton.textContent = 'Auto string';
+      tuningMenu.value = 'standard';
+      tuningMenu.onchange();
+    }
+    void show();
+  });
   document.addEventListener('guitar-exercise-open', stop);
   document.addEventListener('visibilitychange', show);
   window.addEventListener('pagehide', stop);

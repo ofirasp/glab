@@ -6,7 +6,7 @@
 <title>Looper · Guitar Practice Lab</title>
 <link rel="stylesheet" href="/scale-practice.css">
 <style>
-main{grid-template-rows:42px 48px auto minmax(0,1fr) 24px;gap:8px}
+main{grid-template-rows:42px 48px auto minmax(0,1fr) auto;gap:8px}
 .controls,.draft,.loop-row{display:flex;align-items:center;gap:8px;min-width:0}
 .controls label{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .controls select{min-width:0;width:100%}#recordLoop{min-width:124px}
@@ -16,12 +16,15 @@ main{grid-template-rows:42px 48px auto minmax(0,1fr) 24px;gap:8px}
 .loop-row{padding:6px 4px;border-bottom:1px solid #34455d}
 .loop-name{flex:1;overflow-wrap:anywhere;min-width:0}.loop-duration{color:#b9c9de;font-size:13px}
 .loop-row button{flex:none}#message{white-space:normal}
+#loopLevels{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+#loopLevels label{display:flex;align-items:center;gap:8px}
+#loopInputLevel{font-size:14px;color:#ffcf78}
 dialog button+button{margin-left:8px}
 </style>
 <script src="/pi-microphone.js?v=wave" defer></script>
 <script src="/playback-wake-lock.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
-<script src="/looper.js" defer></script>
+<script src="/looper.js?v=levels" defer></script>
 </head>
 <body><main>
 <header><a href="/practice.html?tab=tools">‹ Back</a><h1>Looper</h1></header>
@@ -34,7 +37,13 @@ dialog button+button{margin-left:8px}
   <button id="previewLoop">Preview</button><button id="saveLoop" class="primary">Save</button><button id="discardLoop">Discard</button>
 </div>
 <section id="loops" aria-label="Saved loops"></section>
-<p id="message" role="status"></p>
+<footer>
+  <div id="loopLevels">
+    <label>Playback volume <input id="loopVolume" type="range" min="0" max="100" value="70"></label>
+    <span id="loopInputLevel" role="status"></span>
+  </div>
+  <p id="message" role="status"></p>
+</footer>
 </main>
 <audio id="loopAudio" loop preload="none"></audio>
 <dialog id="removeLoopDialog" aria-labelledby="removeLoopTitle">

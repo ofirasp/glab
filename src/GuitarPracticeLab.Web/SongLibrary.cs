@@ -347,7 +347,7 @@ public static class SongLibrary
                 throw new ArgumentException("Attach an original MP3 first.");
             if (song.Duration > 900)
                 throw new ArgumentException("Chord analysis supports recordings up to 15 minutes.");
-            var (pdf, _, _) = ResolvePdf(song, "");
+            var pdf = Path.Combine(Folder(id), song.PdfFile);
             var pages = PdfChords.Parse(await Run("pdftotext", "-bbox-layout", pdf, "-"));
             var analysis = await SongChordAnalysis.Analyze(Path.Combine(Folder(id), song.AudioFile),
                 pages.SelectMany(page => page.Chords).Select(hit => hit.Name), shift, cancellation);

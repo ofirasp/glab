@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Numerics;
 
 public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat, bool Confirmed = false)
 {
@@ -26,29 +27,36 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
 
         using var process = Process.Start(info) ?? throw new IOException("Could not start audio analysis.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-        timeout.CancelAfter(TimeSpan.FromSeconds(25));
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
         var errors = process.StandardError.ReadToEndAsync();
         var frames = new List<(double Pulse, double Bass)>();
         var buffer = new byte[hop * 2];
-        double low = 0, priorLow = 0, priorHigh = 0;
+        const int size = 512;
+        var samples = new double[size];
+        var spectrum = new Complex[size];
+        var previous = new double[size / 2];
+        var hann = Enumerable.Range(0, size).Select(i => .5 - .5 * Math.Cos(2 * Math.PI * i / (size - 1))).ToArray();
         try
         {
             while (await process.StandardOutput.BaseStream.ReadAtLeastAsync(buffer, buffer.Length, false, timeout.Token) == buffer.Length)
             {
-                double bass = 0, treble = 0;
-                for (int i = 0; i < buffer.Length; i += 2)
+                Array.Copy(samples, hop, samples, 0, size - hop);
+                for (int i = 0; i < hop; i++)
+                    samples[size - hop + i] = BinaryPrimitives.ReadInt16LittleEndian(buffer.AsSpan(i * 2, 2)) / 32768.0;
+                for (int i = 0; i < size; i++) spectrum[i] = new(samples[i] * hann[i], 0);
+                Transform(spectrum);
+                double bass = 0, flux = 0;
+                // Spectral changes retain drum attacks even when the mix's overall
+                // loudness stays constant or a sustained vocal dominates the energy.
+                for (int bin = 3; bin < previous.Length; bin++)
                 {
-                    double sample = BinaryPrimitives.ReadInt16LittleEndian(buffer.AsSpan(i, 2)) / 32768.0;
-                    low += .09 * (sample - low);
-                    bass += low * low;
-                    treble += (sample - low) * (sample - low);
+                    double value = Math.Log(1 + 10 * spectrum[bin].Magnitude);
+                    double onset = Math.Max(0, value - previous[bin]);
+                    flux += onset;
+                    if (bin <= 16) bass += onset;
+                    previous[bin] = value;
                 }
-                double lowEnergy = Math.Log(1 + 25 * Math.Sqrt(bass / hop));
-                double highEnergy = Math.Log(1 + 25 * Math.Sqrt(treble / hop));
-                double bassOnset = Math.Max(0, lowEnergy - priorLow);
-                frames.Add((bassOnset + Math.Max(0, highEnergy - priorHigh), bassOnset));
-                priorLow = lowEnergy;
-                priorHigh = highEnergy;
+                frames.Add((flux, bass));
             }
             await process.WaitForExitAsync(timeout.Token);
             if (process.ExitCode != 0) throw new ArgumentException("Could not decode the original MP3.");
@@ -83,7 +91,7 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
             .Where(lag => correlation[lag] >= correlation[lag - 1] && correlation[lag] >= correlation[lag + 1])
             .OrderByDescending(lag => correlation[lag] + .45 * correlation[lag * 2] - .07 * Math.Abs(Math.Log(lag / 55.0)))
             .ToArray();
-        if (candidates.Length == 0 || correlation[candidates[0]] < .12)
+        if (candidates.Length == 0 || correlation[candidates[0]] < .04)
             throw new ArgumentException("Could not find a steady beat. Enter BPM manually.");
 
         int peak = candidates[0];
@@ -97,8 +105,15 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
         double bpm = Math.Round(6000 / period, 1);
         if (deviation < .001) return new(bpm, null, null);
 
+        double subdivisionStrength(double fraction) =>
+            BeatStrength(phase + period * fraction, period, frames, bassOnly: false).Average();
+        double triplet = (subdivisionStrength(1.0 / 3) + subdivisionStrength(2.0 / 3)) / 2;
+        double duple = subdivisionStrength(.5);
+        double mainStrength = subdivisionStrength(0);
+        bool compound = triplet > duple * 1.35 && triplet > mainStrength * .35;
+
         // A recurring accent can identify both the bar length and its starting beat.
-        var meters = new[] { 3, 4 }.Select(beats =>
+        var meters = (compound ? new[] { 2, 3, 4 } : new[] { 3, 4 }).Select(beats =>
         {
             var phases = Enumerable.Range(0, beats)
                 .Select(index => accents.Where((_, beat) => beat % beats == index).Average()).ToArray();
@@ -109,7 +124,7 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
         var best = meters[0];
         bool clear = best.Score > .45 && best.Score - meters[1].Score > .25;
         if (clear)
-            return new(bpm, best.Beats + "/4", Math.Round((phase + best.Downbeat * period) / framesPerSecond, 3));
+            return new(bpm, compound ? (best.Beats * 3) + "/8" : best.Beats + "/4", Math.Round((phase + best.Downbeat * period) / framesPerSecond, 3));
 
         // A drum or bass pattern can repeat each bar without a single dominant beat.
         // Compare the first two repetitions against other plausible beat groupings.
@@ -142,10 +157,39 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
             meter = "3/4";
 
         // Bar repetition alone does not tell us which beat starts the bar.
+        if (compound) meter = meter == "3/4" ? "9/8" : meter == "4/4" ? "12/8" : "6/8";
         return new(bpm, meter, null);
     }
 
-    static IEnumerable<double> BeatStrength(int phase, double period, List<(double Pulse, double Bass)> frames, bool bassOnly)
+    static void Transform(Complex[] values)
+    {
+        int size = values.Length;
+        for (int i = 1, j = 0; i < size; i++)
+        {
+            int bit = size >> 1;
+            for (; (j & bit) != 0; bit >>= 1) j ^= bit;
+            j ^= bit;
+            if (i < j) (values[i], values[j]) = (values[j], values[i]);
+        }
+        for (int length = 2; length <= size; length <<= 1)
+        {
+            var step = Complex.FromPolarCoordinates(1, -2 * Math.PI / length);
+            for (int i = 0; i < size; i += length)
+            {
+                var weight = Complex.One;
+                for (int j = 0; j < length / 2; j++)
+                {
+                    var first = values[i + j];
+                    var second = values[i + j + length / 2] * weight;
+                    values[i + j] = first + second;
+                    values[i + j + length / 2] = first - second;
+                    weight *= step;
+                }
+            }
+        }
+    }
+
+    static IEnumerable<double> BeatStrength(double phase, double period, List<(double Pulse, double Bass)> frames, bool bassOnly)
     {
         for (double beat = phase; beat < frames.Count; beat += period)
         {

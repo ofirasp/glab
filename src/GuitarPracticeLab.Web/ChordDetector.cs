@@ -81,14 +81,15 @@ public sealed class ChordDetector
     public double[] BassChroma()
     {
         var chroma = new double[12];
-        for (int bin = 12; bin <= 40; bin++)
+        // Include the bass guitar's low register, below the guitar chroma templates.
+        for (int bin = 8; bin <= 40; bin++)
         {
             double left = fft[bin - 1].Magnitude, middle = fft[bin].Magnitude, right = fft[bin + 1].Magnitude;
             if (middle <= left || middle <= right) continue;
             double correction = .5 * (left - right) / (left - 2 * middle + right);
             double midi = 69 + 12 * Math.Log2((bin + correction) * Rate / Size / 440.0);
             int note = (int)Math.Round(midi);
-            if (Math.Abs(midi - note) <= .40) chroma[note % 12] += middle * middle;
+            if (Math.Abs(midi - note) <= .40) chroma[note % 12] += middle * middle / bin;
         }
         double sum = chroma.Sum();
         if (sum > 0)

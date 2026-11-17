@@ -37,14 +37,14 @@
     '<div class="gpl-k-row gpl-k-row3"></div><div class="gpl-k-row gpl-k-tools"></div>';
   document.body.append(keyboard);
   let target = null, start = 0, end = 0, language = 'en', shifted = false, numeric = false;
-  let opening = null, closing = false;
+  let opening = null, closing = false, originalType = null;
   const letters = {
     en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
     he: ['קראטוןםפ', 'שדגכעיחלךף', 'זסבהנמצתץ']
   };
   const symbols = ['1234567890', '-/:.?=&_@#', '!()[],\'"+%'];
   const eligible = element => element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLInputElement && ['text', 'search', 'url', 'email', 'tel', 'password'].includes(element.type);
+    element instanceof HTMLInputElement && ['text', 'search', 'url', 'email', 'tel', 'password', 'number'].includes(element.type);
   function preview() {
     if (!target) return;
     const value = target.type === 'password' ? '•'.repeat(target.value.length) : target.value;
@@ -68,6 +68,10 @@
     preview();
   }
   function insert(text) {
+    if (originalType === 'number') {
+      const value = target.value.slice(0, start) + text + target.value.slice(end);
+      if (!/^-?\d*(\.\d*)?$/.test(value)) return;
+    }
     write(target.value.slice(0, start) + text + target.value.slice(end), start + text.length);
     if (shifted && !numeric) { shifted = false; draw(); }
   }
@@ -79,6 +83,11 @@
     if (!keyboard.open) return;
     closing = true;
     const field = target;
+    if (field?.isConnected && originalType === 'number') {
+      field.type = 'number';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    originalType = null;
     if (field?.isConnected) field.dispatchEvent(new Event('change', { bubbles: true }));
     keyboard.close(); target = null;
     setTimeout(() => { closing = false; }, 150);
@@ -90,7 +99,7 @@
     return button;
   }
   function draw() {
-    const rows = numeric ? symbols : letters[language];
+    const rows = originalType === 'number' ? ['123', '456', '7890.-'] : numeric ? symbols : letters[language];
     rows.forEach((row, index) => {
       const container = keyboard.querySelector('.gpl-k-row' + (index + 1));
       container.replaceChildren(...[...row].map(letter => {
@@ -113,6 +122,15 @@
       }),
       key('Done', done, 'gpl-k-done')
     );
+    if (originalType === 'number') {
+      tools.replaceChildren(
+        key('←', () => { start = end = Math.max(0, start - 1); preview(); }),
+        key('→', () => { start = end = Math.min(target.value.length, end + 1); preview(); }),
+        key('⌫', backspace),
+        key('Select all', () => { start = 0; end = target.value.length; preview(); }),
+        key('Done', done, 'gpl-k-done')
+      );
+    }
     // Prevent the desktop input method from opening alongside the app keyboard.
     keyboard.querySelector('.gpl-k-done').focus({ preventScroll: true });
   }
@@ -122,16 +140,23 @@
     opening = setTimeout(() => {
       if (!field.isConnected || closing || keyboard.open || document.activeElement !== field) return;
       target = field;
+      originalType = field instanceof HTMLInputElement ? field.type : null;
+      // Number fields reject text selection and incomplete decimals while editing.
+      if (originalType === 'number') field.type = 'text';
       start = field.selectionStart ?? field.value.length;
       end = field.selectionEnd ?? start;
       keyboard.querySelector('.gpl-k-field').textContent =
         field.labels?.[0]?.textContent.trim().slice(0, 50) || field.placeholder || 'Text';
-      numeric = field.type === 'tel';
+      numeric = originalType === 'number' || field.type === 'tel';
       draw(); keyboard.showModal(); preview();
       keyboard.querySelector('.gpl-k-done').focus({ preventScroll: true });
     }, 70);
   }
-  document.addEventListener('focusin', event => { if (!keyboard.contains(event.target)) show(event.target); });
+  // Modal dialogs restore focus when closing or enabling their controls.
+  // Open only for a deliberate tap, so saving cannot reopen the keyboard.
+  document.addEventListener('pointerdown', event => {
+    if (!keyboard.contains(event.target)) clearTimeout(opening);
+  });
   document.addEventListener('pointerup', event => { if (!keyboard.contains(event.target)) show(event.target); });
   keyboard.addEventListener('cancel', event => { event.preventDefault(); done(); });
   keyboard.addEventListener('keydown', event => {

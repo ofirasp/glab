@@ -11,15 +11,21 @@
     for (let index = 0; index < timeline.length; index++) hash = Math.imul(hash ^ timeline.charCodeAt(index), 16777619);
     return `guitar-chord-best-${song.id}-${song.audioVersion}-${hash >>> 0}`;
   }
-  function best() {
-    try { return JSON.parse(localStorage.getItem(key())); } catch { return null; }
+  function savedScore(suffix = '') {
+    try { return JSON.parse(localStorage.getItem(key() + suffix)); } catch { return null; }
   }
   function showBest() {
-    const record = best();
+    const record = savedScore();
+    const last = savedScore('-last');
+    $('chordMatchLast').textContent = last ? `Last score · ${last.percent}% (${last.hits} / ${last.total})` : '';
     $('chordMatchBest').textContent = record ? `Personal best · ${record.percent}% (${record.hits} / ${record.total})` : 'No personal best yet.';
   }
   function show(index) {
-    $('playingChord').classList.toggle('matched-chord', Boolean(validRun() && run.matched.has(index)));
+    const matched = Boolean(validRun() && run.matched.has(index));
+    $('playingChord').classList.toggle('matched-chord', matched);
+    $('stageCurrentCard').classList.toggle('matched', matched);
+    $('stageMatch').textContent = matched ? '✓ Matched' : '';
+    $('stageScore').textContent = validRun() ? `Matched ${run.matched.size} / ${run.total}` : 'Chord match off';
   }
   function cancelCapture() {
     capture?.abort();
@@ -57,17 +63,13 @@
     const current = run;
     const controller = new AbortController();
     capture = controller;
-    let last = null, repeats = 0;
     try {
       await PiMicrophone.listenChords(current.device, current.names, current.analysis.shift, controller.signal, chord => {
         if (controller.signal.aborted || audio.paused || audio.seeking || run !== current) return;
         current.received = true;
         const index = chordIndexAt(audio.currentTime, current.analysis.changes);
-        if (chord && chord === current.analysis.changes[index]?.name) {
-          repeats = last === index ? repeats + 1 : 1;
-          last = index;
-          if (repeats >= 2) current.matched.add(index);
-        } else { last = null; repeats = 0; }
+        // Every confident reading can match the active section, at any point in it.
+        if (chord && chord === current.analysis.changes[index]?.name) current.matched.add(index);
         show(index);
       });
     } catch (error) {
@@ -102,7 +104,6 @@
     toggle.textContent = 'Chord match on · turn off';
     toggle.setAttribute('aria-pressed', 'true');
     closeDialog('chordMatchDialog');
-    if (readerMode && !readerControlsOpen) $('readerControlsToggle').click();
     status('Chord match on. Play along through headphones.');
     audio.play().then(listen).catch(error => { stop(); message(error); });
   };
@@ -121,12 +122,16 @@
     const percent = Math.round(100 * hits / total);
     let result = `Score · ${percent}% · ${hits} of ${total} chord sections matched.`;
     if (!received) result = 'No microphone readings received. Check your mic and try again.';
-    else if (!uninterrupted || looping) result += ' A run with seeking or looping does not count toward your best.';
-    else if (hits > (best()?.hits ?? -1)) {
+    else {
       try {
-        localStorage.setItem(key(), JSON.stringify({hits, total, percent}));
-        result += ' New personal best!';
-      } catch { result += ' Personal best could not be saved.'; }
+        const score = JSON.stringify({hits, total, percent});
+        localStorage.setItem(key() + '-last', score);
+        if (!uninterrupted || looping) result += ' Last score saved. Seeking or looping excludes it from your personal best.';
+        else if (hits > (savedScore()?.hits ?? -1)) {
+          localStorage.setItem(key(), score);
+          result += ' New personal best!';
+        } else result += ' Last score saved.';
+      } catch { result += ' The browser could not save the score.'; }
     }
     stop();
     void openSetup(result);
@@ -136,5 +141,5 @@
     else void listen();
   });
   window.addEventListener('pagehide', stop);
-  window.SongChordMatch = {show, stop};
+  window.SongChordMatch = {show, stop, progress: () => validRun() ? {hits: run.matched.size, total: run.total} : null};
 })();
