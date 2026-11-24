@@ -8,14 +8,14 @@
     '': [0,4,7], m:[0,3,7], '5':[0,7], '7':[0,4,7,10], maj7:[0,4,7,11],
     m7:[0,3,7,10], sus2:[0,2,7], sus4:[0,5,7], dim:[0,3,6], aug:[0,4,8],
     dim7:[0,3,6,9], m7b5:[0,3,6,10], '6':[0,4,7,9], m6:[0,3,7,9],
-    '6add9':[0,2,4,7,9], add9:[0,2,4,7], madd9:[0,2,3,7], '9':[0,2,4,7,10], m9:[0,2,3,7,10],
+    '6add9':[0,2,4,7,9], add9:[0,2,4,7], madd9:[0,2,3,7], '9':[0,2,4,7,10], m9:[0,2,3,7,10], m11:[0,2,3,7,10,5],
     maj9:[0,2,4,7,11], '7sus4':[0,5,7,10], '7sus2':[0,2,7,10],
     '7b5':[0,4,6,10], '7#5':[0,4,8,10], '7b9':[0,1,4,7,10], '7#9':[0,3,4,7,10]
   };
   const open = {
     C:[-1,3,2,0,1,0], D:[-1,-1,0,2,3,2], E:[0,2,2,1,0,0], F:[1,3,3,2,1,1],
     G:[3,2,0,0,0,3], A:[-1,0,2,2,2,0], B:[-1,2,4,4,4,2],
-    Am:[-1,0,2,2,1,0], Dm:[-1,-1,0,2,3,1], Em:[0,2,2,0,0,0],
+    Bm11:[-1,2,0,2,2,0], Am:[-1,0,2,2,1,0], Dm:[-1,-1,0,2,3,1], Em:[0,2,2,0,0,0],
     C7:[-1,3,2,3,1,0], D7:[-1,-1,0,2,1,2], E7:[0,2,0,1,0,0], G7:[3,2,0,0,0,1], A7:[-1,0,2,0,2,0],
     Cmaj7:[-1,3,2,0,0,0], Dmaj7:[-1,-1,0,2,2,2], Emaj7:[0,2,1,1,0,0], Amaj7:[-1,0,2,1,2,0],
     Am7:[-1,0,2,0,1,0], Dm7:[-1,-1,0,2,1,1], Em7:[0,2,0,0,0,0],
@@ -31,11 +31,13 @@
     const bass = match[4] ? pitch(match[4], match[5]) : root;
     const notes = qualities[quality].map(n => (n + root) % 12);
     if (!notes.includes(bass)) notes.push(bass);
-    return { root, bass, quality, notes };
+    // Extended minor elevenths commonly omit the fifth on six-string guitar.
+    const requiredNotes = quality === 'm11' ? notes.filter(n => n !== (root + 7) % 12 || n === bass) : notes;
+    return { root, bass, quality, notes, requiredNotes };
   }
   function valid(frets, chord, stringPitches = tuning) {
     const sounded = frets.flatMap((f, i) => f < 0 ? [] : [(stringPitches[i] + f) % 12]);
-    return sounded.length >= 3 && sounded[0] === chord.bass && sounded.every(n => chord.notes.includes(n)) && chord.notes.every(n => sounded.includes(n));
+    return sounded.length >= 3 && sounded[0] === chord.bass && sounded.every(n => chord.notes.includes(n)) && (chord.requiredNotes || chord.notes).every(n => sounded.includes(n));
   }
   function fingers(frets) {
     const used = frets.filter(f => f > 0), min = Math.min(...used), max = Math.max(...used);

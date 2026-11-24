@@ -5,6 +5,12 @@
 
   let confirmedString = null, candidate = null, stable = 0, misses = 0, chimeUntil = 0;
 
+  // Keep a real steady hold, but tolerate a short dropout or one noisy frame
+  // as a plucked string decays. Confirm from a recent window, not all-time extrema.
+  const holdMilliseconds = 500, windowMilliseconds = 1600, maxReadingGap = 1100;
+  let autoCandidate = -1, autoSince = 0, autoFrames = 0;
+  let lastReading = -Infinity, pitchReadings = [], displayReadings = [], displayString = -1, displayedAt = -Infinity;
+
   function highlightString(heard) {
     [...$('strings').children].forEach((item, index) => {
       item.classList.toggle('active', index === selected);
@@ -28,21 +34,43 @@
   function resetConfirmation() {
     confirmedString = candidate = null;
     stable = misses = chimeUntil = 0;
+    pitchReadings = []; displayReadings = []; displayString = -1;
+    autoCandidate = -1; autoFrames = 0;
+    $('needle').classList.add('waiting');
+    $('tuning').dataset.direction = 'waiting';
+    lastReading = -Infinity;
     if ($('tuning').classList.contains('in-tune')) $('tuning').textContent = 'Pluck one string at a time';
     $('tuning').classList.remove('in-tune');
   }
 
-  function confirm(inTune) {
-    if (!inTune) {
-      candidate = null;
-      stable = 0;
-      if (++misses >= 2) confirmedString = null;
+  function confirm(inTune, offset = null) {
+    const now = performance.now();
+    if (offset === null) {
+      misses++;
+      if (now-lastReading > maxReadingGap) {
+        candidate = confirmedString = null;
+        stable = 0; pitchReadings = []; lastReading = -Infinity;
+      }
       return false;
     }
     misses = 0;
-    stable = candidate === selected ? stable + 1 : 1;
+    if (candidate !== selected || now-lastReading > maxReadingGap || Math.abs(offset) > 12) {
+      pitchReadings = []; stable = 0;
+    }
     candidate = selected;
-    if (stable < 2) return false;
+    // Buffered network frames cannot substitute for elapsed listening time.
+    if (now-lastReading < 100) return false;
+    lastReading = now;
+    pitchReadings = pitchReadings.filter(reading => now-reading.time <= windowMilliseconds);
+    pitchReadings.push({time:now, offset});
+    const good = pitchReadings.filter(reading => Math.abs(reading.offset) <= 5);
+    stable = good.length;
+    if (!inTune || stable < 3 || stable/pitchReadings.length < .8
+      || now-good[0].time < holdMilliseconds) return false;
+    const offsets = good.map(reading => reading.offset).sort((a,b)=>a-b);
+    // Ignore the two extreme readings, while rejecting a genuinely wavering note.
+    const trim = offsets.length >= 5 ? 1 : 0;
+    if (offsets[offsets.length-1-trim]-offsets[trim] > 6) return false;
     if (confirmedString !== selected) {
       confirmedString = selected;
       if (ctx?.state === 'running') {
@@ -79,45 +107,83 @@
     }
   }
 
+  function showLocked(heard) {
+    $('note').textContent = names[selected];
+    $('freq').textContent = freqs[selected].toFixed(2) + ' Hz · target';
+    $('needle').style.left = '50%';$('needle').classList.remove('waiting');
+    $('tuning').textContent = '✓ In tune · Tap string to retune';
+    $('tuning').dataset.direction = 'locked';$('tuning').classList.add('in-tune');
+    $('tunerLastScore').textContent = 'Confirmed · ' + names[selected] + ' · 100%';
+    $('tunerScoreMeter').value = 100;$('tunerScoreMeter').hidden = false;
+    highlightString(heard);
+  }
   function reading(frequency) {
     if (toneOsc || performance.now() < chimeUntil) return;
-    if (!frequency) {
+    const now = performance.now();
+    const locked = () => $('strings').children[selected].classList.contains('string-in-tune');
+    if (!frequency || !Number.isFinite(frequency)) {
       confirm(false);
       highlightString(-1);
+      if (locked()) {showLocked(-1);return;}
       $('tuning').classList.remove('in-tune');
-      $('freq').textContent = 'Waiting for a clear note…';
-      $('tuning').textContent = 'Pluck one string at a time';
-      $('needle').style.left = '50%';
+      $('needle').classList.add('waiting');
+      $('freq').textContent = 'Note faded · pluck again';
+      $('tuning').textContent = 'Pluck string ' + (6-selected) + ' (' + names[selected] + ')';
+      $('tuning').dataset.direction = 'waiting';
       return;
     }
     const heard = freqs.reduce((closest, reference, index) =>
       Math.abs(Math.log2(frequency / reference)) < Math.abs(Math.log2(frequency / freqs[closest]))
         ? index : closest, selected);
-    if (automatic) selected = heard;
-    if ($('strings').children[selected].classList.contains('string-in-tune')) {
-      resetConfirmation();
-      $('note').textContent = names[selected];
-      $('freq').textContent = '';
-      $('needle').style.left = '50%';
-      $('tuning').textContent = '✓ In tune · Tap string to retune';
-      $('tuning').classList.add('in-tune');
-      highlightString(heard);
-      return;
+    const heardOffset = 1200 * Math.log2(frequency / freqs[heard]);
+    if (automatic) {
+      // Do not jump to an already-green string on a single noise/harmonic frame.
+      if (Math.abs(heardOffset)>150) {
+        $('needle').classList.add('waiting');
+        $('freq').textContent = 'Unclear pitch · pluck one string';
+        $('tuning').textContent = 'Tap a string circle to tune it manually';
+        $('tuning').classList.remove('in-tune');$('tuning').dataset.direction='waiting';
+        autoCandidate = -1;autoFrames = 0;return;
+      }
+      if (heard !== selected) {
+        if (autoCandidate !== heard || now-autoSince > 650) {autoCandidate=heard;autoFrames=1;autoSince=now;}
+        else if (now-autoSince>=100) {autoFrames++;}
+        if (autoFrames<2) {
+          $('needle').classList.add('waiting');$('freq').textContent='Checking '+names[heard]+'…';
+          $('tuning').classList.remove('in-tune');$('tuning').dataset.direction='waiting';
+          $('tuning').textContent='Keep that string ringing…';return;
+        }
+        selected = heard;
+        // Reset this string's measurement window without altering saved green strings.
+        candidate = null;pitchReadings=[];displayReadings=[];lastReading=-Infinity;
+      }
+      autoCandidate=-1;autoFrames=0;
     }
-    const offset = 1200 * Math.log2(frequency / freqs[selected]);
-    const measured = PiMicrophone.noteName(Math.round(PiMicrophone.midi(frequency)));
+    if (locked()) {showLocked(heard);return;}
+    const rawOffset = 1200 * Math.log2(frequency / freqs[selected]);
+    if (displayString !== selected || now-displayedAt > 650) displayReadings = [];
+    displayString = selected; displayedAt = now;
+    displayReadings.push(rawOffset);displayReadings = displayReadings.slice(-3);
+    const sorted = [...displayReadings].sort((a,b)=>a-b);
+    const offset = sorted[Math.floor(sorted.length/2)];
+    const shownFrequency = freqs[selected] * 2 ** (offset/1200);
+    const measured = PiMicrophone.noteName(Math.round(PiMicrophone.midi(shownFrequency)));
     $('note').textContent = names[selected];
-    $('freq').textContent = frequency.toFixed(2) + ' Hz · Heard ' + measured;
+    $('freq').textContent = shownFrequency.toFixed(2) + ' Hz · Heard ' + measured;
+    $('needle').classList.remove('waiting');
     $('needle').style.left = (50 + Math.max(-45, Math.min(45, offset))) + '%';
-    const inTune = Math.abs(offset) <= 5;
-    const confirmed = confirm(inTune);
+    const inTune = Math.abs(rawOffset) <= 5;
+    const confirmed = confirm(inTune, rawOffset);
     $('tuning').classList.toggle('in-tune', confirmed);
-    $('tuning').textContent = confirmed ? '✓ In tune' : inTune ? 'Hold the note…'
-      : `${offset < 0 ? 'Flat · tune up ↑' : 'Sharp · tune down ↓'} (${offset.toFixed(0)} cents)`;
+    const centered = Math.abs(offset) <= 5;
+    $('tuning').dataset.direction = confirmed ? 'locked' : centered ? 'center' : offset < 0 ? 'tighten' : 'loosen';
+    $('tuning').textContent = confirmed ? '✓ In tune' : centered ? 'Centered · checking…'
+      : offset < 0 ? `Tighten string ${6-selected} → · ${Math.abs(offset).toFixed(0)} cents flat`
+      : `← Loosen string ${6-selected} · ${Math.abs(offset).toFixed(0)} cents sharp`;
     highlightString(heard);
     saveStringResult(heard, inTune, confirmed);
     const score = Math.round(100 * Math.max(0, Math.min(1, (50 - Math.abs(offset)) / 45)));
-    $('tunerLastScore').textContent = `Last string · ${names[selected]} · ${score}%`;
+    $('tunerLastScore').textContent = `${confirmed ? 'Confirmed' : 'Pitch closeness'} · ${names[selected]} · ${score}%`;
     $('tunerScoreMeter').value = score;
     $('tunerScoreMeter').hidden = false;
   }

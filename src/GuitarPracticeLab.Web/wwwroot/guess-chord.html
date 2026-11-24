@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guess the Chord · Guitar Practice Lab</title>
+<link rel="stylesheet" href="/scale-practice.css">
+<link rel="stylesheet" href="/one-minute-changes.css?v=star-burst">
+<style>
+main{grid-template-rows:40px 40px minmax(90px,1fr) 90px auto 44px 36px;gap:7px}
+.settings{justify-content:space-between}.settings label{display:flex;align-items:center;gap:8px}
+.settings select{width:auto}#roundProgress,#bestScore{font-size:13px;color:#bed0e7}
+#question{display:flex;align-items:center;justify-content:center;gap:18px;background:#192639;border-radius:14px;padding:8px;min-height:0}
+#questionText{font-size:24px;text-align:center}#diagram{height:100%;max-width:160px;aspect-ratio:1}
+#diagram svg{height:100%;width:100%}
+#answers,#compareChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#answers button{font-size:27px}#answers .correct{background:#205b49;border:2px solid #81e3ac;opacity:1}
+#answers .wrong{background:#713846;border-color:#ffafba;opacity:1}
+#compareChoices button{font-size:14px;min-height:36px;padding:3px}
+footer{justify-content:center}footer label{display:flex;align-items:center;gap:6px}#guessVolume{width:95px}
+#message{white-space:normal;line-height:17px;overflow:auto;font-size:13px}
+.changes-round-score #guessResultScore{font-size:58px}
+#question small{display:block;font-size:13px;color:#b9c9de;margin-top:8px}
+</style>
+<script src="/chord-shapes.js?v=minor-eleventh" defer></script>
+<script src="/chord-diagram.js" defer></script>
+<script src="/guess-chord.js?v=result-pause-guard" defer></script>
+<link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script></head><body><main>
+<header><a href="/practice.html?tab=practice">‹ Back</a><h1>Guess the Chord</h1><span id="bestScore"></span></header>
+<div class="settings"><label>Level <select id="guessLevel"><option value="open">Open chords</option><option value="sevenths" disabled>Sevenths · locked</option><option value="barre" disabled>Barre chords · locked</option></select></label><span id="roundProgress">10 questions · listen and choose</span></div>
+<section id="question"><div id="questionText">Train your chord hearing<small>Listen to a plucked chord, then choose its name.</small></div><div id="diagram" hidden></div></section>
+<div id="answers" aria-label="Chord answers"></div>
+<div id="compareChoices" hidden aria-label="Compare chord sounds"></div>
+<footer><button id="hearGuess" disabled>Hear again</button><button id="compareGuess" disabled>Compare sounds</button><button id="nextGuess" class="primary">Start round</button><label>Volume<input id="guessVolume" aria-label="Chord volume" type="range" min="0" max="100" value="65"></label></footer>
+<p id="message" role="status">Use headphones or speakers. This game uses sound and touch.</p>
+</main>
+<dialog id="changesRoundResult" aria-labelledby="changesRoundTitle">
+ <div class="changes-round-head"><span id="changesRoundIcon" aria-hidden="true">✓</span><h2 id="changesRoundTitle">Round complete</h2><button id="guessResultClose">Close</button></div>
+ <p id="changesRoundPair"></p>
+ <div class="changes-round-score"><strong id="guessResultScore">0/10</strong><span>Correct answers</span></div>
+ <div class="changes-round-comparisons">
+  <div><span>Last round<strong id="guessResultLast">—</strong></span><b id="changesRoundDifference"></b></div>
+  <div><span>Personal best<small id="changesRoundPreviousBest"></small></span><b id="changesRoundBest">—</b></div>
+ </div>
+ <p id="changesRoundSave" role="status"></p>
+ <div class="changes-round-footer"><button id="guessResultReview">Review last chord</button><span></span><button id="changesRoundAgain">Try again</button></div>
+</dialog>
+</body></html>

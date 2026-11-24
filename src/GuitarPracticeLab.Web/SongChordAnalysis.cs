@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 
-public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongChordChange> Changes)
+public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongChordChange> Changes, bool Corrected = false)
 {
     public sealed record SongChordChange(double Time, string? Name);
 
@@ -68,7 +68,8 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
             {
                 // Slash voicings need reliable bass detection, so leave them out of this first pass.
                 var chord = GuitarChord.Parse(name);
-                if (chord.Notes.Length < 3) continue;
+                // Power chords have two distinct notes, even when played on three strings.
+                if (chord.Notes.Length < 2) continue;
                 int Transpose(int pitch) => (pitch + shift + 12) % 12;
                 candidates.Add(new(name, chord.Notes.Select(Transpose).ToArray(), chord.Required.Select(Transpose).ToArray()));
             }
@@ -115,9 +116,14 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
             {
                 var chord = candidates[index];
                 int root = chord.Required[0];
+                // Bass lines also land on the third and fifth. A strong fifth
+                // supports its parent chord instead of forcing a new root chord.
+                double bassSupport = bass[root] + .25 * bass[chord.Required[1]];
+                int fifth = (root + 7) % 12;
+                if (chord.Notes.Contains(fifth)) bassSupport += .5 * bass[fifth];
                 double evidence = total > 0
                     ? chord.Notes.Sum(note => neighborhood[note]) / total
-                        + .34 * (bassTotal > 0 ? bass[root] / bassTotal : 0)
+                        + .34 * (bassTotal > 0 ? bassSupport / bassTotal : 0)
                         - (neighborhood[chord.Required[1]] < total * .035 ? .12 : 0)
                     : 0;
                 bool change = previous[strongest] - changeCost > previous[index];

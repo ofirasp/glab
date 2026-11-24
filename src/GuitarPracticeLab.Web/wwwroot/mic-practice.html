@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Microphone practice · Guitar Practice Lab</title>
 <link rel="stylesheet" href="/scale-practice.css">
+<link rel="stylesheet" href="/one-minute-changes.css?v=strum-results">
 <style>
 main{grid-template-rows:40px auto minmax(0,1fr) auto auto}
 .settings{flex-wrap:wrap}.settings label{flex:1;min-width:125px}
@@ -22,14 +23,23 @@ main{grid-template-rows:40px auto minmax(0,1fr) auto auto}
 .beat{text-align:center;background:#293950;border-radius:5px;padding:3px;font-size:13px}
 .beat.early,.beat.late{background:#714c22}.beat.missed{background:#62333e}
 footer button{min-width:105px}#message{white-space:normal;min-height:20px}
+#changesRoundResult .changes-round-score{padding:8px 12px}
+#strumScore{font-size:50px}
+#changesRoundResult #changesRoundPair{font-size:15px;margin:8px 0}
+#strumBreakdown{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+#strumBreakdown span{text-align:center;background:#11203288;border-radius:8px;padding:5px;font-size:11px;color:#bdcce0}
+#strumBreakdown strong{display:block;font-size:19px;color:#e7effb}
+#strumBreakdown span:first-child strong{color:#9de6bc}
+#changesRoundResult .changes-round-comparisons{margin-top:8px}
+#changesRoundSave{margin-top:8px}
 </style>
-<script src="/pi-microphone.js?v=tuning-presets" defer></script>
-<script src="/chord-shapes.js?v=alternate-tuning" defer></script>
+<script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/pi-microphone.js?v=shared-pcm" defer></script>
+<script src="/chord-shapes.js?v=minor-eleventh" defer></script>
 <script src="/chord-diagram.js?v=tuning-labels" defer></script>
-<script src="/mic-practice.js?v=tuning-presets" defer></script>
-</head>
+<script src="/mic-practice.js?v=restore-strum-clock" defer></script>
+<link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script><link rel="stylesheet" href="/strumming-timing.css"></head>
 <body><main>
-<header><a href="/practice.html?tab=practice">‹ Back</a><h1 id="title"></h1></header>
+<header><a href="/practice.html?tab=practice">‹ Back</a><h1 id="title"></h1><a href="/audio-settings.html">Audio Settings</a></header>
 <div class="settings">
   <label>Microphone<select id="device"></select></label>
   <label id="chordLabel">Chord shape<select id="chord"></select></label>
@@ -39,7 +49,26 @@ footer button{min-width:105px}#message{white-space:normal;min-height:20px}
   <label id="tempoLabel" hidden>Tempo (BPM)<select id="tempo"><option>40</option><option>50</option><option selected>60</option><option>70</option><option>80</option><option>90</option><option>100</option><option>120</option></select></label>
 </div>
 <section class="exercise" id="cleanPanel"><div id="cleanBoard"><div id="cleanDiagram"></div><div id="shapeNav"><button id="previousShape" aria-label="Previous chord shape">‹</button><span id="shapeCount"></span><button id="nextShape" aria-label="Next chord shape">›</button></div></div><div id="cleanStrings"></div></section>
-<section class="exercise" id="timingPanel" hidden><strong id="timingResult">One strum per beat · 8 bars</strong><div id="beatPulse" hidden></div><div id="beatGrid"></div></section>
+<section class="exercise" id="timingPanel" hidden>
+ <div class="strum-live-meta"><span id="strumSetupSummary">One strum per beat · 8 bars</span><span id="strumBarPosition">Ready</span></div>
+ <div class="strum-live-center"><div id="strumPulseRing"><strong id="strumBeatNumber">♪</strong></div><strong id="strumLiveFeedback" role="status">Find your rhythm</strong><span id="strumLiveOffset">Start with four count-in beats</span><div id="strumBeatDots" aria-label="Beat in the bar"><span>1</span><span>2</span><span>3</span><span>4</span></div></div>
+ <div id="strumLiveProgress"><span></span></div><strong id="timingResult" hidden></strong><div id="beatPulse" hidden></div>
+</section>
 <footer><button id="start" class="primary" disabled>Start</button><span id="instruction"></span></footer>
 <p id="message" role="status"></p>
-</main></body></html>
+</main>
+<dialog id="changesRoundResult" aria-labelledby="changesRoundTitle">
+ <div class="changes-round-head"><span id="changesRoundIcon" aria-hidden="true">✓</span><h2 id="changesRoundTitle">Round complete</h2><button id="strumResultClose">Close</button></div>
+ <p id="changesRoundPair"></p>
+ <div class="changes-round-score"><strong id="strumScore">0%</strong><span>Strums on beat</span></div>
+ <div id="strumBreakdown"><span><strong id="strumOnTime">0</strong>On beat</span><span><strong id="strumEarly">0</strong>Early</span><span><strong id="strumLate">0</strong>Late</span><span><strong id="strumMissed">0</strong>Missed</span></div>
+ <div id="strumTimingTrace" aria-label="Timing of all strums"></div><div class="strum-trace-labels"><span>Early ↑</span><span>Dashed line = on the beat</span><span>↓ Late</span></div>
+ <div id="beatGrid" aria-label="Eight bars of strum results"></div><div class="strum-review-legend">Green: on beat · Gold: early / late · Outline: missed</div>
+ <div class="changes-round-comparisons">
+  <div><span>Last round<strong id="strumLast">—</strong></span><b id="changesRoundDifference"></b></div>
+  <div><span>Personal best<small id="changesRoundPreviousBest"></small></span><b id="changesRoundBest">—</b></div>
+ </div>
+ <p id="changesRoundSave" role="status"></p>
+ <div class="changes-round-footer"><button id="strumResultReview">Done</button><span></span><button id="changesRoundAgain">Try again</button></div>
+</dialog>
+</body></html>

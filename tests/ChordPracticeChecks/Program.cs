@@ -71,3 +71,36 @@ timeline = SongChordAnalysis.BuildTimeline(
         gFrame, gFrame, gFrame, gFrame, softD, softD, softD, softD, softD], majorSong);
 Check(timeline.Select(change => change.Name).SequenceEqual(["G", "D", "G", "C", "G", "D"]),
     "neighboring frames recover short D and G changes in order");
+
+var invertedG = new double[12];
+invertedG[2] = .26; invertedG[7] = .23; invertedG[6] = .10;
+invertedG[4] = .09; invertedG[11] = .08; invertedG[1] = .05; invertedG[9] = .06;
+var fifthBass = new double[12];
+fifthBass[2] = .66; fifthBass[7] = .32;
+(double[] Chroma, double[] Bass)? gOverD = (invertedG, fifthBass);
+timeline = SongChordAnalysis.BuildTimeline(
+    [dFrame, dFrame, dFrame, gOverD, gOverD, gOverD, gOverD, gOverD, gOverD, gOverD, gOverD, dFrame, dFrame, dFrame],
+    SongChordAnalysis.Candidates(["G", "D", "Em", "Bm", "F#7"], 0));
+Check(timeline.Select(change => change.Name).SequenceEqual(["D", "G", "D"]),
+    "a G chord with prominent D bass is retained between D sections");
+
+var powers = SongChordAnalysis.Candidates(["G5","D5","A5"],0);
+Check(powers.Count==3,"song matching keeps two-note power chords");
+foreach(var (name,notes) in new[]{("G5",new[]{43,50,55}),("D5",new[]{50,57,62}),("A5",new[]{45,52,57})})
+{
+    for(int seed=1;seed<=3;seed++){
+        var (_,powerChroma)=detector.Measure(Signal(notes,seed,0,true),.003);
+        Check(SongChordAnalysis.MatchLive(powerChroma!,powers)==name,$"live song match recognizes {name}, seed {seed}");
+    }
+}
+var shiftedPowers=SongChordAnalysis.Candidates(["G5","D5"],2);
+var (_,shiftedPower)=detector.Measure(Signal([45,52,57]),.003);
+Check(SongChordAnalysis.MatchLive(shiftedPower!,shiftedPowers)=="G5","power chord matching retains recording pitch shift");
+var noFifth=new double[12];noFifth[7]=1;
+Check(SongChordAnalysis.MatchLive(noFifth,powers)is null,"power chord requires fifth evidence as well as the root");
+
+var mixedPowerCandidates=SongChordAnalysis.Candidates(["G5","G","C","D"],0);
+var (_,mixedPower)=detector.Measure(Signal([43,50,55]),.003);
+Check(SongChordAnalysis.MatchLive(mixedPower!,mixedPowerCandidates)=="G5","G5 remains distinct when G major is also a candidate");
+var (_,fullMajor)=detector.Measure(Signal([43,47,50,55,59,67]),.003);
+Check(SongChordAnalysis.MatchLive(fullMajor!,mixedPowerCandidates)=="G","full G major remains distinct from G5");

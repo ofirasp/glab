@@ -95,3 +95,9 @@ Use standard tuning with no capo. Volume/mute and a touch Help dialog are includ
 Checks: `node tests/fretboard-notes.test.cjs` validates all keys, filters and fret
 ranges; `node tests/fretboard-map-ui.test.cjs` tests touchscreen navigation,
 filters, quiz feedback, score and layout in an isolated browser.
+
+Auto PDF Follow preview: Songs → Tools → Analyze → Analyze chords, then Sync PDF. Review uncertain sections or tap a printed chord to correct a section, then Use Auto PDF Follow. Tools → Playback → PDF follow switches back to Manual recorded follow. Bar-start/rhythm edits apply live. Re-sync after PDF, chord-timeline or alternate-chord edits. Sync is stored in this browser; recorded cues are unchanged.
+
+Import can find a uniquely named original MP3 in recordings and offers capo selection plus automatic chord/rhythm analysis. Unidentified meter defaults to 4/4. Existing audio, manual chord corrections and saved rhythm are preserved on reimport.
+
+The song control panel includes an Auto PDF checkbox (off = recorded Manual Follow). Sync PDF can clear a section correction or all PDF sync corrections without deleting Follow cues. Library refreshes when opened, including songs imported from Mac Song Studio.

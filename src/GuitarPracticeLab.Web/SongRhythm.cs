@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Numerics;
 
-public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat, bool Confirmed = false)
+public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat, bool Confirmed = false, List<SongRhythmPoint>? Points = null)
 {
     public static int BeatsPerBar(string? meter) => meter switch
     {
@@ -200,3 +200,5 @@ public sealed record SongRhythm(double Bpm, string? Meter, double? FirstDownbeat
         }
     }
 }
+
+public sealed record SongRhythmPoint(double Time, double Bpm, string? Meter);

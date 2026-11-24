@@ -59,8 +59,8 @@
   function listen(device, signal, receive) {
     return stream('/listen', {device}, signal, sample => receive(sample.frequency));
   }
-  function listenChords(device, names, shift, signal, receive) {
-    return stream('/listen-chords', {device, names, shift}, signal, sample => receive(sample.chord));
+  function listenChords(device, names, shift, signal, receive, options={}) {
+    return stream('/listen-chords', {device, names, shift,...(options.includeAudio?{includeAudio:true}:{})}, signal, sample => receive(sample.chord, sample));
   }
 
   function wave(chunks, size) {

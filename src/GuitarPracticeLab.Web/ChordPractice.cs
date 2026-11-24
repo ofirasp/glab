@@ -91,7 +91,7 @@ public static class ChordPractice
                 await context.Response.WriteAsJsonAsync(new { message = "No supported chords in this timeline." });
                 return;
             }
-            await Listen(context, request.Device, app.Lifetime.ApplicationStopping, chords: candidates);
+            await Listen(context, request.Device, app.Lifetime.ApplicationStopping, chords: candidates, includeAudio: request.IncludeAudio);
         });
         api.MapPost("/record", (HttpContext context, ListenRequest request) =>
             Listen(context, request.Device, app.Lifetime.ApplicationStopping, recordSeconds: 65));
@@ -128,7 +128,7 @@ public static class ChordPractice
         });
     }
     public sealed record ListenRequest(string Device);
-    public sealed record ListenChordsRequest(string Device, string[] Names, int Shift);
+    public sealed record ListenChordsRequest(string Device, string[] Names, int Shift, bool IncludeAudio = false);
 
     static bool ValidDevice(string? device) =>
         Regex.IsMatch(device ?? "", @"^[a-zA-Z0-9_:,=.-]{1,160}$");
@@ -144,7 +144,7 @@ public static class ChordPractice
         return Process.Start(config) ?? throw new IOException("Could not start microphone capture.");
     }
 
-    static async Task Listen(HttpContext context, string device, CancellationToken stopping, int recordSeconds = 0, List<GuitarChord>? chords = null)
+    static async Task Listen(HttpContext context, string device, CancellationToken stopping, int recordSeconds = 0, List<GuitarChord>? chords = null, bool includeAudio = false)
     {
         if (!ValidDevice(device) || !Microphone.Wait(0))
         {
@@ -171,12 +171,13 @@ public static class ChordPractice
             process = OpenMicrophone(device);
             errors = process.StandardError.ReadToEndAsync();
             var detector = chords is null ? null : new ChordDetector();
+            var strumDetector = chords is null || includeAudio ? null : new GuitarStrumDetector();
             var window = new double[detector is null ? 4096 : ChordDetector.Size];
             var bytes = new byte[record ? 2048 : window.Length * 2];
             int recordingBytes = recordSeconds * 16000 * 2;
             int captured = 0;
             int overlapBytes = detector is null ? 0 : bytes.Length / 2;
-            int retainedBytes = 0;
+            int retainedBytes = 0;long capturedSamples = 0;
             while (!lifetime.IsCancellationRequested && (!record || captured < recordingBytes))
             {
                 using var read = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
@@ -195,8 +196,16 @@ public static class ChordPractice
                 if (detector is null) await Write(new { frequency = PitchTest.Detect(window) });
                 else
                 {
+                    var measuredAt = Stopwatch.GetTimestamp();
+                    var attacks = strumDetector?.Process(window.AsSpan(retainedBytes / 2)) ?? [];
+                    capturedSamples += window.Length - retainedBytes / 2;
                     var (_, chroma) = detector.Measure(window, .004);
-                    await Write(new { chord = chroma is null ? null : SongChordAnalysis.MatchLive(chroma, chords!) });
+                    var chord = chroma is null ? null : SongChordAnalysis.MatchLive(chroma, chords!);
+                    // The detected chord represents the centre of this capture window.
+                    var ageSeconds = window.Length / (2.0 * ChordDetector.Rate)
+                        + Stopwatch.GetElapsedTime(measuredAt).TotalSeconds;
+                    var processingSeconds = Stopwatch.GetElapsedTime(measuredAt).TotalSeconds;
+                    await Write(new { chord, ageSeconds, strums = attacks.Select(age => new { ageSeconds = age + processingSeconds }).ToArray(), capturedSeconds = capturedSamples / (double)ChordDetector.Rate, captureAgeSeconds = processingSeconds, audioPcm16 = includeAudio ? Convert.ToBase64String(bytes, retainedBytes, bytes.Length - retainedBytes) : null });
                     bytes.AsSpan(overlapBytes).CopyTo(bytes);
                     retainedBytes = overlapBytes;
                 }

@@ -71,8 +71,12 @@
     setFollow(false);
     if (mark) seekPdf(mark);
     sync();
-    $('takeRecordingStatus').textContent = 'Connecting mic…';
+    $('takeRecordingStatus').textContent = 'Get ready…';
     try {
+      accompaniment.currentTime = from;
+      const ready = await songCountIn(() => {}, () => capture === current, accompaniment);
+      if (!ready) { if (capture === current) finish(); return; }
+      $('takeRecordingStatus').textContent = 'Connecting mic…';
       accompaniment.currentTime = from;
       const response = await fetch('/api/chord-practice/record', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -117,7 +121,9 @@
     try {
       guitar.currentTime = 0;
       accompaniment.currentTime = sectionStart;
-      await Promise.all([guitar.play(), ...(withBacking ? [accompaniment.play()] : [])]);
+      const start = () => Promise.all([guitar.play(), ...(withBacking ? [accompaniment.play()] : [])]);
+      const played = withBacking ? await songCountIn(start, () => version === generation && review, accompaniment) : (await start(), true);
+      if (!played) { pauseReview(); return; }
       if (version === generation && review)
         say(withBacking ? 'Playing your take with the song track.' : 'Playing your guitar take.');
     } catch (error) {

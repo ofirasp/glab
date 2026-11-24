@@ -1,0 +1,4 @@
+#freePracticeBadge{flex:0 0 auto;margin-left:auto;display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid #49617d;border-radius:8px;background:#203248;color:#c4d7ed;white-space:nowrap;line-height:1.1}
+#freePracticeBadge[hidden]{display:none}
+#freePracticeBadge small{font:500 10px system-ui;max-width:42px;white-space:normal}
+#freePracticeBadge strong{font:600 18px system-ui;font-variant-numeric:tabular-nums;color:#a5e7be}

@@ -1,0 +1,32 @@
+#practice{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(220px,1fr);gap:24px;align-items:start;align-content:start;justify-content:normal;text-align:left;background:transparent;padding:12px 6px;overflow:hidden}
+#practice h2{font-size:16px;font-weight:600;margin:0;line-height:1.3}
+#practiceToday{margin-left:auto;font-size:12px;color:#b5c6dc;white-space:nowrap}
+.practice-exercises{min-width:0}
+#practice .practice-categories{display:flex;gap:6px;margin:14px 0 16px}
+#practice .practice-categories button{flex:1;min-height:44px;border:1px solid #40536c;background:#1a293c;border-radius:10px;padding:7px 6px;font-size:14px;white-space:nowrap}
+#practice .practice-categories button[aria-selected="true"]{background:#263f60;border-color:#3478d6}
+.practice-category{display:grid;gap:10px}
+#practice .practice-exercise{display:flex;align-items:center;gap:12px;width:100%;min-height:70px;padding:12px 14px;border:1px solid #40536c;border-radius:14px;background:#1a293c;text-align:left}
+.practice-exercise svg{width:21px;height:21px;flex:0 0 21px;color:#b5c6dc}
+.practice-exercise-copy{min-width:0;flex:1}
+.practice-exercise strong{display:block;font-size:17px;font-weight:600}
+.practice-exercise small{display:block;font-size:12px;font-weight:400;color:#b5c6dc;margin-top:4px}
+.practice-chevron{color:#b5c6dc;font-size:23px;font-weight:400}
+.practice-free-timer{display:flex;flex-direction:column;align-items:stretch;gap:12px;min-width:0;border-left:1px solid #40536c;padding-left:24px}
+.practice-timer-description{font-size:12px;color:#b5c6dc;margin:0}
+.practice-durations{display:flex;gap:5px;margin-top:6px}
+#practice .practice-durations button{flex:1;min-height:42px;font-size:14px;padding:7px 2px;border:1px solid #40536c;background:#1a293c;border-radius:10px}
+#practice .practice-durations button.active{background:#263f60;border-color:#3478d6}
+#practice #remaining{font-size:48px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;text-align:center;margin:6px 0}
+#practice #timerStart{flex:none;width:100%;min-height:44px;font-size:16px;background:#3478d6;border-radius:10px;padding:9px}
+#practice #timerFinish{flex:none;width:100%;min-height:42px;font-size:14px;padding:8px;background:#293950;border:1px solid #40536c;border-radius:10px}
+#practice #practiceMessage{margin:0;font-size:12px;color:#b5c6dc;line-height:1.4;text-align:left;min-height:32px}
+@media(max-width:650px){#practice{grid-template-columns:1fr;gap:20px;overflow-y:auto}.practice-free-timer{border-left:0;border-top:1px solid #40536c;padding:18px 0 0}#practice .practice-categories button{white-space:normal}#practiceToday{max-width:125px;white-space:normal;text-align:right;font-size:11px}}
+
+.practice-duration-control{font-size:12px;color:#b5c6dc;margin-top:6px}
+.practice-minute-stepper{display:flex;height:46px;margin-top:5px;border:1px solid #536981;border-radius:9px;overflow:hidden;background:#293950}
+#practiceMinutes{width:0;min-width:0;flex:1;background:transparent;border:0;color:#eef3ff;font:600 23px system-ui;text-align:center;appearance:textfield}
+#practiceMinutes::-webkit-inner-spin-button,#practiceMinutes::-webkit-outer-spin-button{appearance:none}
+#practice .practice-minute-stepper button{min-height:44px;min-width:46px;border:0;border-left:1px solid #536981;border-radius:0;background:#354a64;padding:0;font-size:21px;touch-action:none;user-select:none}
+#practice .practice-minute-stepper button:active{background:#4675aa}
+#practice .practice-minute-stepper button:disabled{opacity:.4}

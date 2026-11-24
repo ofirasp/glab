@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Change After a Bar</title>
+<link rel="stylesheet" href="/scale-practice.css"><link rel="stylesheet" href="/one-minute-changes.css?v=bar-practice"><link rel="stylesheet" href="/bar-changes.css?v=calibration-summary">
+<script src="/timing-adjustment.js?v=global" defer></script><script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/chord-shapes.js?v=minor-eleventh" defer></script><script src="/chord-diagram.js" defer></script><script src="/pi-microphone.js?v=shared-pcm" defer></script><script src="/bar-changes-engine.js?v=shared-pcm" defer></script><script src="/bar-changes.js?v=calibration-diagnostics" defer></script><link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script></head><body><main><section id="chordChanges" aria-label="Change After a Bar">
+  <div class="changeshead"><button id="changesBack">‹ Back</button><strong>Change After a Bar</strong><span id="changesTime" role="timer">Ready</span><span id="changesCount">0 matches</span></div>
+  <div class="changesbody">
+    <button id="barActiveCancel" hidden type="button">Cancel</button>
+    <div id="changesPreviews" class="changespreviews">
+      <div class="changesplay">
+        <strong id="changesTarget">Play C</strong><div id="changesDiagram" class="changesdiagram"></div>
+        <div id="changesFirstShapes" class="changesnav"><button id="changesFirstPrev" aria-label="Previous first chord shape">‹</button><span id="changesFirstShape"></span><button id="changesFirstNext" aria-label="Next first chord shape">›</button></div>
+        <span id="changesNext" hidden></span>
+      </div>
+      <div id="changesSecondPreview" class="changesplay">
+        <strong id="changesSecondTarget">G</strong><div id="changesSecondDiagram" class="changesdiagram"></div>
+        <div class="changesnav"><button id="changesSecondPrev" aria-label="Previous second chord shape">‹</button><span id="changesSecondShape"></span><button id="changesSecondNext" aria-label="Next second chord shape">›</button></div>
+      </div>
+    </div>
+    <div class="changessetup">
+      <div class="bar-settings-group bar-chord-settings">
+      <div class="changespair">
+        <fieldset class="chordchoice"><legend>First chord · <span id="changesFirstName">C</span></legend><div><label>Root<select id="changesFirst" aria-label="First chord root"></select></label><label>Type<select id="changesFirstType" aria-label="First chord type"></select></label></div></fieldset>
+        <fieldset class="chordchoice"><legend>Second chord · <span id="changesSecondName">G</span></legend><div><label>Root<select id="changesSecond" aria-label="Second chord root"></select></label><label>Type<select id="changesSecondType" aria-label="Second chord type"></select></label></div></fieldset>
+      </div>
+<label class="bar-recent">Recent pair<select id="changesRecent"><option value="">Recent chord pairs…</option></select></label>
+      </div>
+      <div class="bar-settings-group bar-rhythm-settings">      <div class="changespair bar-timing-settings"><div class="bar-tempo-control"><span id="barTempoLabel">Tempo (BPM)</span><div class="bar-tempo-stepper"><input id="barTempo" type="number" min="20" max="180" step="1" value="60" readonly aria-labelledby="barTempoLabel"><div class="bar-tempo-arrows"><button id="barTempoUp" type="button" aria-label="Increase tempo">▴</button><button id="barTempoDown" type="button" aria-label="Decrease tempo">▾</button></div></div></div><div class="bar-tempo-control"><span id="barCountLabel">Changes</span><div class="bar-tempo-stepper"><input id="barCount" type="number" min="1" max="128" step="1" value="8" readonly aria-labelledby="barCountLabel"><div class="bar-tempo-arrows"><button id="barCountUp" type="button" aria-label="Increase changes count">▴</button><button id="barCountDown" type="button" aria-label="Decrease changes count">▾</button></div></div></div><label>Time signature<select id="barMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>9/8</option><option>12/8</option></select></label></div></div>
+      <div class="bar-settings-group bar-audio-settings">      <div class="changespair"><label>Microphone<select id="changesDevice"><option>default</option></select></label><label>Metronome<select id="barMetronome"><option value="off" selected>Off · visual beats</option><option value="on">On · headphones</option></select></label></div>
+</div>
+      <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="changesHistory">Results</button></div>
+      <div id="changesPairScores" role="status"></div>
+      <div id="changesMessage" role="status">Change on beat 1. Hold the shown chord clearly. Four beats per bar.</div>
+    </div>
+  </div>
+  <div class="bar-beat-strip"><div id="barBeats" aria-label="Beats in the bar"></div><div id="barTimingFeedback" role="status" aria-live="polite" hidden><strong id="barTimingGuide">Strum on each beat</strong><span id="barTimingOffset"></span></div></div>
+</section>
+<dialog id="changesCountIn" aria-label="One-bar count-in">
+  <span class="changes-count-caption">Get ready</span>
+  <strong id="changesCountInNumber" role="timer" aria-live="assertive">4</strong>
+  <button id="changesCountInCancel">Cancel</button>
+</dialog>
+<dialog id="changesRoundResult" aria-labelledby="changesRoundTitle">
+  <div class="changes-round-head"><span id="changesRoundIcon" aria-hidden="true">✓</span><h2 id="changesRoundTitle">Round complete</h2><button id="changesRoundClose">Close</button></div>
+  <p id="changesRoundPair"></p>
+  <div class="changes-round-score"><strong id="changesRoundScore">0</strong><span>Chord changes</span></div>
+  <div class="changes-round-comparisons"><div><span>Last round<strong id="changesRoundLast">—</strong></span><b id="changesRoundDifference"></b></div><div><span>Personal best<small id="changesRoundPreviousBest"></small></span><b id="changesRoundBest">—</b></div></div>
+  <p id="barResultMatches"></p><div class="bar-strum-result"><strong id="barStrumScore">0%</strong><span>Strum timing</span><small id="barStrumDetail"></small><small id="barTimingSummary"></small></div><p id="changesRoundSave" role="status"></p>
+  <div class="changes-round-footer"><button id="changesRoundHistory">Results history</button><span></span><button id="changesRoundAgain">Try again</button></div>
+</dialog>
+<dialog id="changesResults"><div class="changesresulthead"><h2>Change After a Bar · Results</h2><button id="changesCloseResults">Close</button></div><div id="changesResultsList"></div></dialog>
+
+</main></body></html>

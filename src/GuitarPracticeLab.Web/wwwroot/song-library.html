@@ -4,24 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Songs · Guitar Practice Lab</title>
-<link rel="stylesheet" href="song-library.css?v=five-tool-tabs">
-<script src="chord-shapes.js?v=alternate-tuning" defer></script>
+<link rel="stylesheet" href="song-library.css?v=song-tools-icons">
+<script src="chord-shapes.js?v=minor-eleventh" defer></script>
 <script src="chord-diagram.js" defer></script>
-<script src="chord-viewer.js?v=chord-display" defer></script>
+<script src="chord-viewer.js?v=auto-pdf-pick" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/playback-wake-lock.js" defer></script>
-<script src="song-library.js?v=steady-tap-timing" defer></script>
-<script src="/pi-microphone.js?v=wave" defer></script>
-<script src="/song-recording.js?v=wave" defer></script>
-<script src="/song-chord-match.js?v=fullscreen-stage" defer></script>
+<script src="rhythm-points.js?v=bar-boundaries" defer></script>
+<script src="clean-chord-bars.js?v=1" defer></script>
+<script src="song-library.js?v=song-tools-icons" defer></script>
+<script src="/pi-microphone.js?v=chord-age" defer></script>
+<script src="/song-recording.js?v=count-in-beeps" defer></script>
+<script src="/chord-change-timing.js?v=1" defer></script>
+<script src="/timing-adjustment.js?v=count-in" defer></script>
+<script src="/song-chord-match.js?v=song-tools-icons" defer></script>
+<script src="/song-timeline-editor.js?v=full-section-preview" defer></script>
+<script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/song-timing-calibration.js?v=bar-calibration-scope" defer></script>
 <script src="/touch-keyboard.js?v=explicit-tap" defer></script>
-</head>
+<link rel="stylesheet" href="/auto-pdf-follow.css?v=tight-chord-highlights"><script src="/pdf-chord-alignment.js?v=preserve-sync-marks" defer></script><script src="/auto-pdf-follow.js?v=tight-chord-highlights" defer></script><script src="/import-song-setup.js" defer></script></head>
 <body>
 <header class="top">
   <a href="/practice.html" class="button">‹ Back</a>
   <strong>Songs</strong>
-  <button id="libraryButton">Library</button>
-  <button id="toolsButton">Tools</button>
+  <button id="libraryButton" class="song-action-icon" aria-label="Library" title="Library" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l4-1 3 15-4 1z"/></svg></button>
+  <button id="toolsButton" class="song-action-icon" aria-label="Tools" title="Tools" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></button>
+  <button id="notesButton" class="song-action-icon" aria-label="Notes" title="Notes" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H5v18h14v-9M9 8h3M9 12h2M9 16h4M14 9l6-6 2 2-6 6-3 1z"/></svg></button>
+  <button id="chordMatchButton" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
   <h1 id="songTitle" dir="auto">Choose a song</h1>
   <div id="takeRecordingBanner" hidden><span id="takeRecordingStatus" role="status"></span><button id="stopTake" class="danger">Stop</button></div>
   <button id="stopRecordFollow" class="danger" hidden>Stop recording</button>
@@ -33,13 +41,9 @@
     <div id="readerPageControls" class="pagebar">
       <button id="previous" aria-label="Previous page" disabled>‹</button>
       <button id="next" aria-label="Next page" disabled>›</button>
-      <label id="simpleVersionControl" hidden><input id="simpleVersion" type="checkbox" role="switch"> Simple version</label>
       <div id="chordStrip" hidden aria-label="Previous, current and upcoming chords">
         <span id="playingChord" hidden></span>
       </div>
-      <span id="pageNumber">No PDF selected</span>
-      <button id="zoomOut" aria-label="Zoom out" disabled>−</button>
-      <button id="zoomIn" aria-label="Zoom in" disabled>+</button>
     </div>
     <div id="readerStage">
       <section id="fullscreenChords" hidden aria-label="Play along chords">
@@ -49,7 +53,7 @@
         <div class="chord-card later"><small>Upcoming</small><strong id="stageLater">—</strong></div>
       </section>
       <section id="stageBeats" hidden aria-label="Chord beats and bars">
-        <div class="beat-heading"><span id="stageBeatCaption"></span><div><button id="stageSyncBar" title="Tap on beat 1">Bar starts now</button><button id="stageSetRhythm">Set rhythm</button></div></div>
+        <div class="beat-heading"><label id="simpleVersionControl" hidden><input id="simpleVersion" type="checkbox" role="switch"> Simple</label><span id="stageBeatCaption"></span><span id="cleanChordMatchStatus" hidden>Chord match on</span><span id="chordTimingFeedback" hidden role="status"></span><button id="stageTrack" disabled aria-label="Switch original and backing track">Original</button><div id="rhythmButtons" role="group" aria-label="Rhythm controls"><button id="stageSyncBar" title="Tap on beat 1">Bar starts now</button><button id="addRhythmPoint" title="Mark a new bar alignment on beat 1">+ #</button><button id="stageSetRhythm">Set rhythm</button></div></div>
         <div id="stageBeatGraphic"></div>
       </section>
     <div id="pdfViewport" tabindex="0" aria-label="Scroll chord sheet">
@@ -57,17 +61,15 @@
       <div id="pdfSurface"><img id="pdfImage" alt="Selected chord sheet page" hidden><div id="chordTargets"></div></div>
       <span id="pageLoading" hidden>Loading page…</span>
     </div>
-      <div id="stageTransport" hidden>
-        <button id="stagePlay" aria-label="Play or pause">Play</button>
-        <span id="stageClock">0:00 / 0:00</span>
-        <input id="stageSeek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Fullscreen song position">
-        <span id="stageScore">Chord match off</span>
-      </div>
+
     </div>
     <div id="readerControls">
       <div class="cuebar">
         <button id="readerFollowDown" class="follow-down" aria-label="Scroll PDF down" hidden>↓</button>
-        <button id="follow" aria-pressed="false" disabled>Follow off</button>
+        <button id="follow" aria-pressed="false" disabled>Follow off</button><label class="auto-pdf-check" title="Use PDF chord sync instead of recorded follow"><input id="autoPdfToggle" type="checkbox" disabled> Auto PDF</label><button id="autoPdfFix" hidden>Match PDF</button>
+        <span id="pageNumber">No PDF selected</span>
+        <button id="zoomOut" aria-label="Zoom out" disabled>−</button>
+        <button id="zoomIn" aria-label="Zoom in" disabled>+</button>
         <button id="markCue" disabled>Mark here</button>
         <button id="watchLesson" hidden disabled>Watch lesson ↗</button>
         <button id="chordListButton" disabled>Chords</button>
@@ -80,7 +82,9 @@
         <span id="readerClock">0:00 / 0:00</span>
         <button id="readerLoop" aria-pressed="false" disabled>Loop off</button>
         <button id="readerTrack" disabled>Original</button>
-        <button id="readerTools">Tools</button>
+        <button id="readerTools" class="song-action-icon" aria-label="Tools" title="Tools" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></button>
+        <button id="readerNotes" class="song-action-icon" aria-label="Notes" title="Notes" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H5v18h14v-9M9 8h3M9 12h2M9 16h4M14 9l6-6 2 2-6 6-3 1z"/></svg></button>
+        <button id="readerChordMatch" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
       </div>
       <div class="volumecontrols reader-volume" aria-label="Song volume">
         <button id="readerMute" aria-label="Mute song" aria-pressed="false">Mute</button>
@@ -88,7 +92,19 @@
         <output id="readerVolumeValue" for="readerVolume">100%</output>
       </div>
     </div>
+    <div id="readerBottom" hidden>
+      <div id="stageTransport" hidden>
+        <button id="stageBack" class="clean-transport-only" aria-label="Back 5 seconds" disabled>−5s</button>
+        <button id="stagePlay" aria-label="Play or pause">Play</button>
+        <button id="stageForward" class="clean-transport-only" aria-label="Forward 5 seconds" disabled>+5s</button>
+        <span id="stageClock">0:00 / 0:00</span>
+        <button id="stageStart" aria-label="Restart fullscreen song" title="Go to start">|&lt;</button>
+        <input id="stageSeek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Fullscreen song position">
+        <div id="stageVolumeControls" class="clean-transport-only"><button id="stageMute" aria-label="Mute song" aria-pressed="false">🔊</button><input id="stageVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Clean view song volume"><output id="stageVolumeValue" for="stageVolume" hidden>100%</output></div>
+        <span id="stageScore">Chord match off</span>
+      </div>
     <button id="readerControlsToggle" type="button" aria-expanded="false" aria-controls="readerPageControls readerControls" hidden>▴ Controls</button>
+    </div>
   </section>
   <section class="companion" aria-label="Play along controls">
     <button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button>
@@ -117,6 +133,7 @@
     <div class="sectioncard"><button id="followDown" class="follow-down" aria-label="Scroll PDF down" hidden>↓</button><span class="eyebrow">CURRENT SECTION</span><strong id="currentSection">No cue yet</strong><small id="nextSection">Move the PDF to a section, then tap Mark here.</small></div>
   </section>
 </main>
+<div id="autoPdfActions"><button id="autoPdfResume" hidden>Resume Auto PDF</button><button id="cancelPdfCorrection" hidden>Cancel correction</button></div>
 <footer id="status" role="status">Loading library…</footer>
 <audio id="audio" preload="metadata"></audio>
 <input id="audioFile" type="file" accept=".mp3,audio/mpeg" multiple hidden>
@@ -129,40 +146,54 @@
     <button id="toolsTabAudio" role="tab" aria-selected="false" aria-controls="toolsAudio" tabindex="-1">Audio</button>
     <button id="toolsTabPlayback" role="tab" aria-selected="false" aria-controls="toolsPlayback" tabindex="-1">Playback</button>
     <button id="toolsTabAnalyze" role="tab" aria-selected="false" aria-controls="toolsAnalyze" tabindex="-1">Analyze</button>
-    <button id="toolsTabPractice" role="tab" aria-selected="false" aria-controls="toolsPractice" tabindex="-1">Practice</button>
   </div>
   <div class="dialogbody stack" id="toolsFiles" role="tabpanel" aria-labelledby="toolsTabFiles">
     <div class="toolactions"><button id="importButton">Import PDF</button><button id="replacePdfButton" disabled>Replace PDF</button></div>
-    <div class="toolactions"><button id="notesButton" disabled>Song notes</button><button id="deleteSongButton" class="danger" disabled>Delete song</button></div>
+    <div class="toolactions"><button id="deleteSongButton" class="danger" disabled>Delete song</button></div>
   </div>
   <div class="dialogbody stack" id="toolsAudio" role="tabpanel" aria-labelledby="toolsTabAudio" hidden>
+    <div class="toolactions"><button id="recordReviewButton" disabled>Record &amp; Review</button><button id="timingCalibrationButton" disabled>Microphone timing</button></div>
     <div class="toolactions"><button id="audioButton" disabled>Add MP3</button><button id="addBacking" disabled>Add backing MP3</button></div>
     <div class="toolactions"><button id="originalTrack" aria-pressed="true" disabled>Original</button><button id="backingTrack" aria-pressed="false" disabled>Backing</button></div>
     <p id="backingHint" class="hint"></p>
+    <div class="volumecontrols tools-volume"><button id="toolsMute">Mute</button><input id="toolsVolume" type="range" min="0" max="100" step="1" value="100" aria-label="Song volume in tools"><output id="toolsVolumeValue">100%</output></div>
   </div>
   <div class="dialogbody stack" id="toolsPlayback" role="tabpanel" aria-labelledby="toolsTabPlayback" hidden>
-    <label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label>
-    <div class="toolactions"><button id="setA" disabled>Set A here</button><button id="setB" disabled>Set B here</button><button id="clearLoop" disabled>Clear A/B</button></div>
+    <div class="playback-options"><label class="count-in-setting"><input id="cleanSongLayout" type="checkbox" checked> Clean song screen</label>
+    <label class="count-in-setting"><input id="songCountInEnabled" type="checkbox" checked> 5-second count-in before playback</label></div>
+    <label class="auto-pdf-mode">PDF follow <select id="pdfFollowMode" disabled><option value="manual">Manual · recorded follow</option><option value="auto">Auto PDF · aligned chords</option></select></label><div class="playback-adjustments"><label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label><button id="toolsBack" disabled>−5s</button><button id="toolsForward" disabled>+5s</button></div>
+    <div class="toolactions"><button id="setA" disabled>Set A here</button><button id="setB" disabled>Set B here</button><button id="clearLoop" disabled>Clear A/B</button><button id="toolsLoopToggle" aria-pressed="false" disabled>Loop off</button></div>
     <p id="toolsLoopTimes" class="hint">A — · B —</p>
     <p class="hint">Use −5s / +5s or the song position slider to find a passage. Set A at its start, B at its end, then turn Loop on.</p>
   </div>
-  <div class="dialogbody stack" id="toolsPractice" role="tabpanel" aria-labelledby="toolsTabPractice" hidden>
-    <div class="toolactions"><button id="recordReviewButton" disabled>Record &amp; Review</button><button id="chordMatchButton" aria-pressed="false" disabled>Chord match</button></div>
-  </div>
+
   <div class="dialogbody stack" id="toolsAnalyze" role="tabpanel" aria-labelledby="toolsTabAnalyze" hidden>
-    <div class="toolactions"><button id="analyzeChordsButton" disabled>Analyze chords</button><button id="rhythmButton" disabled>Rhythm</button></div>
+    <div class="toolactions"><button id="syncPdfButton" disabled>Sync PDF</button><button id="analyzeChordsButton" disabled>Analyze chords</button><button id="editChordTimeline" disabled>Edit chord timeline</button><button id="rhythmButton" disabled>Rhythm</button></div>
     <p id="rhythmSummary" class="hint"></p>
   </div>
 </dialog>
 
 <dialog id="chordMatchDialog" aria-labelledby="chordMatchTitle">
   <div class="dialoghead"><h2 id="chordMatchTitle">Chord match</h2><button data-close="chordMatchDialog">Close</button></div>
-  <div class="dialogbody stack">
-    <p class="hint">Use headphones so the mic hears your guitar. Match the chord on screen in the recording’s key. Each chord section counts once. Play from start to finish without seeking to save a personal best.</p>
-    <label>Microphone <select id="chordMatchDevice"></select></label>
-    <p id="chordMatchLast"></p><p id="chordMatchBest"></p><p id="chordMatchResult" role="status"></p>
+  <div class="dialogbody match-body">
+    <section id="chordMatchSetup" class="match-setup">
+      <p class="hint">Use headphones so the mic hears your guitar. Play from start to finish for a personal best. Chords and change timing are scored separately.</p>
+      <div class="match-mic-row"><label>Microphone <select id="chordMatchDevice"></select></label><button id="matchTimingCalibration">Microphone timing</button></div>
+      <div class="match-history"><div><p id="chordMatchLast"></p><p id="chordMatchBest"></p></div><div><p id="chordTimingLast"></p><p id="chordTimingBest"></p></div></div>
+      <p class="hint">Timing within ±150 ms earns full credit. Missed changes score zero. Timing is estimated from your mic and the analyzed track.</p>
+    </section>
+    <section id="matchResultOverview" hidden aria-label="Practice results">
+      <p id="matchResultSong" dir="auto"></p>
+      <div class="match-score-grid">
+        <article class="match-score-card"><h3>Chord accuracy</h3><div id="matchAccuracyRing" class="match-score-ring"><strong id="matchAccuracyPercent">—</strong></div><p id="matchAccuracyDetail"></p><span id="matchAccuracyBest" class="match-best-badge"></span></article>
+        <article class="match-score-card timing"><h3>Change timing</h3><div id="matchTimingRing" class="match-score-ring"><strong id="matchTimingPercent">—</strong></div><p id="matchTimingDetail"></p><span id="matchTimingRecord" class="match-best-badge"></span></article>
+      </div>
+      <div class="match-timing-summary"><span id="matchAverageOffset"></span><span id="matchMissedChanges"></span></div>
+      <p id="matchResultNotice" role="status"></p>
+    </section>
+    <p id="chordMatchResult" role="status"></p>
   </div>
-  <div class="dialogfoot"><button id="startChordMatch" class="primary" disabled>Start from beginning</button></div>
+  <div class="dialogfoot"><button id="matchSetupButton" hidden>Settings</button><button id="startChordMatch" class="primary" disabled>Start from beginning</button></div>
 </dialog>
 <dialog id="analyzeChordsDialog" aria-labelledby="analyzeChordsTitle">
   <div class="dialoghead"><h2 id="analyzeChordsTitle">Analyze chords</h2><button data-close="analyzeChordsDialog">Close</button></div>
@@ -202,7 +233,38 @@
       <p id="rhythmStatus" class="hint" role="status"></p>
     </form>
   </div>
-  <div class="dialogfoot"><button id="saveRhythm" class="primary" type="submit" form="rhythmForm">Save rhythm</button></div>
+  <div class="dialogfoot"><button id="rhythmPointsButton">Rhythm points</button><button id="saveRhythm" class="primary" type="submit" form="rhythmForm">Save rhythm</button></div>
+</dialog>
+
+<dialog id="rhythmPointsDialog" aria-labelledby="rhythmPointsTitle">
+  <div class="dialoghead"><h2 id="rhythmPointsTitle">Rhythm points</h2><button data-close="rhythmPointsDialog">Close</button></div>
+  <div class="dialogbody stack"><p class="hint">Tap + # on beat 1 during playback. Each point starts its own bar alignment. Edit its tempo if needed. Independent of Record Follow.</p><div id="rhythmPointsList"></div></div>
+  <div class="dialogfoot"><button id="pointPlay">Play / Pause</button><span id="pointClock"></span><button id="markRhythmPoint">+ # Mark beat 1 now</button></div>
+</dialog>
+
+<dialog id="timelineEditorDialog" aria-labelledby="timelineEditorTitle">
+  <div class="dialoghead"><h2 id="timelineEditorTitle">Edit chord timeline</h2><button id="closeTimelineEditor">Done</button></div>
+  <div class="dialogbody stack">
+    <p class="hint" id="timelineEditorStatus">Listen, then move a boundary or correct a chord.</p>
+    <div class="timeline-section"><label for="timelineSection">Change</label><button id="timelinePrevious" aria-label="Previous chord section">‹ Prev</button><select id="timelineSection" aria-label="Chord section"></select><button id="timelineNext" aria-label="Next chord section">Next ›</button></div>
+    <svg id="timelineEditorGraphic" viewBox="0 0 740 112" role="img" aria-label="Chord waveform and editable boundaries"></svg>
+    <input id="timelineEditorSeek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Editor song position">
+    <div class="timeline-edit-row"><label>Chord <select id="timelineRoot" aria-label="Chord root" hidden tabindex="-1" aria-hidden="true"></select><button id="timelineRootButton" type="button" aria-label="Choose chord root" aria-haspopup="dialog">G ▾</button><select id="timelineQuality" aria-label="Chord type"></select></label><span class="grow"></span><span>Starts at <output id="timelineStart"></output><small id="timelineDurationInfo"></small></span></div>
+    <div class="timeline-edit-row"><button id="timelineEarlier">← Earlier 0.1s</button><button id="timelineLater">Later 0.1s →</button><span class="grow"></span><button id="hearTimelineChange">▶ Hear section</button></div>
+  </div>
+  <div class="dialogfoot"><button id="cancelTimelineEditor">Cancel</button><button id="undoTimelineChange">Undo</button><button id="addTimelineChange">+ At playhead</button><button id="splitTimelineBar" title="Split the selected chord at the next bar boundary">Split at bar</button><button id="deleteTimelineChange">Delete</button><span class="grow"></span></div>
+</dialog>
+<dialog id="timelineRootPicker" aria-labelledby="timelineRootTitle"><div class="dialoghead"><h2 id="timelineRootTitle">Choose chord root</h2><button data-close="timelineRootPicker">Cancel</button></div><div id="timelineRootGrid" aria-label="Chord roots"></div></dialog>
+<dialog id="timingCalibrationDialog" aria-labelledby="timingCalibrationTitle">
+  <div class="dialoghead"><h2 id="timingCalibrationTitle">Microphone timing</h2><button id="closeTimingCalibration">Close</button></div>
+  <div class="dialogbody stack">
+    <p class="hint">Wear headphones. Wait for 4 get-ready beats. Then lightly mute the strings and strum down once with each STRUM beep.</p>
+    <div class="calibration-options"><label>Microphone <select id="calibrationDevice"></select></label><label>Pulse speed <select id="calibrationTempo"><option value="40">Slow · 40 BPM</option><option value="60">60 BPM</option></select></label></div>
+    <div class="calibration-result"><div id="calibrationPulse" aria-label="Calibration pulse">♪</div><div><span id="calibrationStatus" role="status">Ready to measure.</span><strong id="calibrationSuggestion">—</strong><div id="calibrationBeats"></div></div></div>
+    <div class="calibration-adjust"><span>Fine adjustment</span><span class="grow"></span><button id="calibrationMinus">−10 ms</button><output id="calibrationOffset">0 ms</output><button id="calibrationPlus">+10 ms</button></div>
+    <p class="hint" id="calibrationHelp">Strum together with the beep—not after hearing it. The suggestion includes your response timing.</p>
+  </div>
+  <div class="dialogfoot"><button id="startTimingCalibration">Start calibration</button><button id="previewTimingCalibration">♪ Hear pulse</button><button id="resetTimingCalibration">Reset</button><span class="grow"></span><button id="applyTimingCalibration" class="primary">Apply correction</button></div>
 </dialog>
 
 <dialog id="replacePdfDialog">
@@ -230,6 +292,8 @@
   <div class="dialogbody stack">
     <label>Chord sheets <input id="pdfFiles" type="file" accept=".pdf,application/pdf" multiple></label>
     <label>Original MP3 + matching backing (optional, for one PDF) <input id="importAudio" type="file" accept=".mp3,audio/mpeg" multiple></label>
+    <div class="import-analysis-options"><label>Capo <select id="importCapo"><option value="0">No capo</option></select></label><label class="count-in-setting"><input id="importAnalyze" type="checkbox" checked> Analyze chords &amp; rhythm</label></div>
+    <p class="hint">Without a selected MP3, matching names are found in the Pi recordings folder. An unclear time signature defaults to 4/4. Existing manual corrections and saved rhythm are kept.</p>
     <p class="hint">On the Pi, a matching -backing.mp3 in the recordings folder is attached automatically when you choose -original.mp3. From a Mac, select both MP3 files together.</p>
     <p class="hint">For Simple version, put the matching -simple.pdf in the Pi recordings folder and import the standard PDF.</p>
     <p class="hint">You can import several PDFs together and attach each recording later. PDFs: up to 20 MB / 100 pages. MP3: up to 100 MB / two hours.</p>
@@ -255,15 +319,20 @@
   <div class="dialogbody stack"><p id="markSummary"></p><label>Section <select id="cuePart"><option>Verse</option><option>Chorus</option><option>Bridge</option><option>Intro</option><option>Outro</option><option value="custom">Custom…</option></select></label><label id="customCueLabel" hidden>Custom section name <input id="cueName" maxlength="80" placeholder="Verse 2, Solo…"></label><p class="hint">Pause the song and scroll the PDF to the start of the section before marking it. Follow will keep that page position at your chosen zoom.</p></div>
   <div class="dialogfoot"><button id="saveCue" class="primary">Save cue</button></div>
 </dialog>
-<dialog id="notesDialog">
-  <div class="dialoghead"><h2>Song notes</h2><button data-close="notesDialog">Cancel</button></div>
-  <div class="dialogbody stack"><label>Song title <input id="titleInput" maxlength="160"></label><label>Lesson link <input id="songLessonUrl" type="url" maxlength="2048" placeholder="https://…"></label><label>Capo, tuning and practice notes <textarea id="notesInput" maxlength="10000" rows="5" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></label><p class="hint">Notes are reminders, not automatic tuning or capo detection.</p></div>
-  <div class="dialogfoot"><button id="saveNotes" class="primary">Save notes</button></div>
+<dialog id="notesDialog" aria-labelledby="songNotesTitle">
+  <div class="dialoghead"><h2 id="songNotesTitle">Song notes</h2></div>
+  <div class="notes-tabs" role="tablist" aria-label="Song notes sections"><button id="notesTabNotes" role="tab" aria-selected="true" aria-controls="notesPanelNotes">Notes</button><button id="notesTabImages" role="tab" aria-selected="false" aria-controls="notesPanelImages">Images</button></div>
+  <div id="notesPanelNotes" class="notes-panel" role="tabpanel" aria-labelledby="notesTabNotes"><div class="notes-metadata"><label>Song title <input id="titleInput" maxlength="160" readonly inputmode="none" tabindex="-1"></label><div class="notes-lesson"><button id="notesWatchLesson" type="button">Watch lesson ↗</button><small id="notesLessonEmpty" hidden>No lesson linked</small></div></div><div class="notes-text"><div class="notes-edit-head"><label for="notesInput">Practice notes</label><button id="editNotes" type="button">Edit</button></div><textarea id="notesInput" readonly inputmode="none" tabindex="-1" maxlength="10000" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></div></div>
+
+  <div id="notesPanelImages" class="notes-panel" role="tabpanel" aria-labelledby="notesTabImages" hidden><div class="notes-image-stage"><img id="songNoteImage" alt="Song reference image" hidden><p id="songNoteImageEmpty">Add reference images from Song Studio on your Mac.</p></div><div class="notes-image-nav"><button id="noteImagePrev" aria-label="Previous image">‹ Previous</button><span id="noteImageCount" role="status"></span><button id="noteImageNext" aria-label="Next image">Next ›</button></div></div>
+  <div class="dialogfoot"><button id="saveNotes" class="primary" hidden>Save notes</button><span class="grow"></span><button id="closeNotes">Close</button></div>
 </dialog>
+<dialog id="notesUnsavedDialog" aria-labelledby="notesUnsavedTitle"><div class="dialoghead"><h2 id="notesUnsavedTitle">Save your changes?</h2></div><div class="dialogbody"><p>The song title or notes have changed.</p></div><div class="dialogfoot"><button id="keepEditingNotes">Keep editing</button><button id="discardNotes">Discard</button><button id="saveAndCloseNotes" class="primary">Save &amp; close</button></div></dialog>
 <dialog id="chordsDialog">
   <div class="dialoghead"><h2>Song chords</h2><button data-close="chordsDialog">Close</button></div>
   <div class="dialogbody stack">
     <p id="chordScanStatus" class="hint">Choose a song first.</p>
+    <p class="hint">Choose a chord to see its shape and alternate options.</p>
     <div id="songChordList" class="chordlist"></div>
     <form id="chordLookupForm"><label>Look up a chord <input id="chordLookup" maxlength="18" placeholder="Am, F#m7, C/G…" autocomplete="off"></label><button type="submit">Show shape</button></form>
   </div><div class="dialogfoot"><span class="hint">Tap a chord on the PDF or choose it here.</span></div>
@@ -275,11 +344,47 @@
     <div class="chordsettings stack">
       <label>Guitar tuning <select id="chordTuning"><option value="unknown">Choose tuning…</option><option value="standard">Standard · E A D G B E</option><option value="other">Other tuning</option></select></label>
       <label>Capo <select id="chordCapo"></select></label>
+      <button id="chooseAlternateChord">Choose alternate chord</button>
+      <button id="restoreOriginalChord" disabled>Restore original</button>
       <p id="chordExplanation" class="hint"></p>
-      <p class="hint">Shapes follow the chord names as written. Frets are relative to the capo. Song notes do not set tuning automatically.</p>
     </div>
   </div>
   <div class="dialogfoot"><button id="previousChordShape">‹ Previous</button><span id="chordShapeCount"></span><button id="nextChordShape">Next ›</button></div>
 </dialog>
-</body>
+<dialog id="alternateChordDialog" aria-labelledby="alternateTitle">
+  <div class="dialoghead"><h2 id="alternateTitle">Choose alternate chord</h2><button data-close="alternateChordDialog">Cancel</button></div>
+  <div class="dialogbody chordbody">
+    <div id="alternatePreview"></div>
+    <div class="chordsettings stack"><strong id="alternateOriginalName"></strong>
+      <label>Root <select id="alternateRoot"></select></label>
+      <label>Type <select id="alternateType"></select></label>
+      <strong id="alternateChoiceName"></strong>
+    </div>
+  </div>
+  <div class="dialogfoot"><span class="hint">Used for playback and Chord match.</span><button id="applyAlternateChord" class="primary">Use this chord</button></div>
+</dialog>
+<dialog id="songCountIn" aria-label="Song starts in five seconds">
+  <span class="count-in-caption">Get ready</span>
+  <strong id="songCountInNumber" role="timer" aria-live="assertive">5</strong>
+  <button id="cancelSongCountIn">Cancel</button>
+</dialog>
+<dialog id="pdfSyncDialog" aria-labelledby="pdfSyncTitle">
+ <div class="dialoghead"><h2 id="pdfSyncTitle">Sync PDF</h2><span class="pdf-sync-autosave">Corrections save as you tap</span><button id="pdfSyncClose">Done</button></div>
+ <div class="dialogbody pdf-sync-editor-grid">
+  <aside class="pdf-sync-editor-panel">
+   <strong id="pdfSyncSection"></strong><span id="pdfSyncOrdinal"></span><span id="pdfSyncConfidence"></span><span id="pdfSyncPrintedNext"></span>
+   <div class="pdf-sync-navigation"><button id="pdfSyncPrevious" disabled>‹ Previous</button><button id="pdfSyncNext" disabled>Next ›</button></div>
+   <div class="pdf-sync-navigation"><button id="pdfSyncHear" disabled>♪ Hear bar</button><button id="pdfSyncSkip" disabled>Skip detection</button></div>
+   <p id="pdfSyncPickHint" role="status">Tap the matching chord on the PDF.</p>
+   <div class="pdf-sync-navigation"><button id="pdfSyncCorrect" disabled>Show spot</button><button id="pdfSyncUndo" disabled>Undo</button><button id="pdfSyncResetSection" disabled title="Clear this section correction">Clear</button></div>
+   <p id="pdfSyncStatus" role="status">Reading PDF chords…</p>
+  </aside>
+  <section class="pdf-sync-sheet" aria-label="PDF sync preview">
+   <div class="pdf-sync-sheet-toolbar"><button id="pdfSyncPagePrevious" aria-label="Previous PDF page">‹</button><span id="pdfSyncPageLabel">PDF</span><button id="pdfSyncPageNext" aria-label="Next PDF page">›</button><button id="pdfSyncNow" aria-label="Select chord at song playhead" title="At song playhead">↦</button><select id="pdfSyncDirection" aria-label="PDF reading order"><option value="auto">Auto order</option><option value="rtl">Right → left</option><option value="ltr">Left → right</option></select><span class="grow"></span><button id="pdfSyncZoomOut" aria-label="Zoom PDF preview out">−</button><button id="pdfSyncZoomFit">Fit</button><button id="pdfSyncZoomIn" aria-label="Zoom PDF preview in">+</button></div>
+   <div class="pdf-sync-transport"><button id="pdfSyncStart" aria-label="Go to song start" title="Go to song start">|‹</button><input id="pdfSyncSeek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Navigate song time in Sync PDF"><span id="pdfSyncTime">0:00 / 0:00</span></div>
+   <div id="pdfSyncViewport" tabindex="0" aria-label="Scroll PDF and tap a matching chord"><div id="pdfSyncPaper"><img id="pdfSyncImage" alt="Chord sheet for choosing a sync position"><div id="pdfSyncTargets"></div></div><p id="pdfSyncPageStatus" role="status"></p></div>
+  </section>
+ </div>
+ <div class="dialogfoot"><button id="pdfSyncResetAll" disabled>Clear all corrections</button><span class="grow"></span><button id="pdfSyncManual">Use Manual Follow</button><button id="enableAutoPdf" disabled>Use Auto PDF</button></div>
+</dialog></body>
 </html>

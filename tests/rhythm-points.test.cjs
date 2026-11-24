@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+require('../src/GuitarPracticeLab.Web/wwwroot/rhythm-points.js');
+const base={bpm:100,meter:'4/4',firstDownbeat:1};
+let rhythm=SongRhythmPoints.put(base,20);rhythm=SongRhythmPoints.put(rhythm,10);
+assert.deepEqual(rhythm.points.map(p=>p.time),[10,20]);
+assert.equal(SongRhythmPoints.at(rhythm,9.99).pointNumber,0);
+assert.equal(SongRhythmPoints.at(rhythm,10).firstDownbeat,10);
+assert.equal(SongRhythmPoints.at(rhythm,19).sectionEnd,20);
+rhythm.points[1].bpm=120;rhythm.points[1].meter='6/8';
+assert.equal(SongRhythmPoints.at(rhythm,20).bpm,120);
+assert.equal(SongRhythmPoints.at(rhythm,20).meter,'6/8');
+assert.equal(SongRhythmPoints.at(rhythm,19.99).bpm,100);
+assert.equal(rhythm.firstDownbeat,1);
+assert.equal(SongRhythmPoints.put(rhythm,20.1).points.length,2);
+assert.equal(SongRhythmPoints.at(rhythm,0).sectionEnd,10);
+assert.equal(SongRhythmPoints.at(rhythm,25).sectionEnd,Infinity);
+console.log('PASS rhythm points sort, switch exactly at their time, preserve the base grid and replace near-duplicate marks');
+
+assert.deepEqual(SongRhythmPoints.barAt({bpm:120,meter:'4/4',firstDownbeat:1},3),{start:3,end:5,duration:2,number:2,pointNumber:0});
+assert.equal(SongRhythmPoints.barAt({bpm:120,meter:'6/8',firstDownbeat:0},.5).end,1);
+assert.equal(SongRhythmPoints.barAt({bpm:120,meter:'4/4',firstDownbeat:0,points:[{time:3,bpm:60,meter:'3/4'}]},2.1).end,3);
+assert.equal(SongRhythmPoints.barAt({bpm:120,meter:'4/4',firstDownbeat:0,points:[{time:3,bpm:60,meter:'3/4'}]},3).end,6);
+assert.equal(SongRhythmPoints.barAt(null,0),null);
+console.log('PASS bar boundaries, compound meter and changing rhythm grids');

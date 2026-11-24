@@ -11,18 +11,21 @@
     const cell = document.createElement('span');
     cell.className = 'beat';
     cell.textContent = String(index % 4 + 1);
-    el('beatGrid').append(cell);
+    if(index%4===0){const bar=document.createElement('div');bar.className='strum-review-bar';const label=document.createElement('small');label.textContent=String(index/4+1);bar.append(label);el('beatGrid').append(bar);}
+    el('beatGrid').lastElementChild.append(cell);
     return cell;
   });
 
+  document.body.classList.toggle('strumming-page',timing);
   el('title').textContent = timing ? 'Strumming Timing' : 'Chord Clean Check';
   el('cleanPanel').hidden = el('chordLabel').hidden = el('tuningLabel').hidden = el('capoLabel').hidden = timing;
   el('timingPanel').hidden = el('tempoLabel').hidden = el('beatModeLabel').hidden = !timing;
   el('instruction').textContent = timing ? 'Follow the visual beat. Use headphones if you enable clicks.' : 'Fret numbers are relative to the capo.';
 
   function controls() {
+    document.body.classList.toggle('strum-active',timing&&Boolean(capture));
     el('start').disabled = !capture && (!available || !el('device').value || (!timing && !targets.length));
-    el('start').textContent = capture ? 'Stop' : 'Start';
+    el('start').textContent = capture ? (timing?'Cancel':'Stop') : 'Start';
     for (const id of ['device', 'chord', 'tuning', 'capo', 'tempo', 'beatMode']) el(id).disabled = Boolean(capture);
     el('previousShape').disabled = el('nextShape').disabled = Boolean(capture) || shapes.length < 2;
   }
@@ -143,27 +146,97 @@
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
 
+  function timingCelebration() {
+    if (context?.state !== 'running' || document.hidden) return;
+    const start = context.currentTime + .03;
+    for (const [notes,delay,duration,volume] of [
+      [[392,523.25,659.25,783.99],0,.16,.045],
+      [[523.25,659.25,783.99,1046.5],.23,.95,.055]
+    ]) for (const note of notes) {
+      const voice=context.createOscillator(),gain=context.createGain(),when=start+delay;
+      voice.type='triangle';voice.frequency.value=note;
+      gain.gain.setValueAtTime(0,when);gain.gain.linearRampToValueAtTime(volume,when+.005);
+      gain.gain.exponentialRampToValueAtTime(.001,when+duration);
+      voice.connect(gain).connect(context.destination);clicks.push(voice);
+      voice.onended=()=>{voice.disconnect();gain.disconnect();};
+      voice.start(when);voice.stop(when+duration+.02);
+    }
+  }
+  function timingResults(counts, extra) {
+    const score=Math.round(counts['on-time']/beats.length*100);
+    const bpm=Number(el('tempo').value),mode=el('beatMode').value,key=bpm+':'+mode;
+    const storage='guitar-strumming-timing-progress';
+    let history={},previous={};
+    try {
+      const stored=JSON.parse(localStorage.getItem(storage)||'{}');
+      if(stored&&typeof stored==='object'&&!Array.isArray(stored))history=stored;
+      const item=history[key];
+      if(item&&Number.isFinite(item.last)&&Number.isFinite(item.best)&&item.last>=0&&item.last<=100&&item.best>=0&&item.best<=100)previous=item;
+    }catch{}
+    const best=Math.max(previous.best??0,score);
+    history[key]={last:score,best,rounds:(previous.rounds||0)+1,counts:{...counts},extra};
+    let saved=true;
+    try{localStorage.setItem(storage,JSON.stringify(history));}catch{saved=false;}
+    const record=saved&&score>0&&(previous.best===undefined||score>previous.best);
+    const tied=saved&&previous.best!==undefined&&score===previous.best;
+    const dialog=el('changesRoundResult');dialog.classList.toggle('new-best',record);
+    el('changesRoundIcon').textContent=record?'★':'✓';
+    el('changesRoundTitle').textContent=record?'New personal best!':tied?'Personal best matched!':'Round complete';
+    el('changesRoundPair').textContent=bpm+' BPM · 32 beats · '+(mode==='audio'?'Headphone clicks':'Visual beat');
+    el('strumScore').textContent=score+'%';
+    for(const [id,name]of [['strumOnTime','on-time'],['strumEarly','early'],['strumLate','late'],['strumMissed','missed']])el(id).textContent=counts[name];
+    el('strumLast').textContent=previous.last===undefined?'—':previous.last+'%';
+    const difference=previous.last===undefined?null:score-previous.last;
+    el('changesRoundDifference').textContent=difference===null?'First round':difference===0?'Same as last':(difference>0?'+':'')+difference+' pts';
+    el('changesRoundDifference').classList.toggle('improved',difference>0);
+    el('changesRoundBest').textContent=saved?best+'%':previous.best===undefined?'—':previous.best+'%';
+    el('changesRoundPreviousBest').textContent=record?(previous.best===undefined?'First personal best':'Previous best: '+previous.best+'%'):tied?'You matched your best':'';
+    const status=el('changesRoundSave');status.classList.toggle('save-error',!saved);
+    status.textContent=(saved?'✓ Saved in this browser.':'Could not save in this browser.')+(extra?' '+extra+' extra strums.':'');
+    status.title=status.textContent+' Records compare the same tempo and metronome mode. Timing is approximate.';
+    dialog.showModal();
+    if(record)timingCelebration();
+  }
+  el('strumResultClose').onclick=el('strumResultReview').onclick=()=>el('changesRoundResult').close();
+  el('changesRoundAgain').onclick=()=>{el('changesRoundResult').close();el('start').click();};
+  function liveFeedback(label,offset){
+    const words={'on-time':'✓ On beat',early:'A little early',late:'A little late',missed:'Missed this beat'};
+    el('strumLiveFeedback').textContent=words[label]||'Strum with the pulse';
+    el('strumLiveFeedback').dataset.result=label;
+    el('strumLiveOffset').textContent=offset==null?'Aim for the next pulse':`Your last strum · ${Math.abs(Math.round(offset*1000))} ms ${offset<0?'early':'late'}`;
+  }
+  function renderTimingReview(hits){
+    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 640 72');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Strum timing: above center is early, below is late');
+    const band=document.createElementNS(ns,'rect');band.setAttribute('x','0');band.setAttribute('y','27');band.setAttribute('width','640');band.setAttribute('height','18');band.setAttribute('fill','#8dd6b514');svg.append(band);
+    const line=document.createElementNS(ns,'path');line.setAttribute('d','M0 36H640');line.setAttribute('stroke','#7798ae');line.setAttribute('stroke-dasharray','4 4');svg.append(line);
+    hits.forEach((offset,i)=>{const dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',8+i*624/31);dot.setAttribute('cy',offset==null?66:36+Math.max(-1,Math.min(1,offset/.25))*28);dot.setAttribute('r',3);dot.setAttribute('fill',offset==null?'none':Math.abs(offset)<=.08?'#91dfb4':'#e8bd75');if(offset==null)dot.setAttribute('stroke','#b88791');const title=document.createElementNS(ns,'title');title.textContent=`Beat ${i+1}: ${offset==null?'missed':Math.round(offset*1000)+' ms'}`;dot.append(title);svg.append(dot);});
+    el('strumTimingTrace').replaceChildren(svg);
+  }
   function showTiming(hits, extra) {
     const counts = {early: 0, late: 0, 'on-time': 0, missed: 0};
     for (const [index, beat] of beats.entries()) {
       const offset = hits[index];
-      const label = offset === null ? 'missed' : offset < -.08 ? 'early' : offset > .08 ? 'late' : 'on-time';
+      const label = offset === null ? 'missed' : GuitarStrumTiming.classify(offset);
       counts[label]++;
       beat.className = 'beat ' + label;
       beat.textContent = offset === null ? 'Missed' : `${offset > 0 ? '+' : ''}${Math.round(offset * 1000)} ms`;
+      beat.title=`Bar ${Math.floor(index/4)+1}, beat ${index%4+1}: ${beat.textContent}`;beat.setAttribute('aria-label',beat.title);
     }
     el('timingResult').textContent = `${counts['on-time']} on beat · ${counts.early} early · ${counts.late} late · ${counts.missed} missed`;
     say(`Approximate timing · negative = early · positive = late${extra ? ' · '+extra+' extra strums' : ''}.`);
+    renderTimingReview(hits);
+    timingResults(counts, extra);
   }
 
   async function strum(controller) {
     const period = 60 / Number(el('tempo').value);
     const hits = Array(32).fill(null);
     const audible = el('beatMode').value === 'audio';
-    let low = 0, guitarBand = 0, broadbandEnergy = 0;
-    let extra = 0, anchor, firstBeat, samples = 0, lowByte = null, energy = 0, envelope = 0, last = -Infinity;
+    const strums = new GuitarStrumTiming.Detector();
+    let extra = 0, anchor, firstBeat;
     beats.forEach((beat, index) => { beat.className = 'beat'; beat.textContent = String(index % 4 + 1); });
     el('timingResult').textContent = 'One strum per beat · 8 bars';
+    el('strumSetupSummary').textContent=el('tempo').value+' BPM · 4/4 · '+(audible?'headphone clicks':'visual beat');el('strumBarPosition').textContent='Get ready';el('strumLiveProgress').firstElementChild.style.width='0%';el('strumLiveFeedback').textContent='Get ready';el('strumLiveFeedback').dataset.result='';el('strumLiveOffset').textContent='Four count-in beats, then strum';
     say('Connecting to the microphone…');
     const response = await fetch('/api/chord-practice/record', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -195,33 +268,26 @@
               shownBeat = index;
               const beat = (index + 4) % 4 + 1;
               pulse.textContent = index < 0 ? `Count-in · ${beat}` : `Bar ${Math.floor(index / 4) + 1} · Beat ${beat}`;
+              el('strumBarPosition').textContent=index<0?'Count-in':`Bar ${Math.floor(index/4)+1} of 8`;
+              el('strumBeatNumber').textContent=beat;
+              el('strumPulseRing').classList.remove('pulse');void el('strumPulseRing').offsetWidth;el('strumPulseRing').classList.add('pulse');
+              [...el('strumBeatDots').children].forEach((dot,i)=>dot.classList.toggle('current',i===beat-1));
+              el('strumLiveProgress').firstElementChild.style.width=Math.max(0,index)/32*100+'%';
+              if(index>=1&&hits[index-1]===null)liveFeedback('missed',null);
+              if(index===0){say('Strum once per beat · follow the pulse.');el('strumLiveFeedback').textContent='Strum with the pulse';el('strumLiveOffset').textContent='One strum per beat';}
+
             }
           }, 40);
         }
-        for (const byte of value) {
-          if (lowByte === null) { lowByte = byte; continue; }
-          const sample = (lowByte | (byte << 8)) << 16 >> 16;
-          lowByte = null;
-          // The audible clicks are above the guitar band. Reject attacks dominated by those frequencies.
-          const input = sample / 32768;
-          low += .18 * (input - low);
-          guitarBand += .18 * (low - guitarBand);
-          energy += guitarBand * guitarBand;
-          broadbandEnergy += input * input;
-          if (++samples % 160) continue;
-          const rms = Math.sqrt(energy / 160);
-          const hasGuitarBand = energy >= broadbandEnergy * .12;
-          energy = broadbandEnergy = 0;
-          const time = anchor + (samples - 80) / 16000;
-          const onset = hasGuitarBand && rms > Math.max(.008, envelope * 2.2);
-          envelope = envelope * .85 + rms * .15;
-          if (time < firstBeat - period * .45 || !onset || time - last < .12) continue;
-          last = time;
+        strums.acceptAfter=firstBeat-anchor-period*.45;
+        for(const attack of strums.process(value)){
+          const time=anchor+attack;
           const beat = Math.round((time - firstBeat) / period);
           if (beat < 0 || beat >= hits.length) continue;
           const offset = time - firstBeat - beat * period;
           if (Math.abs(offset) > period * .45 || hits[beat] !== null) { extra++; continue; }
           hits[beat] = offset;
+          liveFeedback(GuitarStrumTiming.classify(offset),offset);
           beats[beat].className = 'beat current';
           beats[beat].textContent = '✓';
         }
@@ -231,6 +297,7 @@
 
   el('start').onclick = async () => {
     if (capture) { stop(); say('Stopped. Tap Start to try again.'); return; }
+    stop(); // Stop any previous result fanfare before reopening the microphone.
     const controller = new AbortController();
     capture = controller;
     controls();

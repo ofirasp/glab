@@ -1,0 +1,46 @@
+.chordtarget.auto-pdf-highlight{background:#ffd44c88;box-shadow:0 0 0 3px #d18a00,0 0 14px #e8b32e77;border-radius:3px}
+#autoPdfActions{position:fixed;bottom:38px;right:16px;z-index:101;display:flex;gap:8px;pointer-events:none}
+#autoPdfActions button{pointer-events:auto;background:#293e59;color:#fff;border:1px solid #91afd2;box-shadow:0 3px 15px #0005}
+#pdfSyncDialog{width:min(630px,calc(100vw - 20px));max-height:calc(100dvh - 20px)}
+#pdfSyncDialog .dialogbody{gap:10px}
+#pdfSyncSection{font-size:19px}#pdfSyncConfidence{font-size:14px;color:#bbcee7}
+
+#toolsPlayback .auto-pdf-mode{display:flex;align-items:center;gap:10px;font-size:13px}#toolsPlayback .auto-pdf-mode select{height:36px;min-height:36px;flex:1;margin:0}
+#toolsPlayback{gap:8px}#toolsPlayback>.hint{margin:0;font-size:12px}
+
+.import-analysis-options{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.import-analysis-options>label{display:flex;align-items:center;gap:8px;font-size:13px}.import-analysis-options select{height:36px;min-height:36px;margin:0}#importDialog .hint{margin:0;font-size:12px}#importDialog .dialogbody{gap:9px}
+
+#pdfSyncDialog .dialogfoot{gap:8px}#pdfSyncDialog .dialogfoot button{font-size:12px;padding:7px 9px}#pdfSyncDialog .dialogbody{gap:8px}#pdfSyncDialog .hint{font-size:12px;margin:0}
+
+.cuebar .auto-pdf-check{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;white-space:nowrap;font-size:11px;padding:0 3px;color:#c7d9ee}.auto-pdf-check input{width:18px;height:18px;min-height:18px;margin:0;accent-color:#86b7f6}
+/* Touch-first split sync editor: the PDF never disappears while correcting. */
+#pdfSyncDialog[open]{width:calc(100vw - 20px);max-width:1100px;height:calc(100dvh - 20px);max-height:700px;padding:10px;display:grid;grid-template-rows:36px minmax(0,1fr) 40px;gap:8px}
+#pdfSyncDialog .dialoghead{gap:10px}#pdfSyncDialog .dialoghead h2{font-size:19px}#pdfSyncDialog .dialoghead button{min-height:34px}
+.pdf-sync-autosave{margin-left:auto;color:#aac1d9;font-size:11px}
+#pdfSyncDialog .pdf-sync-editor-grid{display:grid;grid-template-columns:205px minmax(0,1fr);padding:0;gap:10px;min-height:0;overflow:hidden}
+.pdf-sync-editor-panel{display:flex;flex-direction:column;gap:7px;background:#122136;border:1px solid #3e536c;border-radius:10px;padding:10px;min-height:0;overflow:auto}
+#pdfSyncSection{font-size:23px;line-height:1.25;white-space:pre-line;color:#ffe1a0}
+#pdfSyncConfidence{font-size:11px;min-height:16px}.pdf-sync-navigation{display:flex;gap:5px}.pdf-sync-navigation button{flex:1;min-width:0}
+#pdfSyncDialog .pdf-sync-editor-panel button{min-height:36px;padding:5px;font-size:12px}
+#pdfSyncDialog #pdfSyncStatus,#pdfSyncPickHint{font-size:11px;line-height:1.35;margin:0;color:#b9cce2}
+#pdfSyncStatus{margin-top:auto!important}
+.pdf-sync-sheet{display:grid;grid-template-rows:34px minmax(0,1fr);min-width:0;min-height:0;border:1px solid #52657e;border-radius:9px;overflow:hidden;background:#b6c0cc}
+.pdf-sync-sheet-toolbar{display:flex;align-items:center;gap:5px;padding:2px 4px;background:#24364d}.pdf-sync-sheet-toolbar button{min-height:28px;padding:1px 9px;font-size:14px}.pdf-sync-sheet-toolbar span{font-size:11px;white-space:nowrap}
+#pdfSyncViewport{overflow:auto;position:relative;min-height:0;touch-action:pan-x pan-y;overscroll-behavior:contain}
+#pdfSyncPaper{position:relative;width:100%;min-height:0}#pdfSyncImage{display:block;width:100%;height:auto;max-width:none}#pdfSyncTargets{position:absolute;inset:0;pointer-events:none}
+#pdfSyncTargets .pdf-sync-hit{position:absolute;min-height:0;min-width:0;padding:0;border:1px solid #609fe366;border-radius:3px;background:#4d91df10;pointer-events:auto;touch-action:pan-x pan-y}
+#pdfSyncTargets .pdf-sync-hit.matching{border-color:#3879ca;background:#4488d330}
+#pdfSyncTargets .pdf-sync-hit.selected{border:2px solid #cb8c00;background:#ffd44c77;box-shadow:0 0 0 2px #ffd44c44}
+#pdfSyncTargets .pdf-sync-hit.saved{border:2px solid #14794e;background:#6be7a377;box-shadow:0 0 0 2px #6be7a333}
+#pdfSyncPageStatus{position:sticky;bottom:0;background:#192a3ee8;color:#eef4ff;margin:0;font-size:12px;padding:3px}#pdfSyncPageStatus:empty{display:none}
+#pdfSyncDialog .dialogfoot{padding-top:0;gap:7px}#pdfSyncDialog .dialogfoot button{min-height:36px;font-size:12px;padding:5px 9px}
+@media(max-width:650px){#pdfSyncDialog .pdf-sync-editor-grid{grid-template-columns:174px minmax(0,1fr)}.pdf-sync-autosave{display:none}#pdfSyncSection{font-size:19px}.pdf-sync-editor-panel{padding:7px;gap:5px}}
+#pdfSyncOrdinal{font-size:12px;color:#a8bfd8;margin-top:-4px}#pdfSyncSection{font-size:27px;line-height:1.1;min-height:30px}#pdfSyncDialog .pdf-sync-editor-panel{gap:7px}#pdfSyncDialog #pdfSyncStatus{font-size:10px}
+
+#pdfSyncTargets .pdf-sync-hit{min-width:0;min-height:0}
+
+#pdfSyncPrintedNext{font-size:11px;color:#e4cc91}#pdfSyncDirection{height:28px;min-height:28px;max-width:126px;margin:0;padding:2px;font-size:11px;background:#293e57;color:#eaf2ff;border:1px solid #536a84;border-radius:5px}
+
+#pdfSyncDialog .pdf-sync-editor-panel{gap:5px;padding:9px}#pdfSyncDialog #pdfSyncStatus{line-height:1.2}#pdfSyncDialog .pdf-sync-editor-panel button{font-size:11px}
+
+.pdf-sync-sheet{grid-template-rows:34px 40px minmax(0,1fr)}.pdf-sync-transport{display:grid;grid-template-columns:42px minmax(0,1fr) 87px;gap:7px;align-items:center;padding:2px 5px;background:#1b2c42;color:#d4e3f4;border-top:1px solid #42566f}.pdf-sync-transport button{min-height:34px;padding:2px;font-size:18px}.pdf-sync-transport input[type=range]{width:100%;min-width:0;height:34px;min-height:34px;margin:0;padding:0;accent-color:#94bdf2;touch-action:none}.pdf-sync-transport span{white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;text-align:right}

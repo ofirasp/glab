@@ -10,10 +10,11 @@ public static class Lessons
     static string Bridge=>Environment.GetEnvironmentVariable("GUITAR_LESSON_BROWSER")??Path.Combine(Lab,"lesson-browser");
     static string FileName=>Path.Combine(Root,"links.json");
     public sealed class Lesson {
-        public Guid Id{get;set;}=Guid.NewGuid();public string Title{get;set;}="";public string Url{get;set;}="";public string Notes{get;set;}="";
+        public Guid Id{get;set;}=Guid.NewGuid();public Guid? SongId{get;set;}public string Title{get;set;}="";public string Url{get;set;}="";public string Notes{get;set;}="";
         public bool Archived{get;set;}public DateTimeOffset Updated{get;set;}=DateTimeOffset.UtcNow;
     }
     public sealed record Edit(string Title,string Url,string Notes="",bool PreserveExisting=false);
+    public sealed record LessonMapping(Guid? LessonId,Guid? SourceSongId,Guid? SongId,string Title,string Url,string Notes,DateTimeOffset? SourceUpdated,DateTimeOffset? TargetUpdated);
     public sealed record OpenRequest(string Url);
     public static string ValidateUrl(string? value,bool allowEmpty=false) {
         string text=(value??"").Trim();if(allowEmpty&&text.Length==0)return "";
@@ -170,7 +171,25 @@ public static class Lessons
             catch(Exception e)when(e is IOException||e is JsonException||e is UnauthorizedAccessException){return Results.Problem("Lesson storage is unavailable. Existing saved links have not been replaced.");}
             finally{Gate.Release();}
         });
-        api.MapGet("",()=>Results.Ok(Read().Where(l=>!l.Archived).OrderBy(l=>l.Title,StringComparer.OrdinalIgnoreCase)));
+        api.MapGet("",async()=>{
+            var linked=await SongLibrary.LinkedLessons();
+            var urls=linked.Select(l=>l.Url).ToHashSet(StringComparer.Ordinal);
+            return Results.Ok(linked.Concat(Read().Where(l=>!l.Archived&&!urls.Contains(l.Url))).OrderBy(l=>l.Title,StringComparer.OrdinalIgnoreCase));
+        });
+        api.MapPost("/song-link",async(LessonMapping edit)=>{
+            var url=ValidateUrl(edit.Url);
+            if(string.IsNullOrWhiteSpace(edit.Title)||edit.Title.Trim().Length>160||(edit.Notes??"").Length>10000)throw new ArgumentException("Check the lesson title and notes length.");
+            var saved=Read();
+            if(edit.SourceSongId.HasValue && edit.LessonId!=edit.SourceSongId)throw new ArgumentException("Reload the selected song lesson.");
+            if(edit.LessonId.HasValue && !edit.SourceSongId.HasValue && !saved.Any(l=>l.Id==edit.LessonId&&!l.Archived))throw new FileNotFoundException();
+            await SongLibrary.SetLessonMapping(edit.SourceSongId,edit.SongId,url,edit.Notes??"",edit.SourceUpdated,edit.TargetUpdated);
+            if(!edit.SourceSongId.HasValue || !edit.SongId.HasValue){
+                var item=saved.FirstOrDefault(l=>l.Id==edit.LessonId)??saved.FirstOrDefault(l=>l.Url==url);
+                if(item is null){item=new();saved.Add(item);}
+                item.Title=edit.Title.Trim();item.Url=url;item.Notes=edit.Notes??"";item.Archived=false;item.Updated=DateTimeOffset.UtcNow;Save(saved);
+            }
+            return Results.Ok(new { mapped=true });
+        });
         api.MapPost("",(Edit edit)=>{
             string url=ValidateUrl(edit.Url);if(string.IsNullOrWhiteSpace(edit.Title)||edit.Title.Trim().Length>160||(edit.Notes??"").Length>10000)throw new ArgumentException("Add a title up to 160 characters and notes up to 10,000 characters.");
             var rows=Read();var item=rows.FirstOrDefault(l=>l.Url==url);

@@ -2,24 +2,34 @@
 
 Guitar Practice Lab is a touchscreen app for practising with chord sheets, backing tracks, and guitar exercises. The kiosk is designed for a 7-inch, 800 × 480 display. It was originally set up on a Raspberry Pi 3 Model B and now runs on a Pi 4 Model B using the same 32-bit Raspberry Pi OS Trixie card. The app uses .NET 10, ASP.NET Core, and HTML and JavaScript practice screens.
 
+## Downloads
+
+Get the ready-to-run files from the [latest GitHub release](https://github.com/ofirasp/glab/releases/latest):
+
+- [Song Studio for macOS](https://github.com/ofirasp/glab/releases/latest/download/Guitar-Lab-Song-Studio-macOS.zip) — unzip and open the app on your Mac.
+- [Pi updater for Mac](https://github.com/ofirasp/glab/releases/latest/download/Update-Guitar-Practice-Lab.command) — run this on your Mac to update the Pi over SSH.
+- [Pi update ZIP](https://github.com/ofirasp/glab/releases/latest/download/GuitarLab-Update.zip) — alternative update package.
+
+Install the Pi update before using Song Studio’s Edit and image-management features. The Mac app is built for Intel macOS 11 or later; its processing worker requires Python 3.11 or 3.12 and FFmpeg. Source and build instructions are in [tools/mac-song-studio](tools/mac-song-studio/README.txt).
+
 ## Home screen
 
 | Menu | What's inside |
 | --- | --- |
 | **Songs** | Import chord PDFs and MP3s, switch between original and backing audio, and follow timed cues. **FullScreen** offers PDF + Chords and Chord Focus. **Split view** restores the playback panel. |
-| **Tools** | Live Guitar Tuner, metronome, Fretboard Map, Scales, and Looper. |
+| **Tools** | Live Guitar Tuner, metronome, Fretboard Map and Looper. |
 | **Lessons** | Open JustinGuitar or GuitarZero2Hero, save lesson links with notes, and revisit them later. |
-| **Practice** | **1 Minute Changes**, **Find the Notes**, **Chord Clean Check**, **Strumming Timing**, and a practice timer. |
+| **Practice** | **1 Minute Changes**, **Change After a Bar**, **Scales**, **Find the Notes**, **Guess the Chord**, **Chord Clean Check**, **Strumming Timing**, and a practice timer. |
 
 **Shut down** asks for confirmation and powers off the Pi. Each request belongs to the current desktop session, so a saved request cannot run again after a restart. **Sleep screen** covers the kiosk with a black saver while keeping the display signal active. **Exit to Desktop** closes the practice kiosk.
 
-In **Tools → Screen saver**, choose Black, Clock, or Guitar photo and preview the style before saving. The idle timeout defaults to 10 minutes and can be set from 1 to 60 minutes using the listed presets. On the Pi's Wayland desktop, the helper activates the kiosk saver after the configured time without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before showing the saver. Touch the display to wake it. The backlight stays on in this mode.
+The top-right icons open Settings, Sleep screen, Exit to Desktop and Shut down. In **Settings → Screen Saver**, choose Black, Clock, or Guitar photo and preview the style before saving. The idle timeout defaults to 10 minutes and can be set from 1 to 60 minutes using the listed presets. On the Pi's Wayland desktop, the helper activates the kiosk saver after the configured time without input when playback permits. App audio and generated backing tracks request a screen wake lock. The helper also checks media playback reported by Chromium through MPRIS before showing the saver. Touch the display to wake it. The backlight stays on in this mode.
 
 ## Songs and timed PDF following
 
 Import a PDF in **Songs → Tools** and attach an MP3. The player supports original and backing versions, volume and mute, speed, A/B loops, and song notes. A matching `-backing.mp3` in the Pi's recordings folder can be found automatically when attaching the corresponding `-original.mp3`. When importing from a Mac, both matching MP3s can be selected together.
 
-For a simplified chord sheet, import the standard PDF and copy the matching `-simple.pdf` into `~/GuitarPracticeLab/recordings` on the Pi. For example, `Linger.pdf` pairs with `Linger-simple.pdf`. Open the song to reveal **Simple version** next to the zoom controls, in either reading view. The recording keeps playing as you switch sheets. If an older library entry was renamed before filenames were stored, keeping an identical copy of the standard PDF in `recordings` lets the app recover the match.
+For a simplified chord sheet, import the standard PDF and copy the matching `-simple.pdf` into `~/GuitarPracticeLab/recordings` on the Pi. For example, `Linger.pdf` pairs with `Linger-simple.pdf`. Open the song to reveal **Simple** beside the bar controls, in either reading view. The recording keeps playing as you switch sheets. If an older library entry was renamed before filenames were stored, keeping an identical copy of the standard PDF in `recordings` lets the app recover the match.
 
 Use **Mark here** to save the recording time and position on the imported sheet. With **Record Follow**, tap or hold the down arrow while listening, then pause for one second to capture a cue. **Follow** turns on when a song with cues starts or resumes. It interpolates scroll position between cues on the same page. When the next cue is on a later page, it scrolls toward the bottom and turns at the cue time. Manual PDF navigation pauses Follow. Both PDF versions use the same cue times and saved positions, so alignment can differ if their layouts differ. Edit cues on the imported sheet.
 
@@ -27,9 +37,17 @@ Tap a detected chord name or **Chords** to see fingering alternatives and manual
 
 The app builds continuous reading copies for multi-page PDFs when PyMuPDF is available, and keeps the original files. Hebrew song titles start the PDF view at the right edge. Other titles start at the left edge.
 
-Song tools has five tabs on one row, **Files**, **Audio**, **Playback**, **Analyze**, and **Practice**. **Analyze chords** and **Rhythm** are in **Analyze**. **Record & Review** and **Chord match** are in **Practice**. Closing a tool dialog returns to the same tools tab.
+The Songs header has icon shortcuts for **Library**, **Tools**, **Notes** and **Chord Match**, with tooltips and accessible names. Chord Match highlights while active. Song Tools has four tabs: **Files**, **Audio**, **Playback** and **Analyze**. **Record & Review** and **Microphone timing** are in Audio; **Analyze chords**, **Edit chord timeline**, **Sync PDF** and **Rhythm** are in Analyze. Closing an analysis tool returns to the tools dialog.
+
+**Notes** opens directly beside Tools. The title and notes are read-only until you tap **Edit**, so touching them does not open the keyboard. Close is at the bottom right; unsaved edits offer Save & close, Discard or Keep editing. The lesson is a **Watch lesson** button, rather than a URL field. The Images tab displays reference images in natural filename order (2 before 10), with Previous/Next controls. The dialog fits an 800 × 480 display without scrolling its frame.
 
 **Analyze chords** compares the original MP3 with the main PDF’s chord names and estimates a timeline. Reanalyze a song to replace an older estimate after updating the analyzer. Chord matching listens throughout each current chord section and counts a confident match once per section. Its **Last score** and **Personal best** are stored in that browser. Completed runs with seeking or looping save a last score, while uninterrupted runs can qualify for a personal best. **Record & Review** captures a take of up to 60 seconds while the song and Follow continue. Replay the guitar alone or with backing, or download the take as WAV.
+
+### Auto PDF sync and chord corrections
+
+Keep recorded Follow for manual control, or choose Auto PDF to align the extracted chord timeline with positions in the PDF. Sync PDF supports next/previous navigation, seeking from the start, skipped sections, repeated chord bars and direct selection of the correct printed chord. Selecting a different chord on the PDF corrects that timeline section. Hebrew chord lines are followed from right to left.
+
+In Edit chord timeline, use Prev/Next to select a section, Split at bar to separate a long detection, and Hear section to preview the complete section. Done saves; Cancel discards. Saving migrates unchanged PDF anchors to the revised timeline rather than clearing all sync work. Automatic chord/rhythm extraction remains approximate; confirm and correct estimates by ear.
 
 ## Fullscreen chords and rhythm
 
@@ -52,6 +70,8 @@ Automatic tempo, meter, chord names, and bar alignment are estimates. A saved te
 In **Tools → Guitar Tuner**, choose a tuning from the dropdown. Each visit starts with **Auto string** and **Standard tuning**, with Drop D, Half Step Down, Whole Step Down, DADGAD, and Open G also available. The selected tuning determines the string labels, reference tones, and target pitches. In-tune strings turn green and play a confirmation chime. Green strings stay confirmed until you tap their circle to restore its neutral color and tune again. The tuner shows a checkmark when all six strings are in tune.
 
 - **1 Minute Changes** shows both chord diagrams before Start. Choose each chord's root and type and use the arrows to select its shape. The exercise assumes standard tuning with no capo. **Recent** restores both chords and their selected shapes. The app uses the saved microphone and counts a stable match before moving to the other chord. Completed rounds save on the Pi, and the app shows the pair’s last score and personal best. Recognition is experimental and works best with clean guitar sound and headphones.
+- **Change After a Bar** alternates a chord pair at the chosen tempo, meter and number of changes. The one-bar count-in sounds even with exercise clicks off. Both chord diagrams stay visible while playing. Results separate chord-change matches from strum timing, with early/late feedback and saved browser history. The beat grid stays fixed.
+- **Guess the Chord** offers an end-of-round result and feedback before the final popup.
 - **Follow the Notes** highlights scale notes on the beat with a count-in, tempo control, and optional reference tones. It supports major and minor pentatonic in all 12 keys. For the open C major pattern, choose **C → Major → Open position**. The up-and-down sequence starts at the A string, fret 3, and passes through open low E before returning to C.
 - **Play Along** shows a scale beside a generated chord loop, an MP3 from the Pi’s `recordings/Scale-Backing-Tracks` folder, or a local audio file. The built-in loop follows the selected key and scale. Choose the key yourself for recorded tracks.
 - **Fretboard Map** shows five fret positions at a time through fret 24. Tap to hear a note, highlight a pitch or scale, switch between note names and intervals, or use **Find the Note** to practise identifying positions. Open-string circles sit beside the nut. Enable **Use mic** in Find the Note to answer by playing the requested note in any octave using the saved Pi microphone. A stable correct note advances the question. **Hear target** plays a reference tone, with feedback for muted or zero volume.
@@ -60,13 +80,38 @@ In **Tools → Guitar Tuner**, choose a tuning from the dropdown. Each visit sta
 - **Strumming Timing** scores strums as on time, early, late, or missed. It starts with a silent visual beat and also offers audible clicks.
 - **Looper** records the guitar from the Pi microphone. Stop, name and save the take, then replay it on a loop or delete it from the list. The input peak reading warns when captured samples reach maximum level. Playback has its own volume slider, and short edge fades reduce clicks at the loop boundary.
 
-The live microphone tools use a USB microphone on the Pi and `alsa-utils`. Capture runs on the Pi through ALSA. If the default device fails, try the USB microphone's `plughw:CARD=…,DEV=…` entry. Only completed 1 Minute Changes scores are saved. Looper saves audio when you name and save a take.
+The live microphone tools use a USB microphone on the Pi and `alsa-utils`. Capture runs on the Pi through ALSA. If the default device fails, try the USB microphone's `plughw:CARD=…,DEV=…` entry. Completed 1 Minute Changes scores are saved on the Pi. Bar Changes, Strumming Timing and song Chord Match also keep their results in the current browser profile. Clearing browser data removes those browser-only scores. Looper saves audio when you name and save a take.
+
+### Audio timing calibration
+
+Open **Settings → Audio** from the gear icon, or Microphone timing in the song’s Audio tools. Select the microphone, wait through four count-in pulses, strum once with each of the eight slow STRUM beeps, then Apply correction. The correction is saved per microphone in the browser profile and used by Bar Changes and song Chord Match. Recalibrate after changing the audio output. Calibration uses the same timestamped capture path and strum detector as Bar Changes; its results include the applied correction and average residual offset.
+
+Standalone Strumming Timing keeps its original raw-stream clock and does not apply the chord-stream correction. This avoids shifting the previously working exercise by a correction measured through a different capture path. Timing and recognition tests use simulated audio; they do not establish accuracy on every microphone or guitar.
 
 ## Lessons
 
 Open **Lessons → Add Lesson** to save a URL with a title and notes. On the Pi, a lesson opens in a separate Chromium window. Its **← Practice** tab offers **Save current lesson** to capture the active lesson's title and address, and **Return to Practice** to close the lesson window. Website sign-in and playback are handled by Chromium in its dedicated lesson profile.
 
-To attach a lesson URL to a song, open **Songs → Tools → Song notes**. The song then shows **Watch lesson**. Opening the lesson pauses song playback.
+To attach a lesson, open **Lessons → Edit → Link to song**, search or scroll the touch-friendly song picker, select a song and save. The saved row uses the song’s name. Song Notes shows Watch lesson, and opening it pauses song playback. Notes text is available in the editor rather than repeated in every list row.
+
+Song Studio can also save the lesson URL directly. Existing song links appear automatically in Lessons without making a duplicate URL entry. Editing a song-linked lesson updates the song’s URL and notes. Choosing No song detaches the link and retains a saved lesson. Remapping validates both song revisions and preserves the target song’s practice notes.
+
+## Song Studio for Mac
+
+Connect with the Pi login (default `ofiras@glab.local`) and password, or leave the password empty to use a working SSH key. The main window then opens **Upload** and **Edit** tabs. The password is kept in memory for the app session and is not saved.
+
+- **Upload:** enter a YouTube/YouTube Music URL, choose a chord PDF and song name, then Create & Send to Pi. The Mac prepares an original and vocal-reduced backing MP3, sends the files, and can import/analyze the song on the Pi. Output names are `Song.pdf`, `Song-original.mp3` and `Song-backing.mp3`. Matching files require explicit replacement; recovery copies are kept.
+- **Edit:** load the Pi’s actual library, select a song, edit notes and lesson URL, add reference images, and Save to Pi. Saved images can be selected and marked with Remove image; Save to Pi applies removals. Clear pending cancels unsaved uploads and removals. Same-name uploads add another image rather than replacing one.
+
+PNG, JPEG, HEIC and WebP input is converted on the Mac to JPEG up to 2400 pixels on the long edge. The Pi accepts up to 30 images per song, 8 MB per converted image. Successfully uploaded/removed images are cleared from the pending list so a partial failure can be retried. A newer song revision on the Pi must be reloaded before editing, preventing silent overwrites.
+
+Build the native app on a Mac:
+
+```bash
+python3 tools/mac-song-studio/build.py /path/to/output
+```
+
+The build uses Swift/AppKit and creates an ad-hoc signed app and ZIP. First-time audio processing can download vocal models. Tests use local fixtures and a temporary Pi API; no live YouTube download or transfer to the user’s Pi is part of the automated checks.
 
 ## Run locally
 
@@ -100,7 +145,7 @@ Back up the library and practice data separately from the code.
 
 | Default location | Contents |
 | --- | --- |
-| `~/GuitarPracticeLab/song-library` | Imported PDFs and MP3s, song metadata, notes, and cues |
+| `~/GuitarPracticeLab/song-library` | Imported PDFs and MP3s, metadata, notes, lesson URLs, reference images and cues |
 | `~/GuitarPracticeLab/recordings` | Loose recordings and matching simple PDFs |
 | `~/GuitarPracticeLab/lessons/links.json` | Saved lesson links and notes |
 | `~/GuitarPracticeLab/chord-practice/results.json` | Completed 1 Minute Changes scores |
@@ -110,6 +155,7 @@ Back up the library and practice data separately from the code.
 Storage overrides include `GUITAR_SONG_LIBRARY`, `GUITAR_RECORDINGS_ROOT`, `GUITAR_LESSONS`, `GUITAR_CHORD_PRACTICE`, `GUITAR_LOOPS_ROOT`, and `GUITAR_LESSON_BROWSER`. The web service and desktop helper must use the same bridge location.
 
 - [Pi kiosk startup and recovery tools](tools/pi-kiosk/README.txt)
+- [Mac Song Studio](tools/mac-song-studio/README.txt) — Upload/Edit desktop companion.
 - [Mac backing-track tools](tools/mac-backing/README.txt). Demucs runs on the Mac to generate instrumental backing tracks for playback on the Pi.
 - [Pi updater details](tools/chord-update/README.md)
 
@@ -127,3 +173,16 @@ dotnet run --project tests/LessonUrlChecks
 ```
 
 The `*-ui.test.cjs` and `auto-follow.test.cjs` tests use Playwright. The desktop power tests simulate shutdown and screen blanking, and the chord detector tests use synthetic audio.
+
+Additional checks for the current song-management and timing features:
+
+```bash
+node tests/bar-changes-engine.test.cjs
+node tests/guitar-strum-timing.test.cjs
+node tests/timing-adjustment.test.cjs
+node tests/pdf-chord-alignment.test.cjs
+python3 tests/mac-song-studio.test.py
+GPL_TEST_DOTNET=/path/to/dotnet python3 tests/song-studio-edit-api.test.py
+```
+
+The API check uses the compiled Debug application and temporary storage. UI checks include `song-notes-images-ui.test.cjs`, `song-lesson-links-ui.test.cjs`, `global-audio-settings.test.cjs` and `bar-changes-ui.test.cjs`; set `GPL_TEST_CHROME` to your local Chrome binary and make Playwright available through Node. Mac image conversion and password-terminal tests need macOS facilities.

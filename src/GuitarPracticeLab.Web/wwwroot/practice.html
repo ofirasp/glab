@@ -53,6 +53,12 @@ main{
 header{height:40px;white-space:nowrap}
 h1{font-size:21px}
 header small{font-size:12px}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.header-actions button{flex:0 0 44px;width:44px;height:40px;min-height:40px;padding:7px;display:grid;place-items:center;background:#223249;border:1px solid #435972;border-radius:12px;color:#d4e4f5}
+.header-actions button:hover{background:#314865}.header-actions button:focus-visible{outline:2px solid #8ebcff;outline-offset:2px}
+#shutdownButton{color:#ffb9b9}
+#audioSettings{flex:0 0 44px;width:44px;height:40px;min-height:40px;padding:7px;display:grid;place-items:center;background:#223249;border:1px solid #435972;border-radius:12px;color:#d4e4f5}
+#audioSettings:hover{background:#314865}#audioSettings:focus-visible{outline:2px solid #8ebcff;outline-offset:2px}
 nav{margin:0;gap:8px}
 button{min-height:48px;font-size:18px;padding:8px 14px}
 section{min-height:0;padding:12px}
@@ -89,6 +95,16 @@ section{min-height:0;padding:12px}
 .tuner-score meter{width:100%;height:15px;accent-color:#72dfa5}
 .tuner-controls{grid-column:1/-1;justify-content:center;align-items:center}
 .tuner-controls button{white-space:nowrap;font-size:16px}
+.tuner-gauge{padding-top:8px}
+.tuner-gauge .track{background:linear-gradient(90deg,#aa6648 0%,#344257 44%,#205c48 44%,#205c48 56%,#344257 56%,#aa6648 100%);border:1px solid #8196ae;height:18px}
+.tuner-center-zone{position:absolute;left:44%;width:12%;height:100%;border:1px solid #8de4b0;border-radius:3px;background:#7de7a320}
+.tuner-center-mark{position:absolute;left:50%;top:-8px;bottom:-8px;width:3px;transform:translateX(-50%);background:#8ff3b6;box-shadow:0 0 5px #77e6ab}
+#needle{z-index:1;border:1px solid #111827;box-shadow:0 0 0 1px #ffffff66;border-radius:3px;height:30px;top:-7px}
+#needle.waiting{opacity:.3}
+.tuner-scale{display:flex;justify-content:space-between;align-items:center;margin:8px 8px 0;font-size:11px;color:#e0c5ae;gap:4px}
+.tuner-scale strong{font-size:10px;color:#8ff3b6;white-space:nowrap}
+#tuning{min-height:38px;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1.2}
+#tuning[data-direction="tighten"],#tuning[data-direction="loosen"]{color:#ffc38b;font-weight:700}
 #tuning.in-tune{color:#72dfa5;font-weight:750}
 .tunerinput{display:flex;align-items:center;gap:8px;min-width:0;font-size:14px}
 .tunerinput select{min-width:0;max-width:200px;min-height:40px;background:#293950;color:#eef3ff;border:1px solid #536981;border-radius:8px;padding:5px;font:inherit}
@@ -118,6 +134,7 @@ section{min-height:0;padding:12px}
 nav button{font-size:17px}
 #practice{gap:5px}#remaining{font-size:56px}
 #practice .exercise-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#practice .exercise-menu:first-child{grid-template-columns:repeat(4,minmax(0,1fr))}
 #practice .exercise-menu button{min-height:42px;font-size:16px;padding:6px 10px}
 #menuBack{min-height:40px;padding:5px 12px;font-size:16px}
 main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
@@ -144,9 +161,9 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
   border-color:rgba(156,181,208,.56);
 }
 #homeMenu .menu-grid small{color:#e1eaf4}
-.home-actions{display:flex;align-items:center;gap:8px}
-.home-actions button{min-height:44px;font-size:15px}
-#exitDesktop{margin-left:auto}
+.home-actions{display:flex;align-items:center;gap:6px}
+
+
 #homeActionStatus{font-size:12px;color:#e1eaf4;flex:1}
 #shutdownConfirm,#saverSettingsDialog{max-width:calc(100vw - 30px);border:1px solid #547091;border-radius:16px;background:#192639;color:#eef3ff;padding:18px}
 #shutdownConfirm::backdrop,#saverSettingsDialog::backdrop{background:#000b}
@@ -158,13 +175,16 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 #saverSettingsDialog select{font:inherit;min-height:44px;background:#293950;color:#eef3ff;border:1px solid #547091;border-radius:8px;padding:6px}
 #saverSettingsDialog .row{justify-content:flex-end}
 #saverSettingsStatus{min-height:20px;font-size:13px;color:#c3d4e7}
-#saverSettingsButton{justify-self:start;min-height:42px;font-size:16px}
+#settingsDialog{width:min(480px,calc(100vw - 28px));padding:20px;border:1px solid #506680;border-radius:18px;background:#152237;color:#eef3ff}
+#settingsDialog::backdrop{background:#050b16b8}.settings-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.settings-heading h2{margin:0;font-size:23px}#settingsClose{min-height:40px;width:40px;padding:4px;background:#263a53}
+.settings-options{display:grid;gap:12px}.settings-options button{display:flex;align-items:center;gap:16px;text-align:left;padding:16px;width:100%}.settings-options button>span:first-child{font-size:28px;color:#a8ceff;width:30px;text-align:center}.settings-options button>span:last-child{margin-left:auto}.settings-options small{display:block;font-size:13px;font-weight:400;margin-top:4px;color:#b7c8dd}
 </style>
 
-</head>
+<link rel="stylesheet" href="/practice-hub.css?v=grouped">
+<link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script></head>
 <body>
 <main>
-<header><button id="menuBack" hidden>‹ Back</button><h1 id="pageTitle">Guitar Practice Lab</h1></header>
+<header><button id="menuBack" hidden>‹ Back</button><h1 id="pageTitle">Guitar Practice Lab</h1><span id="practiceToday" hidden>Today: 0 min · 0 sessions</span><div class="header-actions"><button id="audioSettings" aria-label="Settings" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.2-1.6.9-2.2-.6-2.5 4.3 1.6 1.6v1.8l-1.6 1.6 2.5 4.3 2.2-.6 1.6.9.6 2.2h5l.6-2.2 1.6-.9 2.2.6 2.5-4.3-1.6-1.6v-1.8l1.6-1.6L18.9 5l-2.2.6-1.6-.9-.6-2.2h-5Z"/><circle cx="12" cy="12" r="3.2"/></svg></button><div id="homeActions" class="home-actions" hidden><button id="sleepScreen" aria-label="Sleep screen" title="Sleep screen"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.1A8.6 8.6 0 0 1 10.9 3.2 8.7 8.7 0 1 0 20.8 13.1Z"/></svg></button><button id="exitDesktop" aria-label="Exit to Desktop" title="Exit to Desktop"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8m-4-5v5m-3-12h6m-2-2 2 2-2 2"/></svg></button><button id="shutdownButton" aria-label="Shut down" title="Shut down"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10m-5.7-7.3a9 9 0 1 0 11.4 0"/></svg></button></div></div></header>
 <section id="homeMenu" class="menu-screen" aria-label="Main menu">
   <div class="menu-grid">
     <button id="songLibraryLink" onclick="location.href='/song-library.html'">Songs<small>Chord sheets and backing tracks</small></button>
@@ -172,12 +192,7 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
     <button id="lessonsTab" onclick="location.href='/lessons.html'">Lessons<small>Browse and revisit lessons</small></button>
     <button id="practiceTab">Practice<small>Chord changes and play along</small></button>
   </div>
-  <div id="homeActions" class="home-actions" hidden>
-    <button id="shutdownButton">Shut down</button>
-    <button id="sleepScreen">Sleep screen</button>
-    <span id="homeActionStatus" role="status"></span>
-    <button id="exitDesktop">Exit to Desktop</button>
-  </div>
+  <span id="homeActionStatus" role="status"></span>
 </section>
 <dialog id="shutdownConfirm" aria-labelledby="shutdownTitle">
   <h2 id="shutdownTitle">Shut down the Pi?</h2>
@@ -194,8 +209,15 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
     <button id="metroTab">Metronome<small>Set a steady tempo</small></button>
     <button onclick="location.href='/looper.html'">Looper<small>Record and replay guitar loops</small></button>
   </div>
-  <button id="saverSettingsButton" hidden>Screen saver</button>
 </section>
+
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="settings-heading"><h2 id="settingsTitle">Settings</h2><button id="settingsClose" aria-label="Close settings">✕</button></div>
+  <div class="settings-options">
+    <button id="openAudioSettings"><span aria-hidden="true">♫</span><span>Audio<small>Microphone timing calibration</small></span><span aria-hidden="true">›</span></button>
+    <button id="saverSettingsButton" hidden><span aria-hidden="true">☾</span><span>Screen Saver<small>Choose a style and idle time</small></span><span aria-hidden="true">›</span></button>
+  </div>
+</dialog>
 
 <dialog id="saverSettingsDialog" aria-labelledby="saverSettingsTitle">
   <h2 id="saverSettingsTitle">Screen saver</h2>
@@ -226,7 +248,10 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 <div class="tuner-readout">
   <div class="note" id="note">E2</div>
   <div class="muted" id="freq">82.41 Hz · reference</div>
-  <div class="track"><span id="needle"></span></div>
+  <div class="tuner-gauge" aria-label="Tuning target: center. Flat: tighten. Sharp: loosen.">
+    <div class="track"><span class="tuner-center-zone" aria-hidden="true"></span><span class="tuner-center-mark" aria-hidden="true"></span><span id="needle"></span></div>
+    <div class="tuner-scale"><span>Flat · Tighten →</span><strong>▲ TARGET</strong><span>← Loosen · Sharp</span></div>
+  </div>
   <div id="tuning">Pluck one string at a time</div>
   <strong id="guitarInTune" role="status" hidden>✓ Guitar in tune</strong>
   <div class="tuner-score">
@@ -253,29 +278,39 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 <p class="muted">4 beats per bar · accented first beat</p>
 </section>
 
-<section id="practice" hidden>
-  <div class="row exercise-menu"><button id="oneMinuteChanges">1 Minute Changes</button><button id="followNotes" onclick="location.href='/scale-practice.html'">Scales</button><button id="findNotes" onclick="location.href='/fretboard-map.html?mode=quiz'">Find the Notes</button></div>
-  <div class="row exercise-menu">
-    <button onclick="location.href='/mic-practice.html?mode=chord'">Chord Clean Check</button>
-    <button onclick="location.href='/mic-practice.html?mode=timing'">Strumming Timing</button>
+<section id="practice" hidden aria-label="Practice exercises and free practice timer">
+ <div class="practice-exercises">
+  <h2>What would you like to practise?</h2>
+  <nav class="practice-categories" role="tablist" aria-label="Practice focus">
+   <button id="practiceChords" role="tab" aria-controls="practiceChordsPanel" aria-selected="true">Chords</button>
+   <button id="practiceNotes" role="tab" aria-controls="practiceNotesPanel" aria-selected="false" tabindex="-1">Notes &amp; scales</button>
+   <button id="practiceRhythm" role="tab" aria-controls="practiceRhythmPanel" aria-selected="false" tabindex="-1">Rhythm</button>
+  </nav>
+  <div id="practiceChordsPanel" class="practice-category" role="tabpanel" aria-labelledby="practiceChords">
+<button id="oneMinuteChanges" class="practice-exercise" aria-label="1 Minute Changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 4-4 4 4 4M3 8h12a4 4 0 0 1 4 4v1M17 20l4-4-4-4M21 16H9a4 4 0 0 1-4-4v-1"/></svg><span class="practice-exercise-copy"><strong>1 Minute Changes</strong><small>Build faster chord changes</small></span><span class="practice-chevron" aria-hidden="true">›</span></button><button id="cleanChordPractice" class="practice-exercise" aria-label="Chord Clean Check" onclick="location.href='/mic-practice.html?mode=chord'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span class="practice-exercise-copy"><strong>Chord Clean Check</strong><small>Check each string of a chord</small></span><span class="practice-chevron" aria-hidden="true">›</span></button><button id="guessChord" class="practice-exercise" aria-label="Guess the Chord" onclick="location.href='/guess-chord.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10a5 5 0 1 1 9 3c-1 1-3 2-3 4a3 3 0 0 1-6 0M10 10a2 2 0 0 1 4 0c0 2-3 2-3 4"/></svg><span class="practice-exercise-copy"><strong>Guess the Chord</strong><small>Recognize chords by ear</small></span><span class="practice-chevron" aria-hidden="true">›</span></button>
   </div>
-  <div class="row">
-    <button data-minutes="5">5 min</button>
-    <button data-minutes="10" class="active">10 min</button>
-    <button data-minutes="20">20 min</button>
+  <div id="practiceNotesPanel" class="practice-category" role="tabpanel" aria-labelledby="practiceNotes" hidden>
+<button id="followNotes" class="practice-exercise" aria-label="Scales" onclick="location.href='/scale-practice.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg><span class="practice-exercise-copy"><strong>Scales</strong><small>Follow notes and play along</small></span><span class="practice-chevron" aria-hidden="true">›</span></button><button id="findNotes" class="practice-exercise" aria-label="Find the Notes" onclick="location.href='/fretboard-map.html?mode=quiz'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span class="practice-exercise-copy"><strong>Find the Notes</strong><small>Learn your fretboard</small></span><span class="practice-chevron" aria-hidden="true">›</span></button>
   </div>
+  <div id="practiceRhythmPanel" class="practice-category" role="tabpanel" aria-labelledby="practiceRhythm" hidden>
+<button id="barChanges" class="practice-exercise" aria-label="Change After a Bar" onclick="location.href='/bar-changes.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 4-4 4 4 4M3 8h12a4 4 0 0 1 4 4v1M17 20l4-4-4-4M21 16H9a4 4 0 0 1-4-4v-1"/></svg><span class="practice-exercise-copy"><strong>Change After a Bar</strong><small>Change chords with the beat</small></span><span class="practice-chevron" aria-hidden="true">›</span></button><button id="strummingPractice" class="practice-exercise" aria-label="Strumming Timing" onclick="location.href='/mic-practice.html?mode=timing'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6M8 5v14M12 2v20M16 7v10M20 10v4"/></svg><span class="practice-exercise-copy"><strong>Strumming Timing</strong><small>Keep your strums on the beat</small></span><span class="practice-chevron" aria-hidden="true">›</span></button>
+  </div>
+ </div>
+ <aside class="practice-free-timer" aria-labelledby="freePracticeTitle">
+  <h2 id="freePracticeTitle">Free practice</h2><p class="practice-timer-description">A timer for your own practice</p>
+  <div class="practice-duration-control"><span id="practiceMinutesLabel">Minutes</span><div class="practice-minute-stepper"><input id="practiceMinutes" type="number" min="1" max="120" value="10" readonly aria-labelledby="practiceMinutesLabel"><button id="practiceMinutesUp" type="button" aria-label="Increase practice minutes">▴</button><button id="practiceMinutesDown" type="button" aria-label="Decrease practice minutes">▾</button></div></div>
   <div id="remaining" role="timer">10:00</div>
-  <div class="row">
-    <button id="timerStart">Start</button>
-    <button id="timerFinish" disabled>Finish &amp; save</button>
-  </div>
-  <div id="practiceToday">Today: 0 min</div>
-  <div id="practiceMessage">Choose a duration and tap Start.</div>
+  <button id="timerStart">Start timer</button>
+  <button id="timerFinish" disabled hidden>Finish &amp; save</button>
+  <div id="practiceMessage" role="status">Ready when you are</div>
+ </aside>
 </section>
 
 <section id="chordChanges" hidden aria-label="1 Minute Changes">
   <div class="changeshead"><button id="changesBack">‹ Back</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
   <div class="changesbody">
+    <button id="minuteActiveCancel" hidden type="button">Cancel</button>
+    <div id="minuteLiveStatus" hidden></div>
     <div id="changesPreviews" class="changespreviews">
       <div class="changesplay">
         <strong id="changesTarget">Play C</strong><div id="changesDiagram" class="changesdiagram"></div>
@@ -304,6 +339,19 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
     </div>
   </div>
 </section>
+<dialog id="changesCountIn" aria-label="Exercise starts in three seconds">
+  <span class="changes-count-caption">Get ready</span>
+  <strong id="changesCountInNumber" role="timer" aria-live="assertive">3</strong>
+  <button id="changesCountInCancel">Cancel</button>
+</dialog>
+<dialog id="changesRoundResult" aria-labelledby="changesRoundTitle">
+  <div class="changes-round-head"><span id="changesRoundIcon" aria-hidden="true">✓</span><h2 id="changesRoundTitle">Minute complete</h2><button id="changesRoundClose">Close</button></div>
+  <p id="changesRoundPair"></p>
+  <div class="changes-round-score"><strong id="changesRoundScore">0</strong><span>Chord changes in one minute</span></div>
+  <div class="changes-round-comparisons"><div><span>Last round<strong id="changesRoundLast">—</strong></span><b id="changesRoundDifference"></b></div><div><span>Personal best<small id="changesRoundPreviousBest"></small></span><b id="changesRoundBest">—</b></div></div>
+  <p id="changesRoundSave" role="status"></p>
+  <div class="changes-round-footer"><button id="changesRoundHistory">Results history</button><span></span><button id="changesRoundRetry" hidden>Retry save</button><button id="changesRoundAgain">Try again</button></div>
+</dialog>
 <dialog id="changesResults"><div class="changesresulthead"><h2>1 Minute Changes · Results</h2><button id="changesCloseResults">Close</button></div><div id="changesResultsList"></div></dialog>
 
 <p id="status" role="status"></p>
@@ -320,11 +368,13 @@ async function audio(){
   ctx??=new AudioContext();
   await ctx.resume();
 }
-function sound(freq,start,duration,volume){
+function sound(freq,start,duration,volume,type='sine',hold=0){
   const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;
   o.frequency.value=freq;
   g.gain.setValueAtTime(0,start);
   g.gain.linearRampToValueAtTime(volume,start+.005);
+  if(hold>0)g.gain.setValueAtTime(volume,start+Math.min(hold,duration-.01));
   g.gain.exponentialRampToValueAtTime(.001,start+duration);
   o.connect(g).connect(ctx.destination);
   o.start(start);o.stop(start+duration+.02);
@@ -410,6 +460,7 @@ function showPage(page){
   currentPage=page;
   for(const id of Object.keys(pageTitles))$(id).hidden=id!==page;
   $('pageTitle').textContent=pageTitles[page];
+  $('practiceToday').hidden=page!=='practice';
   $('menuBack').hidden=page==='homeMenu';
   $('status').hidden=page==='homeMenu'||page==='toolsMenu'||page==='practice';
   $('status').textContent=page==='tuner'?'Connecting to the Pi microphone…':'';
@@ -433,10 +484,15 @@ if(window.parent!==window){
     $('sleepScreen').onclick=()=>requestDesktopAction('screen-sleep');
   }
 }
+const settingsDialog=$('settingsDialog');
+$('audioSettings').onclick=()=>settingsDialog.showModal();
+$('settingsClose').onclick=()=>settingsDialog.close();
+$('openAudioSettings').onclick=()=>{settingsDialog.close();location.href='/audio-settings.html';};
 const saverDialog = $('saverSettingsDialog');
 const saverStatus = $('saverSettingsStatus');
 const saverEndpoint = '/api/desktop/screen-settings';
 $('saverSettingsButton').onclick = async () => {
+  settingsDialog.close();
   saverDialog.showModal();
   $('saverSave').disabled = true;
   $('saverPreview').disabled = true;
@@ -513,8 +569,17 @@ update();
   }
 
   let duration=600000,elapsed=0,started=null;
+  const timerKey='guitar-free-practice-timer-v1';
+  try{
+    const saved=JSON.parse(localStorage.getItem(timerKey)||'null');
+    if(saved&&Number.isInteger(saved.duration/60000)&&saved.duration>=60000&&saved.duration<=7200000&&Number.isFinite(saved.elapsed)&&saved.elapsed>=0&&(saved.started===null||Number.isFinite(saved.started)&&saved.started>0)){
+      duration=saved.duration;elapsed=Math.min(duration,saved.elapsed);started=saved.started;
+    }
+  }catch{}
+  function persistTimer(){try{localStorage.setItem(timerKey,JSON.stringify({duration,elapsed,started}));}catch{}window.dispatchEvent(new Event('guitar-free-timer-change'));}
+  window.addEventListener('pagehide',persistTimer);
   const day=date=>date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
-  const used=()=>elapsed+(started===null?0:Date.now()-started);
+  const used=()=>elapsed+(started===null?0:Math.max(0,Date.now()-started));
 
   function today(){
     const now=day(new Date());
@@ -528,19 +593,22 @@ update();
     get('remaining').textContent=
       String(Math.floor(seconds/60)).padStart(2,'0')+':'+
       String(seconds%60).padStart(2,'0');
-    get('timerStart').textContent=started!==null?'Pause':elapsed>0?'Resume':'Start';
+    get('timerStart').textContent=started!==null?'Pause timer':elapsed>0?'Resume timer':'Start timer';
     get('timerFinish').disabled=used()<=0;
-    document.querySelectorAll('[data-minutes]').forEach(b=>{
-      b.disabled=started!==null||elapsed>0;
-    });
+    get('timerFinish').hidden=started===null&&used()<=0;
+    get('practiceMinutes').value=duration/60000;
+    const locked=started!==null||elapsed>0;
+    get('practiceMinutes').disabled=locked;
+    get('practiceMinutesUp').disabled=locked||duration>=7200000;
+    get('practiceMinutesDown').disabled=locked||duration<=60000;
   }
-  document.addEventListener('guitar-exercise-open',()=>{if(started!==null){elapsed=used();started=null;draw();}});
+  document.addEventListener('guitar-exercise-open',()=>{get('practiceToday').hidden=true;});
   function finish(){
     const milliseconds=Math.min(duration,used());
     if(milliseconds<=0)return;
     if(started!==null){elapsed=milliseconds;started=null}
     else elapsed=milliseconds;
-    draw();
+    persistTimer();draw();
 
     if(!storageOK){
       get('practiceMessage').textContent='Storage unavailable. Session remains paused.';
@@ -553,23 +621,26 @@ update();
       get('practiceMessage').textContent='Could not save. Session remains paused; try Finish again.';
       return;
     }
-    sessions=next;elapsed=0;
+    sessions=next;elapsed=0;persistTimer();
     get('practiceMessage').textContent=
       'Saved '+(milliseconds/60000).toFixed(1)+' minutes. Ready for another session.';
     today();draw();
   }
 
-  document.querySelectorAll('[data-minutes]').forEach(b=>{
-    b.onclick=()=>{
-      duration=Number(b.dataset.minutes)*60000;
-      document.querySelectorAll('[data-minutes]').forEach(x=>
-        x.classList.toggle('active',x===b));
-      draw();
-    };
-  });
+  for(const [id,step] of [['practiceMinutesUp',60000],['practiceMinutesDown',-60000]]){
+    let delay=null,repeat=null;
+    const stop=()=>{clearTimeout(delay);clearInterval(repeat);delay=repeat=null;};
+    const change=()=>{if(started!==null||elapsed>0){stop();return;}duration=Math.max(60000,Math.min(7200000,duration+step));persistTimer();draw();if(duration===60000||duration===7200000)stop();};
+    const button=get(id);
+    button.onclick=change;
+    button.onpointerdown=e=>{if(button.disabled)return;button.setPointerCapture(e.pointerId);delay=setTimeout(()=>{change();if(!button.disabled)repeat=setInterval(change,100);},450);};
+    button.onpointerup=button.onpointercancel=button.onlostpointercapture=button.onblur=stop;
+  }
   get('timerStart').onclick=()=>{
     if(started!==null){elapsed=used();started=null}
     else started=Date.now();
+    persistTimer();
+    if(storageOK)get('practiceMessage').textContent=started!==null?'Free practice in progress':'Paused · resume or save your session';
     draw();
   };
   get('timerFinish').onclick=finish;
@@ -584,17 +655,22 @@ update();
     if(started!==null&&used()>=duration)finish();
     draw();
   },250);
+
+  if(started!==null&&used()>=duration)finish();
+  else if(storageOK&&started!==null)get('practiceMessage').textContent='Free practice in progress';
+  else if(storageOK&&elapsed>0)get('practiceMessage').textContent='Paused · resume or save your session';
   today();draw();
 })();
 </script>
 
 
-<link rel="stylesheet" href="/one-minute-changes.css?v=standard-tuning">
-<script src="/chord-shapes.js?v=alternate-tuning" defer></script>
+<link rel="stylesheet" href="/one-minute-changes.css?v=three-second-start">
+<script src="/chord-shapes.js?v=minor-eleventh" defer></script>
 <script src="/chord-diagram.js?v=tuning-labels" defer></script>
 <script src="/pi-microphone.js?v=tuning-presets" defer></script>
-<script src="/live-tuner.js?v=entry-defaults" defer></script>
-<script src="/one-minute-changes.js?v=recent-shapes" defer></script>
+<script src="/live-tuner.js?v=center-target" defer></script>
+<script src="/one-minute-changes.js?v=clear-match-chime" defer></script>
+<script src="/practice-hub.js?v=grouped" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 <script>

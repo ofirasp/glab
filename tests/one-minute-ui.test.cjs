@@ -42,7 +42,7 @@ const server=http.createServer((req,res)=>{const p=new URL(req.url,'http://local
   return json(isKnown?{last:24,best:30}:{last:null,best:null});
  }
  if(p==='/api/chord-practice/history')return json([{first:'C',second:'G',correctChords:31,changes:30,finished:new Date().toISOString()}]);
- if(p==='/api/chord-practice/start'){let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{lastStart=JSON.parse(body);starts++;if(failStart){res.statusCode=400;return json({message:'Connect a microphone first.'});}state={id:'test',status:'running',first:lastStart.first,second:lastStart.second,target:lastStart.first,correctChords:0,changes:0,remaining:60,rms:.02,saved:false};json(state);});return;}
+ if(p==='/api/chord-practice/start'){let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{lastStart=JSON.parse(body);starts++;if(failStart){res.statusCode=400;return json({message:'Connect a microphone first.'});}state={id:'test-'+starts,status:'running',first:lastStart.first,second:lastStart.second,target:lastStart.first,correctChords:0,changes:0,remaining:60,rms:.02,saved:false};json(state);});return;}
  if(p.endsWith('/save')){state.saved=true;state.error='';return json(state);}
  if(p.endsWith('/cancel')){state.status='cancelled';return json(state);}
  const f=path.resolve(root,'.'+p);if(!f.startsWith(root+path.sep)||!fs.existsSync(f)){res.statusCode=404;return res.end();}res.setHeader('Content-Type',f.endsWith('.html')?'text/html':f.endsWith('.js')?'text/javascript':'text/css');res.end(fs.readFileSync(f));
@@ -51,7 +51,7 @@ const server=http.createServer((req,res)=>{const p=new URL(req.url,'http://local
 try{browser=await chromium.launch({headless:true,timeout:30000,...(process.env.GPL_TEST_CHROME?{executablePath:process.env.GPL_TEST_CHROME}:{})});const page=await browser.newPage({viewport:{width:800,height:480},hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`http://127.0.0.1:${server.address().port}/practice.html`);
 await page.locator('#practiceTab').tap();await page.locator('#timerStart').tap();await page.locator('#oneMinuteChanges').tap();await page.waitForFunction(()=>document.querySelector('#changesDevice').options.length===2);
 check('exercise fits touchscreen without page scrollbar',await page.evaluate(()=>document.body.scrollHeight<=480&&document.documentElement.scrollWidth<=800));
-await page.waitForFunction(()=>document.querySelector('#changesPairScores').textContent.includes('Last 24 · Personal best 30'));
+await page.waitForFunction(()=>document.querySelector('#changesPairScores').textContent.includes('Last 23 · Personal best 29'));
 check('selected pair shows its saved scores',await page.locator('#changesPairScores').isVisible());
 check('root and type menus replace the long chord list',await page.locator('#changesFirst option').count()===12&&await page.locator('#changesFirstType option').count()===26);
 await page.locator('#changesFirstType').selectOption('m');await page.locator('#changesFirst').selectOption('A');check('root plus minor type updates the diagram',await page.locator('#changesTarget').textContent()==='Play Am');await page.locator('#changesFirst').selectOption('C');await page.locator('#changesFirstType').selectOption('');
@@ -69,20 +69,35 @@ check('arrows choose independent alternatives',selectedSecond!==originalSecond&&
 
 check('Start is available without tuning confirmation',await page.locator('#changesStart').isEnabled()&&await page.locator('#changesTuning').count()===0);
 await page.locator('#changesSecond').selectOption('C');await page.locator('#changesStart').tap();check('identical chords rejected without opening mic',starts===0&&await page.locator('#changesMessage').textContent().then(t=>t.includes('different notes')));
-await page.locator('#changesSecond').selectOption('G');await page.locator('#changesSecondNext').tap();await page.locator('#changesStart').tap();await page.waitForFunction(()=>document.querySelector('#changesCancel').disabled===false);
+await page.locator('#changesSecond').selectOption('G');
+await page.locator('#changesStart').tap();await page.waitForFunction(()=>document.querySelector('#changesCountIn').open);
+check('three-second popup fits and timer has not started',starts===0&&await page.locator('#changesTime').textContent()==='1:00'&&await page.locator('#changesCountInNumber').textContent()==='3'&&await page.locator('#changesCountIn').evaluate(e=>e.clientWidth<=280&&e.scrollHeight<=e.clientHeight));
+await page.locator('#changesCountInCancel').tap();await page.waitForFunction(()=>!document.querySelector('#changesStart').disabled);
+check('cancelled countdown never starts microphone or round',starts===0&&!await page.locator('#changesCountIn').evaluate(e=>e.open));
+await page.evaluate(()=>{window.roundChimes=[];const original=sound;sound=(note,...args)=>{window.roundChimes.push(note);original(note,...args);};});
+await page.locator('#changesSecond').selectOption('G');await page.locator('#changesSecondNext').tap();const startedAt=Date.now();await page.locator('#changesStart').tap();
+await page.waitForFunction(()=>document.querySelector('#changesCountInNumber').textContent==='2');check('countdown shows two before starting',starts===0);
+await page.waitForFunction(()=>document.querySelector('#changesCountInNumber').textContent==='1');check('countdown shows one before starting',starts===0);
+await page.waitForFunction(()=>document.querySelector('#changesCancel').disabled===false);
+check('full three-second count-in beeps before round',Date.now()-startedAt>=2900&&await page.evaluate(()=>window.roundChimes.length===3));await page.evaluate(()=>window.roundChimes=[]);
 check('start displays one-minute countdown and locks chord choices',await page.locator('#changesFirst').isDisabled()&&await page.locator('#changesFirstType').isDisabled()&&await page.locator('#changesSecondType').isDisabled()&&await page.locator('#changesTime').textContent()==='1:00');
-state={...state,target:'G',correctChords:1,remaining:54};await page.waitForFunction(()=>document.querySelector('#changesTarget').textContent==='Play G');check('recognition advances target and score',await page.locator('#changesCount').textContent()==='1 chord');
-check('running round shows the chosen second shape',await page.locator('#changesDiagram svg').getAttribute('aria-label')===selectedSecond&&await page.locator('#changesSecondPreview').isHidden());
+state={...state,target:'G',correctChords:1,remaining:54};await page.waitForFunction(()=>document.querySelector('#changesSecondTarget').textContent==='Play G');check('recognition advances target and score',await page.locator('#changesCount').textContent()==='0 changes');
+check('accepted chord makes one quiet confirmation sound',await page.evaluate(()=>window.roundChimes.length===1&&window.roundChimes[0]===1318.5));await page.waitForTimeout(300);check('polling the same match does not repeat the sound',await page.evaluate(()=>window.roundChimes.length===1));await page.evaluate(()=>window.roundChimes=[]);
+check('centered stage keeps meter, time, count and cancel visible',await page.locator('#minuteActiveCancel').isVisible()&&await page.locator('#changesLevel').isVisible()&&await page.locator('#changesTime').isVisible()&&await page.locator('#changesCount').isVisible()&&await page.locator('.changessetup').isHidden());await page.screenshot({path:'/tmp/glab-minute-active.png'});
+check('chord and meter occupy separate rows',await page.evaluate(()=>document.querySelector('#changesDiagram').getBoundingClientRect().height>100&&document.querySelector('#changesPreviews').getBoundingClientRect().bottom<=document.querySelector('#minuteLiveStatus').getBoundingClientRect().top));
+check('running round shows the chosen second shape',await page.locator('#changesSecondDiagram svg').getAttribute('aria-label')===selectedSecond&&await page.locator('#changesSecondPreview').isVisible()&&await page.locator('#changesSecondPreview').evaluate(e=>e.classList.contains('chord-to-play')));
 
 await page.screenshot({path:process.env.GPL_TEST_SCREENSHOT||'/tmp/glab-one-minute.png'});
-state={...state,status:'completed',remaining:0,previous:{last:24,best:30},correctChords:31,changes:30,saved:false,error:'Result not saved.'};await page.waitForFunction(()=>!document.querySelector('#changesRetry').hidden);check('unsaved result remains available for retry',await page.locator('#changesStart').isDisabled()&&await page.locator('#changesFirst').isDisabled());await page.locator('#changesRetry').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('Saved on the Pi'));
-check('completed result shows score, changes and save status',await page.locator('#changesMessage').textContent().then(t=>t.includes('31 correct chords')&&t.includes('30 changes')));
+state={...state,status:'completed',remaining:0,previous:{last:24,best:30},correctChords:31,changes:30,saved:false,error:'Result not saved.'};await page.waitForFunction(()=>!document.querySelector('#changesRetry').hidden);check('unsaved result remains available for retry',await page.locator('#changesStart').isDisabled()&&await page.locator('#changesFirst').isDisabled());check('completion popup shows single score without scrolling',await page.evaluate(()=>{const d=document.querySelector('#changesRoundResult'),s=document.querySelector('.changes-round-score');return d.open&&d.scrollHeight<=d.clientHeight&&s.offsetWidth<250&&document.querySelector('#changesRoundScore').textContent==='30'&&window.roundChimes.length===0;}));await page.locator('#changesRoundRetry').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('Saved on the Pi'));
+check('completed result shows score, changes and save status',await page.locator('#changesMessage').textContent().then(t=>t.includes('30 chord changes')&&!t.includes('correct chords')));
 check('result compares with last round and announces a new best',await page.locator('#changesMessage').textContent().then(t=>t.includes('7 more than last round')&&t.includes('New personal best')));
-check('saved score updates pair summary',await page.locator('#changesPairScores').textContent().then(t=>t.includes('Last 31 · Personal best 31')));
-await page.locator('#changesHistory').tap();await page.waitForFunction(()=>document.querySelector('#changesResultsList').textContent.includes('31 chords'));check('saved results shown',await page.locator('#changesResultsList').textContent().then(t=>t.includes('31 chords')&&t.includes('30 changes')));await page.locator('#changesCloseResults').tap();
+check('saved personal best celebrates once',await page.evaluate(()=>document.querySelector('#changesRoundTitle').textContent==='New personal best!'&&window.roundChimes.length===8));
+await page.screenshot({path:'/tmp/glab-one-minute-result.png'});
+check('saved score updates pair summary',await page.locator('#changesPairScores').textContent().then(t=>t.includes('Last 30 · Personal best 30')));
+await page.locator('#changesRoundHistory').tap();await page.waitForFunction(()=>document.querySelector('#changesResultsList').textContent.includes('30 changes'));check('saved results shown',await page.locator('#changesResultsList').textContent().then(t=>t.includes('30 changes')&&t.includes('30 changes')));await page.locator('#changesCloseResults').tap();
 failStart=true;await page.locator('#changesStart').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('Connect a microphone'));check('microphone errors do not start a round',await page.locator('#changesMessage').textContent().then(t=>t.includes('Connect a microphone'))&&await page.locator('#changesCancel').isDisabled());
-failStart=false;await page.locator('#changesFirst').selectOption('A');await page.locator('#changesFirstType').selectOption('m');await page.locator('#changesSecond').selectOption('D');await page.locator('#changesSecondType').selectOption('7');await page.locator('#changesStart').tap();await page.waitForFunction(()=>!document.querySelector('#changesCancel').disabled);check('combined names sent and restored correctly',lastStart.first==='Am'&&lastStart.second==='D7'&&await page.locator('#changesFirstType').inputValue()==='m'&&await page.locator('#changesSecondType').inputValue()==='7');await page.locator('#changesCancel').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('cancelled'));check('cancelled rounds explicitly not saved',await page.locator('#changesMessage').textContent().then(t=>t.includes('not saved')));
-await page.locator('#changesBack').tap();check('returns to existing practice timer',await page.locator('#practice').isVisible()&&await page.locator('#chordChanges').isHidden());check('existing practice timer pauses while doing the exercise',await page.locator('#timerStart').textContent()==='Resume');
+failStart=false;await page.locator('#changesFirst').selectOption('A');await page.locator('#changesFirstType').selectOption('m');await page.locator('#changesSecond').selectOption('D');await page.locator('#changesSecondType').selectOption('7');await page.locator('#changesStart').tap();await page.waitForFunction(()=>!document.querySelector('#changesCancel').disabled);check('combined names sent and restored correctly',lastStart.first==='Am'&&lastStart.second==='D7'&&await page.locator('#changesFirstType').inputValue()==='m'&&await page.locator('#changesSecondType').inputValue()==='7');await page.locator('#minuteActiveCancel').tap();await page.waitForFunction(()=>document.querySelector('#changesMessage').textContent.includes('cancelled'));check('cancelled rounds explicitly not saved',await page.locator('#changesMessage').textContent().then(t=>t.includes('not saved')));
+await page.locator('#changesBack').tap();check('returns to existing practice timer',await page.locator('#practice').isVisible()&&await page.locator('#chordChanges').isHidden());check('existing practice timer continues while doing the exercise',await page.locator('#timerStart').textContent()==='Pause timer');
 await page.locator('#oneMinuteChanges').tap();await page.waitForFunction(()=>document.querySelector('#changesDevice').options.length===2);
 await page.locator('#changesDevice').selectOption('plughw:CARD=USB,DEV=0');
 await page.locator('#changesBack').tap();
@@ -105,17 +120,20 @@ await page.evaluate(()=>{
  sound=(frequency,...args)=>{window.chimeNotes.push(frequency);original(frequency,...args);};
 });
 await page.locator('#tunerTab').tap();
+await page.waitForFunction(()=>document.querySelector('#freq').textContent.includes('110.00'));
+check('tuner explains a centered or confirmed pitch',await page.locator('#tuning').textContent().then(text=>text.includes('Centered')||text.includes('In tune')));
 await page.waitForFunction(()=>document.querySelector('#tuning').textContent.includes('In tune'));
 check('guitar tuner starts automatically with the saved Pi mic',await page.locator('#tunerDevice').inputValue()==='plughw:CARD=USB,DEV=0'&&await page.locator('#tunerListen').count()===0);
 check('live pitch auto-selects and tunes the A string',await page.locator('#note').textContent()==='A2'&&await page.locator('#tuning').textContent()==='✓ In tune');
 check('tuner highlights the heard string and shows a 100% score',await page.locator('#strings .heard').textContent()==='A2'&&await page.locator('#tunerScoreMeter').evaluate(m=>m.value)===100);
+check('tuner has a fixed center target and adjustment labels',await page.locator('.tuner-center-mark').isVisible()&&await page.locator('.tuner-scale').textContent().then(t=>t.includes('TARGET')&&t.includes('Tighten')&&t.includes('Loosen'))&&await page.locator('.tuner-center-mark').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.parentElement.getBoundingClientRect();return Math.abs((a.left+a.width/2)-(b.left+b.width/2))<2;}));
 check('tuner neck and controls fit on the Pi screen',await page.evaluate(()=>document.querySelector('#strings').getBoundingClientRect().height>=210&&document.querySelector('.tuner-controls').getBoundingClientRect().bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
 if(process.env.GPL_TUNER_SCREENSHOT)await page.screenshot({path:process.env.GPL_TUNER_SCREENSHOT});
 await page.waitForTimeout(600);
 check('steady in-tune signal plays a single two-note chime',await page.evaluate(()=>window.chimeNotes.length===2));
 liveFrequency=null;
 await page.waitForFunction(()=>!document.querySelector('#strings .heard'));
-check('tuner keeps the last score when the string stops ringing',await page.locator('#tunerLastScore').textContent()==='Last string · A2 · 100%');
+check('tuner keeps the last score when the string stops ringing',await page.locator('#tunerLastScore').textContent()==='Confirmed · A2 · 100%');
 liveFrequency=144;
 await page.waitForFunction(()=>document.querySelector('#strings .string-out-of-tune')?.textContent==='D3');
 check('the current string turns orange while the previous string stays green',
@@ -142,13 +160,13 @@ await page.waitForFunction(()=>!document.querySelector('#guitarInTune').hidden);
 check('the reset string can turn green again',await page.locator('#strings .string-in-tune').count()===6);
 liveFrequency=110;
 await page.locator('#strings').getByRole('button',{name:'D3'}).tap();
-await page.waitForFunction(()=>document.querySelector('#tuning').textContent.includes('Flat'));
+await page.waitForFunction(()=>document.querySelector('#tuning').textContent.includes('flat'));
 check('manual string selection measures against the chosen string',await page.locator('#note').textContent()==='D3');
 check('guitar tuner defaults to standard tuning',await page.locator('#tunerTuning').inputValue()==='standard');
 liveFrequency=73.4162;
 await page.locator('#tunerTuning').selectOption('dropD');
 await page.locator('#strings').getByRole('button',{name:'D2',exact:true}).tap();
-await page.waitForFunction(()=>document.querySelector('#tunerLastScore').textContent==='Last string · D2 · 100%'
+await page.waitForFunction(()=>document.querySelector('#tunerLastScore').textContent==='Confirmed · D2 · 100%'
  &&document.querySelector('#strings .string-in-tune')?.textContent==='D2');
 check('Drop D changes the low string target and clears previous tuning results',
  await page.locator('#strings .string-in-tune').count()===1&&await page.locator('#note').textContent()==='D2');
@@ -187,7 +205,7 @@ await page.waitForFunction(()=>document.querySelector('#cleanStrings .correct'))
 check('Chord Clean Check flags a wrong pitch and advances on the right one',await page.locator('#cleanStrings .correct').count()===1);
 await page.locator('#start').tap();
 await page.getByRole('link',{name:'‹ Back'}).tap();
-await page.getByRole('button',{name:'Strumming Timing'}).tap();
+await page.locator('#practiceRhythm').tap();await page.getByRole('button',{name:'Strumming Timing'}).tap();
 await page.locator('#tempo').selectOption('120');
 check('Strumming Timing starts in silent visual mode',await page.locator('#beatMode').inputValue()==='visual');
 await page.locator('#beatMode').selectOption('audio');
@@ -197,5 +215,11 @@ check('Strumming Timing scores all 32 beats and distinguishes early, late, and m
  await page.locator('#beatGrid .beat').count()===32&&await page.locator('#beatGrid .on-time').count()>20
  &&await page.locator('#beatGrid .early').count()>0&&await page.locator('#beatGrid .late').count()>0&&await page.locator('#beatGrid .missed').count()>0);
 check('audible click alone does not count as a strum',await page.locator('#beatGrid .beat').nth(3).textContent()==='Missed');
+check('Strumming results popup fits without scrolling',await page.locator('#changesRoundResult').evaluate(el=>el.open&&el.scrollHeight<=el.clientHeight&&el.getBoundingClientRect().bottom<=480));
+const onTime=await page.locator('#beatGrid .on-time').count();
+check('Strumming accuracy uses all 32 beats',await page.locator('#strumScore').textContent()===Math.round(onTime/32*100)+'%'&&await page.locator('#strumOnTime').textContent()===String(onTime));
+check('Strumming personal best saves for this tempo and mode',await page.evaluate(()=>JSON.parse(localStorage.getItem('guitar-strumming-timing-progress'))['120:audio'].rounds===1)&&await page.locator('#changesRoundTitle').textContent()==='New personal best!');
+await page.waitForTimeout(1250);await page.screenshot({path:'/tmp/glab-strumming-result.png'});
+await page.locator('#strumResultReview').tap();check('Review beats returns to all beat details',!await page.locator('#changesRoundResult').evaluate(el=>el.open)&&await page.locator('#beatGrid .beat').count()===32);
 check('no JavaScript errors',errors.length===0);console.log(checks.length+' exercise UI checks passed.');
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1});

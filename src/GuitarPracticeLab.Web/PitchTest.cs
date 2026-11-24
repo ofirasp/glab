@@ -35,14 +35,46 @@ public static double? Detect(double[] audio)
 
         if (lag >= maxLag) return null;
 
-        double left = normalized[lag - 1];
-        double center = normalized[lag];
-        double right = normalized[lag + 1];
-        double divisor = left - 2 * center + right;
-        double correction = Math.Abs(divisor) > 1e-12
-            ? 0.5 * (left - right) / divisor : 0;
+        double RefinedLag(int index)
+        {
+            double divisor = normalized[index - 1] - 2 * normalized[index] + normalized[index + 1];
+            double correction = Math.Abs(divisor) > 1e-12
+                ? 0.5 * (normalized[index - 1] - normalized[index + 1]) / divisor : 0;
+            return index + Math.Clamp(correction, -.5, .5);
+        }
+        double Trough(int index)
+        {
+            double left = normalized[index - 1], center = normalized[index], right = normalized[index + 1];
+            double curvature = left - 2 * center + right;
+            return Math.Max(0, curvature > 1e-12 ? center - (left - right) * (left - right) / (8 * curvature) : center);
+        }
 
-        return sampleRate / (lag + correction);
+        // A ringing guitar string can lose its fundamental while its third
+        // harmonic remains loud. The first acceptable YIN trough then reports
+        // that harmonic. Recover the fundamental only if its longer period
+        // explains the waveform substantially better. Clean single tones must
+        // retain their pitch, rather than being divided into subharmonics.
+        int bestLag = lag;
+        double initialPeriod = RefinedLag(lag), bestError = Trough(lag);
+        if (bestError > .01)
+        {
+            for (int multiple = 2; multiple <= 4; multiple++)
+            {
+                int expected = (int)Math.Round(initialPeriod * multiple);
+                int from = Math.Max(17, expected - 2), to = Math.Min(maxLag - 2, expected + 2);
+                for (int candidate = from; candidate <= to; candidate++)
+                {
+                    if (normalized[candidate] > normalized[candidate - 1] || normalized[candidate] > normalized[candidate + 1]) continue;
+                    double error = Trough(candidate);
+                    if (normalized[candidate] < .15 && error < bestError * .35)
+                    {
+                        bestLag = candidate;
+                        bestError = error;
+                    }
+                }
+            }
+        }
+        return sampleRate / RefinedLag(bestLag);
     }
     return null;
 }

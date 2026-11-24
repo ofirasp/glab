@@ -15,12 +15,12 @@ function syncVolume() {
   const percentage = Math.round(audio.volume * 100);
   const silent = audio.muted || audio.volume === 0;
   if (audio.volume > 0) lastAudibleVolume = audio.volume;
-  for (const prefix of ['song', 'reader']) {
+  for (const prefix of ['song', 'reader', 'tools', 'stage']) {
     $(prefix + 'Volume').value = percentage;
     $(prefix + 'Volume').setAttribute('aria-valuetext', percentage + ' percent' + (silent ? ', muted' : ''));
     $(prefix + 'VolumeValue').textContent = percentage + '%';
     const mute = $(prefix + 'Mute');
-    mute.textContent = silent ? 'Unmute' : 'Mute';
+    mute.textContent = prefix === 'stage' ? (silent ? '🔇' : '🔊') : (silent ? 'Unmute' : 'Mute');
     mute.setAttribute('aria-label', silent ? 'Unmute song' : 'Mute song');
     mute.setAttribute('aria-pressed', String(silent));
   }
@@ -30,7 +30,7 @@ function syncVolume() {
     }));
   } catch {}
 }
-for (const prefix of ['song', 'reader']) {
+for (const prefix of ['song', 'reader', 'tools', 'stage']) {
   $(prefix + 'Volume').oninput = event => {
     audio.volume = Math.max(0, Math.min(100, Number(event.target.value))) / 100;
     audio.muted = audio.volume === 0;
@@ -46,11 +46,13 @@ for (const prefix of ['song', 'reader']) {
 }
 audio.addEventListener('volumechange', syncVolume);
 syncVolume();
-let preferredZoom = 1.5, readerMode = false, readerControlsOpen = false, chordFocus = false;
+let preferredZoom = 1.5, readerMode = false, readerControlsOpen = false, chordFocus = false, cleanSongLayout = true;
 try {
   const saved = Number(localStorage.getItem('guitar-reading-zoom'));
   if (saved >= 1 && saved <= 3) preferredZoom = saved;
   readerMode = localStorage.getItem('guitar-reading-view') === 'full';
+  cleanSongLayout = localStorage.getItem('guitar-clean-song-layout') !== 'false';
+  if(cleanSongLayout)readerMode=false;
 } catch {}
 let songs = [], song = null, page = 1, zoom = preferredZoom, pageToken = 0;
 let alternatePdf = null, pairedPdf = null;
@@ -105,6 +107,15 @@ async function operation(action) {
 function pdfStem(item) {
   return (item.pdfStem || item.title).trim().toLowerCase();
 }
+// Analysis belongs to the displayed sheet; use the shared timeline until it is analyzed.
+function analysisTarget() {
+  const pdf = alternatePdf || song;
+  return {id: pdf?.id, variant: pdf?.variant || '', pdf};
+}
+function activeChordAnalysis() {
+  const {pdf, variant} = analysisTarget();
+  return (variant === 'simple' ? song?.simpleChordAnalysis : pdf?.chordAnalysis) || song?.chordAnalysis;
+}
 function isSimplePdf(item) {
   return item.variant === 'simple' || pdfStem(item).endsWith('-simple');
 }
@@ -126,6 +137,7 @@ async function discoverSimplePdf(item) {
     const metadata = await response.json();
     if (song !== item || !Number.isInteger(metadata.pages)) return;
     pairedPdf = { ...item, ...metadata, variant: 'simple' };
+    showPlayingChord(audio.currentTime);
     update();
   } catch {
     // The standard PDF remains usable if the companion lookup fails.
@@ -141,7 +153,7 @@ function update() {
   $('chordListButton').disabled = $('watchLesson').disabled = busy || !song;
   $('watchLesson').hidden = !song?.lessonUrl;
   const hasSong = !!song, hasAudio = hasSong && song.hasAudio;
-  for (const id of ['audioButton', 'notesButton', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
+  for (const id of ['audioButton', 'notesButton', 'readerNotes', 'replacePdfButton', 'deleteSongButton', 'previous', 'next', 'zoomIn', 'zoomOut', 'cuesButton'])
     $(id).disabled = busy || !hasSong;
   $('previous').hidden = $('next').hidden = pdf?.pages === 1;
   $('previous').disabled ||= page <= 1;
@@ -157,18 +169,20 @@ function update() {
   $('readerLoop').disabled = $('loop').disabled;
   $('rhythmButton').disabled = busy || !hasAudio;
   $('analyzeChordsButton').disabled = busy || !hasAudio;
-  $('chordMatchButton').disabled = busy || !hasAudio || !song.chordAnalysis?.changes.some(change => change.name);
+  $('editChordTimeline').disabled = busy || takingSongRecording || isRecordingFollow() || !hasAudio || !activeChordAnalysis()?.changes.length;
+  $('timingCalibrationButton').disabled = busy || takingSongRecording || isRecordingFollow();
+  $('chordMatchButton').disabled = busy || !hasAudio || !activeChordAnalysis()?.changes.some(change => change.name);$('readerChordMatch').disabled=$('chordMatchButton').disabled;
   $('recordReviewButton').disabled = busy || switchingTrack || !hasAudio;
   $('rhythmSummary').textContent = song?.rhythm ? `${song.rhythm.meter} · ${song.rhythm.bpm} BPM` : '';
   $('addBacking').disabled = busy || switchingTrack || !hasAudio;
   $('originalTrack').disabled = busy || switchingTrack || !hasAudio;
   $('backingTrack').disabled = busy || switchingTrack || !song?.hasBacking;
-  $('trackToggle').disabled = $('readerTrack').disabled = busy || switchingTrack || !song?.hasBacking;
+  $('stageTrack').disabled = $('trackToggle').disabled = $('readerTrack').disabled = busy || switchingTrack || !song?.hasBacking;
   $('originalTrack').setAttribute('aria-pressed', String(audioVariant === 'original'));
   $('backingTrack').setAttribute('aria-pressed', String(audioVariant === 'backing'));
   $('trackToggle').textContent = switchingTrack ? 'Switching…' : !song?.hasBacking
     ? 'Original · no backing' : audioVariant === 'original' ? 'Original → tap for backing' : 'Backing → tap for original';
-  $('readerTrack').textContent = audioVariant === 'backing' ? 'Backing' : 'Original';
+  $('stageTrack').textContent = $('readerTrack').textContent = audioVariant === 'backing' ? 'Backing' : 'Original';
   $('addBacking').textContent = song?.hasBacking ? 'Change backing MP3' : 'Add backing MP3';
   $('backingHint').textContent = song?.hasBacking
     ? 'Backing ready. Both versions share the same PDF cues. Switching keeps your playback position.'
@@ -177,12 +191,14 @@ function update() {
   $('audioEmpty').hidden = hasAudio;
   $('songTitle').textContent = song?.title || 'Choose a song';
   $('songTitle').title = song?.title || '';
-  $('pageNumber').textContent = song ? `${pdf.pages === 1 ? 'Scroll' : `${page} / ${pdf.pages}`} · ${Math.round(zoom * 100)}%` : 'No PDF selected';
+  $('pageNumber').textContent = song ? `${pdf.pages === 1 ? '' : `${page} / ${pdf.pages} · `}${Math.round(zoom * 100)}%` : 'No PDF selected';
   $('cueCount').textContent = song?.cues.length || 0;
   $('play').textContent = audio.paused ? 'Play' : 'Pause';
   $('readerPlay').textContent = $('play').textContent;
-  $('follow').textContent = following ? 'Follow on' : 'Follow off';
-  $('follow').setAttribute('aria-pressed', String(following));
+  window.AutoPdfFollow?.refreshUI();
+  const autoPdfState=window.AutoPdfFollow?.state();
+  $('follow').textContent = autoPdfState?.enabled ? (autoPdfState.suspended?'Follow paused':'Follow on') : following ? 'Follow on' : 'Follow off';
+  $('follow').setAttribute('aria-pressed', String(autoPdfState?.enabled ? !autoPdfState.suspended : following));
   $('loop').textContent = looping ? 'Loop on' : 'Loop off';
   $('loop').setAttribute('aria-pressed', String(looping));
   $('readerLoop').textContent = $('loop').textContent;
@@ -192,19 +208,25 @@ function update() {
   const recording = isRecordingFollow();
   $('recordFollow').disabled = busy || switchingTrack || !hasAudio || !pageReady || !!alternatePdf || recording;
   $('stopRecordFollow').hidden = !recording;
-  $('followDown').hidden = !recording || readerMode;
-  $('readerFollowDown').hidden = !recording || !readerMode;
-  for (const id of ['libraryButton', 'toolsButton', 'readerTools', 'loopTools', 'readerToggle', 'readerControlsToggle'])
+  $('followDown').hidden = !recording || readerMode || cleanSongLayout;
+  $('readerFollowDown').hidden = !recording || !(readerMode || cleanSongLayout);
+  document.body.classList.toggle('follow-recording',recording);
+  for (const id of ['libraryButton', 'toolsButton', 'readerTools', 'loopTools', 'readerToggle', 'readerControlsToggle', 'chordFocusToggle'])
     $(id).disabled = recording;
   if (takingSongRecording) {
-    for (const id of ['libraryButton','toolsButton','readerTools','loopTools','play','readerPlay','back','forward','readerBack','readerForward','songStart','seek','loop','readerLoop','readerTrack','trackToggle','follow','cuesButton','markCue','watchLesson'])
+    for (const id of ['libraryButton','toolsButton','readerTools','loopTools','play','readerPlay','back','forward','readerBack','readerForward','songStart','seek','loop','readerLoop','readerTrack','stageTrack','trackToggle','follow','cuesButton','markCue','watchLesson'])
       $(id).disabled = true;
   }
   if (recording) {
     for (const id of ['simpleVersion', 'zoomIn', 'zoomOut', 'back', 'forward', 'songStart', 'seek', 'follow', 'cuesButton',
-      'markCue', 'readerBack', 'readerForward', 'loop', 'readerLoop', 'readerTrack', 'trackToggle', 'watchLesson'])
+      'markCue', 'readerBack', 'readerForward', 'loop', 'readerLoop', 'readerTrack', 'stageTrack', 'trackToggle', 'watchLesson'])
       $(id).disabled = true;
   }
+  $('stageBack').disabled=$('back').disabled||Boolean(takePlayback)||Boolean(takingSongRecording);
+  $('stageForward').disabled=$('forward').disabled||Boolean(takePlayback)||Boolean(takingSongRecording);
+  $('toolsBack').disabled=$('back').disabled;$('toolsForward').disabled=$('forward').disabled;
+  $('toolsLoopToggle').disabled=$('loop').disabled;$('toolsLoopToggle').textContent=$('loop').textContent;$('toolsLoopToggle').setAttribute('aria-pressed',String(looping));
+  $('readerToggle').hidden = cleanSongLayout;
   $('readerToggle').textContent = readerMode ? 'Split view' : 'FullScreen';
   $('readerToggle').setAttribute('aria-pressed', String(readerMode));
 }
@@ -340,7 +362,100 @@ function renderLibrary() {
   }
   $('libraryCount').textContent = `${songs.length} songs`;
 }
+let countInEnabled = true;
+try { countInEnabled = localStorage.getItem('guitar-song-count-in') !== 'false'; } catch {}
+$('songCountInEnabled').checked = countInEnabled;
+$('songCountInEnabled').onchange = () => {
+  countInEnabled = $('songCountInEnabled').checked;
+  try { localStorage.setItem('guitar-song-count-in', String(countInEnabled)); } catch {}
+  status(countInEnabled ? 'Five-second count-in enabled.' : 'Count-in off. Songs start immediately.');
+};
+let pendingSongStart = null, countInAudio = null;
+function stopCountInBeeps(pending) {
+  for (const voice of pending.voices) { try { voice.stop(); } catch {} }
+  pending.voices = [];
+}
+async function scheduleCountInBeeps(pending, player) {
+  if (audio.muted || audio.volume === 0) return;
+  try {
+    countInAudio ??= new AudioContext();
+    await countInAudio.resume();
+    if (pendingSongStart !== pending || countInAudio.state !== 'running') return;
+    const position = player.currentTime || 0;
+    const countRhythm = SongRhythmPoints.at(song?.rhythm, position);
+    const bpm = countRhythm?.bpm || 60;
+    const beat = 60 / bpm, rate = player.playbackRate || 1;
+    const anchor = Number.isFinite(countRhythm?.firstDownbeat) ? countRhythm.firstDownbeat : position;
+    const beats = rhythmBeats[countRhythm?.meter] || 4;
+    const remaining = Math.max(0, (pending.deadline - performance.now()) / 1000);
+    const first = Math.ceil((position - remaining * rate - anchor) / beat);
+    const last = Math.ceil((position - anchor) / beat) - 1;
+    for (let index = first; index <= last; index++) {
+      const delay = remaining + (anchor + index * beat - position) / rate;
+      if (delay < .005 || delay >= remaining) continue;
+      const start = countInAudio.currentTime + delay;
+      const oscillator = countInAudio.createOscillator(), gain = countInAudio.createGain();
+      const accent = ((index % beats) + beats) % beats === 0;
+      oscillator.type = 'sine';
+      oscillator.frequency.value = accent ? 1046.5 : 784;
+      gain.gain.setValueAtTime(.0001, start);
+      gain.gain.exponentialRampToValueAtTime((accent ? .14 : .09) * audio.volume, start + .005);
+      gain.gain.exponentialRampToValueAtTime(.0001, start + .09);
+      oscillator.connect(gain).connect(countInAudio.destination);
+      oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+      pending.voices.push(oscillator);
+      oscillator.start(start); oscillator.stop(start + .1);
+    }
+  } catch {}
+}
+function cancelSongStart() {
+  if (!pendingSongStart) return;
+  const pending = pendingSongStart;
+  pendingSongStart = null;
+  clearTimeout(pending.timer);
+  stopCountInBeeps(pending);
+  $('songCountIn').close();
+  pending.resolve(false);
+}
+function songCountIn(start, valid = () => true, player = audio) {
+  cancelSongStart();
+  if (document.hidden || !valid()) return Promise.resolve(false);
+  if (!countInEnabled) return Promise.resolve().then(start).then(() => true);
+  return new Promise((resolve, reject) => {
+    const pending = {resolve, timer:null, voices:[], deadline:performance.now() + 5000};
+    pendingSongStart = pending;
+    $('songCountInNumber').textContent = '5';
+    $('songCountIn').showModal();
+    void scheduleCountInBeeps(pending, player);
+    const tickCount = () => {
+      if (pendingSongStart !== pending) return;
+      if (document.hidden || !valid()) { cancelSongStart(); return; }
+      const remaining = Math.ceil((pending.deadline - performance.now()) / 1000);
+      if (remaining > 0) {
+        $('songCountInNumber').textContent = String(remaining);
+        pending.timer = setTimeout(tickCount, Math.min(100, pending.deadline - performance.now()));
+        return;
+      }
+      pendingSongStart = null;
+      stopCountInBeeps(pending);
+      $('songCountIn').close();
+      Promise.resolve().then(start).then(() => resolve(true), reject);
+    };
+    pending.timer = setTimeout(tickCount, 100);
+  });
+}
+function startSongPlayback() {
+  if (!audio.paused) return Promise.resolve(true);
+  const id = song?.id, source = audio.src;
+  return songCountIn(() => audio.play(), () => song?.id === id && audio.src === source);
+}
+$('cancelSongCountIn').onclick = cancelSongStart;
+$('songCountIn').addEventListener('cancel', event => { event.preventDefault(); cancelSongStart(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) cancelSongStart(); });
+window.addEventListener('pagehide', cancelSongStart);
+
 function selectSong(item, autoplay = false) {
+  cancelSongStart();
   window.SongChordMatch?.stop();
   switchToken++; switchingTrack = false; audioVariant = 'original';
   audio.pause(); audio.removeAttribute('src'); audio.load();
@@ -358,7 +473,7 @@ function selectSong(item, autoplay = false) {
   if (song.hasAudio) {
     audio.src = `${api}/${song.id}/audio?v=${encodeURIComponent(song.updated)}`;
     audio.playbackRate = Number($('speed').value);
-    if (autoplay) audio.play().catch(() => status('Recording loaded. Tap Play to begin.'));
+    if (autoplay) startSongPlayback().catch(() => status('Recording loaded. Tap Play to begin.'));
   }
   $('seek').value = 0; $('seek').max = Math.max(1, song.duration);
   $('clock').textContent = `0:00 / ${clock(song.duration)}`;
@@ -589,7 +704,7 @@ $('recordFollow').onclick = () => {
   setFollow(false);
   addFollowMark(cueAtPlayhead());
   status('Recording Follow. Tap or hold ↓ to scroll, then pause for a second to mark the position.');
-  audio.play().catch(error => {
+  startSongPlayback().then(started => { if (!started) stopRecordingFollow(); }).catch(error => {
     stopRecordingFollow();
     message(error);
   });
@@ -613,6 +728,7 @@ function renderCues() {
     jump.textContent = `${clock(cue.time)} · ${cue.label} · page ${cue.page}`;
     jump.onclick = () => {
       if (busy) return;
+      window.AutoPdfFollow?.pause();
       audio.currentTime = cue.time; activeCue = null;
       seekPdf(cue);
       closeDialog('cueDialog');
@@ -638,97 +754,50 @@ function chordIndexAt(time, changes) {
   while (low && !changes[low - 1].name) low--;
   return low - 1;
 }
-const stripLabels = new Map();
-let stripTimeline = null, stripLongestName = 1;
+function playbackChord(name) {
+  return name ? window.GuitarChordViewer?.alternate(name) || name : name;
+}
+document.addEventListener('guitar-chord-alternate-change', event => {
+  if (song?.id !== event.detail.id) return;
+  const matching = Boolean(window.SongChordMatch?.progress?.());
+  window.SongChordMatch?.stop();
+  stageDiagramName = '';
+  showPlayingChord((takePlayback ?? audio).currentTime);
+  status(matching ? 'Alternate chord saved. Start Chord match again to use the new choices.' : 'Alternate chord saved for this song.');
+});
 function showPlayingChord(time) {
-  const changes = song?.chordAnalysis?.changes;
+  const changes = activeChordAnalysis()?.changes;
   const index = chordIndexAt(time, changes);
-  const current = changes?.[index];
-  const strip = $('chordStrip'), badge = $('playingChord');
-  if (stripTimeline !== changes) {
-    for (const label of stripLabels.values()) label.remove();
-    stripLabels.clear();
-    stripTimeline = changes;
-    stripLongestName = changes?.reduce((longest, change) => Math.max(longest, change.name?.length ?? 0), 1) ?? 1;
-  }
-  strip.hidden = !changes?.length;
-  strip.classList.toggle('moving', !(takePlayback ?? audio).paused);
+  const badge = $('playingChord');
+  $('chordStrip').hidden = true;
+  badge.textContent = playbackChord(changes?.[index]?.name) || '';
   $('songTitle').hidden = false;
-  badge.hidden = !current?.name;
-  if (badge.textContent !== (current?.name || '')) badge.textContent = current?.name || '';
   window.SongChordMatch?.show(index);
   showFullscreenChords(time, changes, index);
-
-  const width = strip.clientWidth;
-  if (!width || !changes?.length) return;
-  const center = width / 2, gap = 7;
-  const labelWidth = name => Math.max(20, name.length * 8 + 4);
-  const visible = new Set();
-  function place(offset, x, past, next = false) {
-    let label = stripLabels.get(offset);
-    if (!label) {
-      label = document.createElement('span');
-      label.className = 'strip-chord';
-      label.textContent = changes[offset].name;
-      stripLabels.set(offset, label);
-      strip.append(label);
-    }
-    visible.add(offset);
-    label.classList.toggle('past', past);
-    label.classList.toggle('next', next);
-    label.style.left = x + 'px';
-  }
-  const currentHalf = current ? badge.offsetWidth / 2 : 0;
-  let left = center - currentHalf - gap;
-  let endedAt = current?.time ?? time;
-  for (let offset = index - 1; offset >= 0; offset--) {
-    const change = changes[offset];
-    if (!change.name) continue;
-    const half = labelWidth(change.name) / 2;
-    // A completed chord leaves at its end time, regardless of how long it played.
-    // Keep earlier chords behind it so short sections cannot hide their neighbors.
-    const x = Math.min(left - half, center - currentHalf - gap - half - Math.max(0, time - endedAt) * 24);
-    if (x < half) break;
-    place(offset, x, true);
-    left = x - half - gap;
-    endedAt = change.time;
-  }
-  // Reserve the same approach lane for the entire timeline. A chord's position
-  // on this lane survives the change from a later chord to the blinking next one.
-  const largeHalf = name => Math.max(13, (name.length * 11 + 4) / 2);
-  const widest = Math.max(13, (stripLongestName * 11 + 4) / 2);
-  const far = width - Math.min(widest, width / 2);
-  const near = Math.min(far, center + widest * 2 + gap);
-  const travel = far - near;
-  let previous = current ?? {time: 0, name: ''};
-  let x = near, next = true;
-  for (let offset = index + 1; offset < changes.length; offset++) {
-    const change = changes[offset];
-    if (!change.name) continue;
-    const duration = Math.max(.001, change.time - previous.time);
-    const spacing = Math.min(travel, Math.max(largeHalf(previous.name) + largeHalf(change.name) + gap, duration * 24));
-    const remaining = next ? Math.max(0, Math.min(1, (change.time - time) / duration)) : 1;
-    x += spacing * remaining;
-    if (!next && (travel === 0 || x > far)) break;
-    place(offset, x, false, next);
-    previous = change;
-    next = false;
-  }
-  for (const [offset, label] of stripLabels) {
-    if (!visible.has(offset)) { label.remove(); stripLabels.delete(offset); }
-  }
 }
 let stageDiagramName = '', focusPdfPoint = null, syncingBar = false, syncTapTime = null;
 function showFullscreenChords(time, changes, index) {
-  const ready = readerMode && Boolean(changes?.some(change => change.name));
-  $('fullscreenChords').hidden = $('stageTransport').hidden = $('chordFocusToggle').hidden = $('stageBeats').hidden = !ready;
-  document.body.classList.toggle('chord-focus', ready && chordFocus);
+  const ready = Boolean(changes?.some(change => change.name));
+  const focused = ready && (readerMode || cleanSongLayout) && chordFocus;
+  $('fullscreenChords').hidden = !focused;
+  $('stageBeats').hidden = !ready && !pairedPdf;
+  $('stageBeats').classList.toggle('simple-only', !ready);
+  $('stageTransport').hidden = !(readerMode || cleanSongLayout) || !song?.hasAudio;
+  $('chordFocusToggle').hidden = !ready || !(readerMode || cleanSongLayout);
+  $('readerPageControls').hidden = (readerMode && !readerControlsOpen) || (cleanSongLayout && focused);
+  document.body.classList.toggle('chord-focus', focused);
+  document.body.classList.toggle('split-bar-view', ready && !readerMode && !focused);
+  const bars = $('stageBeats');
+  if ((readerMode || focused) && bars.parentElement !== $('readerStage')) $('pdfViewport').before(bars);
+  if (!readerMode && !focused && bars.parentElement !== $('readerPageControls')) $('readerPageControls').append(bars);
+  syncStageTransport(time);
+  $('cleanChordMatchStatus').hidden=!cleanSongLayout||!window.SongChordMatch?.progress?.();
   if (!ready) return;
   const named = changes.map((change, offset) => ({...change, offset})).filter(change => change.name);
   const currentPosition = named.findIndex(change => change.offset === index);
-  const current = changes[index];
-  const upcoming = named.filter(change => change.offset > index);
-  $('stagePrevious').textContent = named[currentPosition - 1]?.name || '—';
+  const current = changes[index] ? {...changes[index], name:playbackChord(changes[index].name)} : null;
+  const upcoming = named.filter(change => change.offset > index).map(change => ({...change,name:playbackChord(change.name)}));
+  $('stagePrevious').textContent = playbackChord(named[currentPosition - 1]?.name) || '—';
   $('stageCurrent').textContent = current?.name || '—';
   $('stageNext').textContent = upcoming[0]?.name || '—';
   $('stageLater').textContent = upcoming[1]?.name || '—';
@@ -749,9 +818,12 @@ function showFullscreenChords(time, changes, index) {
     const shape = shapes.find(option => option.frets.join(',') === preferred) || shapes[0];
     if (shape) $('stageDiagram').append(GuitarChordDiagram(shape, stageDiagramName));
   }
+}
+function syncStageTransport(time) {
   const player = takePlayback ?? audio;
   $('stagePlay').textContent = player.paused ? 'Play' : 'Pause';
   $('stagePlay').disabled = !song?.hasAudio || Boolean(takingSongRecording);
+  $('stageStart').disabled = $('songStart').disabled || Boolean(takePlayback) || Boolean(takingSongRecording);
   $('stageClock').textContent = clock(time) + ' / ' + clock(song?.duration || 0);
   $('stageSeek').max = song?.duration || 1;
   $('stageSeek').value = time;
@@ -760,7 +832,9 @@ function showFullscreenChords(time, changes, index) {
   $('stageScore').textContent = score ? 'Matched ' + score.hits + ' / ' + score.total : 'Chord match off';
 }
 function showChordBeats(time, start, end, nextName) {
-  const rhythm = song?.rhythm;
+  const rhythm = SongRhythmPoints.at(song?.rhythm, time);
+  $('addRhythmPoint').disabled = !song?.rhythm || syncingBar || Boolean(takePlayback) || Boolean(takingSongRecording);
+  if ($('rhythmPointsDialog').open) $('pointClock').textContent = clock(audio.currentTime);
   const beats = rhythmBeats[rhythm?.meter];
   const bpm = rhythm?.bpm;
   $('stageSyncBar').disabled = !beats || !Number.isFinite(bpm) || syncingBar || Boolean(takePlayback) || Boolean(takingSongRecording);
@@ -780,13 +854,14 @@ function showChordBeats(time, start, end, nextName) {
   const aligned = Number.isFinite(rhythm.firstDownbeat);
   if (!syncingBar) $('stageSyncBar').textContent = aligned ? '✓ Bar synced' : 'Bar starts now';
   const anchor = aligned ? rhythm.firstDownbeat : 0;
-  const currentBar = Math.floor((time - anchor) / bar + 1e-6);
+  const gridTime=cleanSongLayout?Math.min(time,Math.max(0,(song?.duration||time)-.001)):time;
+  const currentBar = Math.floor((gridTime - anchor) / bar + 1e-6);
   // Keep song-time coordinates fixed through chord changes.
-  const windowBar = Math.floor(currentBar / 2) * 2;
-  const windowStart = anchor + windowBar * bar;
-  const windowEnd = windowStart + 2 * bar;
+  const windowBar = cleanSongLayout?currentBar:Math.floor(currentBar / 2) * 2;
+  const windowStart = cleanSongLayout?Math.max(0,anchor+windowBar*bar):anchor+windowBar*bar;
+  const windowEnd = Math.min(anchor+(windowBar+2)*bar,rhythm.sectionEnd,cleanSongLayout?(song?.duration||Infinity):Infinity);
   const length = Math.max(.001, windowEnd - windowStart);
-  $('stageBeatCaption').textContent = 'Estimated · ' + rhythm.meter + ' · ' + bpm + ' BPM'
+  $('stageBeatCaption').textContent = (rhythm.pointNumber ? '#' + rhythm.pointNumber + ' · ' : 'Estimated · ') + rhythm.meter + ' · ' + bpm + ' BPM'
     + (aligned ? ' · bar aligned at ' + clock(rhythm.firstDownbeat) : ' · tap Bar starts now on beat 1');
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
@@ -806,14 +881,22 @@ function showChordBeats(time, start, end, nextName) {
   const displayStart = anchor + Math.round((start - anchor) / pulse) * pulse;
   const displayEnd = anchor + Math.round((end - anchor) / pulse) * pulse;
   const timeline = [];
-  for (const change of song?.chordAnalysis?.changes || []) {
+  for (const [sourceIndex, change] of (activeChordAnalysis()?.changes || []).entries()) {
     if (!change.name) continue;
     const nearest = anchor + Math.round((change.time - anchor) / pulse) * pulse;
     const boundary = nearest;
     const previous = timeline.at(-1);
     if (previous?.time === boundary) {
-      previous.name = change.name;
-    } else if (previous?.name !== change.name) timeline.push({time: boundary, name: change.name});
+      previous.name = playbackChord(change.name); previous.sourceIndex = sourceIndex;
+    } else timeline.push({time: boundary, name:playbackChord(change.name), sourceIndex});
+  }
+
+  if(cleanSongLayout){
+    $('stageBeatCaption').title=$('stageBeatCaption').textContent;
+    $('stageBeatCaption').textContent=(rhythm.pointNumber?'#'+rhythm.pointNumber+' · ':'')+rhythm.meter+' · '+bpm+' BPM';
+    CleanChordBars.render(graphic,{time,windowBar,windowStart,windowEnd,bar,pulse,pulses,anchor,timeline,meter:rhythm.meter,matched:index=>window.SongChordMatch?.matched?.(index)||false});
+    if(nextName){const remaining=Math.max(0,(end-time)/pulse);$('stageSeconds').textContent='Change in '+remaining.toFixed(1)+(subdivisions>1?' pulses':' beats');}
+    return;
   }
 
   for (let group = windowBar; group <= windowBar + 1; group++) {
@@ -828,12 +911,17 @@ function showChordBeats(time, start, end, nextName) {
       const chordIndex = chordIndexAt(from + .001, timeline);
       const name = timeline[chordIndex]?.name || (from >= start && from < end ? $('stageCurrent').textContent : '');
       const activeChord = from < displayEnd && to > displayStart;
+      const sourceIndex = timeline[chordIndex]?.sourceIndex;
+      const matched = window.SongChordMatch?.matched?.(sourceIndex) || false;
       const width = Math.max(1, x(to) - x(from) - 4);
       add('rect', {x:x(from)+1,y:16,width,height:31,rx:5,
-        fill:activeChord?'#375743':'#203247',stroke:activeChord?'#91d6a5':'#647e96','stroke-width':1,
+        fill:matched?'#22573d':activeChord?'#375743':'#203247',stroke:matched?'#8af0b4':activeChord?'#91d6a5':'#647e96','stroke-width':matched?2:1,
+        'data-matched':matched,'data-source-index':sourceIndex,
         'data-chord-segment':name,'data-bar-fraction':(to-from)/bar});
+      if (matched && width > 22)
+        add('text', {x:x(to)-10,y:29,'text-anchor':'middle',fill:'#9affc3','font-size':13,'font-weight':800,'data-match-check':sourceIndex}, '✓');
       if (name && width > 25)
-        add('text', {x:(x(from)+x(to))/2,y:14,'text-anchor':'middle',fill:activeChord?'#ffe28a':'#cad9eb','font-size':10,'font-weight':700},name);
+        add('text', {x:(x(from)+x(to))/2,y:14,'text-anchor':'middle',fill:activeChord?'#ffe28a':'#cad9eb','font-size':15,'font-weight':750},name);
     }
     add('text', {x:x(left)+5,y:11,fill:'#b9cde6','font-size':7}, 'Bar ' + label);
     for (let count = 0; count < pulses; count++) {
@@ -868,13 +956,15 @@ $('stageSyncBar').onclick = async () => {
   if (syncingBar || !id || !rhythm || !rhythmBeats[rhythm.meter] || !Number.isFinite(firstDownbeat)) return;
   const audioVersion = song.audioVersion;
   syncingBar = true;
-  song.rhythm = {...rhythm, firstDownbeat};
+  const activePoint = SongRhythmPoints.at(rhythm, firstDownbeat)?.pointNumber;
+  const editedRhythm = activePoint ? {...rhythm,points:rhythm.points.map((point,i)=>i===activePoint-1?{...point,time:firstDownbeat}:point)} : {...rhythm, firstDownbeat};
+  song.rhythm = editedRhythm;
   showPlayingChord(audio.currentTime);
   $('stageSyncBar').textContent = 'Saving…';
   try {
     const result = await request(`/${id}/rhythm`, {
       method: 'PUT', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({audioVersion, rhythm: {...rhythm, firstDownbeat}})
+      body: JSON.stringify({audioVersion, rhythm: editedRhythm})
     });
     if (song?.id !== id || song.audioVersion !== audioVersion) return;
     song.rhythm = result.rhythm;
@@ -890,7 +980,10 @@ $('stageSyncBar').onclick = async () => {
     showPlayingChord((takePlayback ?? audio).currentTime);
   }
 };
-$('stageSetRhythm').onclick = () => $('rhythmButton').click();
+$('stageSetRhythm').onclick = () => {
+  const point = SongRhythmPoints.at(song?.rhythm, audio.currentTime)?.pointNumber;
+  if(point) editRhythmPoint(point-1); else $('rhythmButton').click();
+};
 $('chordFocusToggle').onclick = () => {
   if (!chordFocus) focusPdfPoint = pagePoint();
   chordFocus = !chordFocus;
@@ -902,7 +995,10 @@ $('chordFocusToggle').onclick = () => {
     else if (focusPdfPoint) restorePosition(0, focusPdfPoint.y, focusPdfPoint.x);
   }
 };
+$('stageBack').onclick = () => $('back').click();
+$('stageForward').onclick = () => $('forward').click();
 $('stagePlay').onclick = () => $('readerPlay').click();
+$('stageStart').onclick = () => $('songStart').click();
 $('stageSeek').oninput = () => {
   audio.currentTime = Number($('stageSeek').value);
   activeCue = null;
@@ -912,7 +1008,7 @@ $('stageSeek').oninput = () => {
 function tick() {
   if (!song?.hasAudio || switchingTrack) return;
   const time = audio.currentTime;
-  if (!takingSongRecording && looping && loopA !== null && loopB !== null && !audio.paused && time >= loopB) {
+  if (!takingSongRecording && !$('timelineEditorDialog').open && looping && loopA !== null && loopB !== null && !audio.paused && time >= loopB) {
     audio.currentTime = loopA; activeCue = null;
   }
   const player = takePlayback ?? audio;
@@ -929,6 +1025,7 @@ function tick() {
   $('currentSection').textContent = cue?.label || (cues.length ? 'Before first cue' : 'No cue yet');
   $('nextSection').textContent = nextCue ? `Next: ${nextCue.label} at ${clock(nextCue.time)}` :
     cue ? 'Final saved section' : 'Move the PDF to a section, then tap Mark here.';
+  if (window.AutoPdfFollow?.tick(now)) return;
   if (following) {
     if (activeCue !== index) {
       activeCue = index;
@@ -938,11 +1035,12 @@ function tick() {
   }
 }
 const songToolDialogs = new Set([
-  'analyzeChordsDialog', 'rhythmDialog', 'chordMatchDialog', 'recordReviewDialog',
-  'notesDialog', 'replacePdfDialog', 'deleteSongDialog'
+  'pdfSyncDialog', 'analyzeChordsDialog', 'rhythmDialog', 'rhythmPointsDialog', 'chordMatchDialog', 'recordReviewDialog',
+  'replacePdfDialog', 'deleteSongDialog', 'timelineEditorDialog', 'timingCalibrationDialog'
 ]);
 function dismissDialog(id) {
   closeDialog(id);
+  if(id === 'rhythmDialog' && rhythmPointTime !== null) { openRhythmPoints(); return; }
   if (song && songToolDialogs.has(id)) openDialog('toolsDialog');
 }
 document.querySelectorAll('[data-close]').forEach(button => {
@@ -950,6 +1048,7 @@ document.querySelectorAll('[data-close]').forEach(button => {
 });
 document.querySelectorAll('dialog').forEach(dialog => {
   dialog.addEventListener('cancel', event => {
+    if(dialog.id==='notesDialog'){event.preventDefault();if(!busy)requestNotesClose();return;}
     if (busy) event.preventDefault();
     else if (song && songToolDialogs.has(dialog.id)) {
       event.preventDefault();
@@ -957,27 +1056,35 @@ document.querySelectorAll('dialog').forEach(dialog => {
     }
   });
 });
-$('libraryButton').onclick = () => { renderLibrary(); openDialog('libraryDialog'); };
+$('libraryButton').onclick = () => operation(async () => { await refreshLibrary();renderLibrary();openDialog('libraryDialog'); });
 $('search').oninput = renderLibrary;
-function importDialog() { closeDialog('libraryDialog'); closeDialog('toolsDialog'); $('importStatus').textContent = ''; openDialog('importDialog'); }
+for(let capo=1;capo<=12;capo++)$('importCapo').add(new Option('Fret '+capo,capo));
+$('importCapo').onchange=()=>{$('importCapo').dataset.changed='true';};
+function importDialog() { $('importCapo').value='0';$('importCapo').dataset.changed='false';closeDialog('libraryDialog'); closeDialog('toolsDialog'); $('importStatus').textContent = ''; openDialog('importDialog'); }
 $('importButton').onclick = importDialog; $('libraryImport').onclick = importDialog;
 $('doImport').onclick = () => operation(async () => {
   const files = [...$('pdfFiles').files], selection = audioSelection($('importAudio').files);
   if (!files.length) throw new Error('Choose at least one PDF.');
   if (selection && files.length !== 1) throw new Error('Attach an MP3 when importing one PDF, or import PDFs only.');
-  let last;
+  const importOptions={capo:Number($('importCapo').value),capoExplicit:$('importCapo').dataset.changed==='true',analyze:$('importAnalyze').checked};
+  let last;const notices=[];
+  const existingIds = new Set(songs.map(item => item.id));
+  let replacedExisting=false;
   for (const file of files) {
-    $('importStatus').textContent = 'Importing ' + file.name + '…';
-    status('Importing ' + file.name + '…');
-    last = await uploadPdf(file);
-  }
-  if (selection) {
-    $('importStatus').textContent = 'Attaching recording…';
-    last = await uploadAudioSelection(last.id, selection);
+    const progress=text=>{$('importStatus').textContent=file.name+' · '+text;status($('importStatus').textContent);};
+    progress('Importing PDF…');last=await uploadPdf(file);replacedExisting=existingIds.has(last.id);
+    if(selection){progress('Attaching selected recording…');last=await uploadAudioSelection(last.id,selection);if(last.backingImportMessage)notices.push(last.backingImportMessage);}
+    const setup=await window.SongImportSetup.run(last,{...importOptions,existing:replacedExisting},progress);
+    last=setup.item;notices.push(...setup.notices);existingIds.add(last.id);
   }
   await refreshLibrary();
   closeDialog('importDialog'); $('pdfFiles').value = ''; $('importAudio').value = '';
-  selectSong(last); status(audioSavedStatus(last, 'Imported and saved on this Pi.'));
+  last=songs.find(item=>item.id===last.id)||last;
+  selectSong(last);
+  const summary = files.length === 1 && replacedExisting
+    ? 'Existing song updated. Kept ' + last.cues.length + ' Follow cues. Check their positions on the new PDF.'
+    : 'Imported and saved on this Pi.';
+  status(audioSavedStatus(last, summary)+' '+[...new Set(notices)].join(' '));
 });
 $('replacePdfButton').onclick = () => {
   closeDialog('toolsDialog');
@@ -1058,13 +1165,17 @@ $('backingFile').onchange = () => operation(async () => {
 });
 $('simpleVersion').onchange = () => {
   if (!song || !pairedPdf || busy) return;
+  const previousAnalysis = activeChordAnalysis();
   const point = pagePoint();
   pendingPageX = point.x;
   alternatePdf = $('simpleVersion').checked === isSimplePdf(song) ? null : pairedPdf;
   const pdf = alternatePdf || song;
   pageReady = false;
   activeCue = null;
-  window.GuitarChordViewer?.reset(pdf.id);
+  window.GuitarChordViewer?.reset(song.id);
+  if (activeChordAnalysis() !== previousAnalysis) window.SongChordMatch?.stop();
+  stageDiagramName = '';
+  showPlayingChord(audio.currentTime);
   status(isSimplePdf(pdf) ? 'Simple version' : 'Standard version');
   if (following && !switchingTrack) tick();
   else renderPage(page, 0, point.y);
@@ -1087,6 +1198,8 @@ for (const event of ['pointerdown', 'wheel', 'keydown']) $('pdfViewport').addEve
   if (following && !takingSongRecording) { setFollow(false); status('Manual PDF navigation. Tap Follow on to resume cues.'); }
 }, { passive: true });
 $('follow').onclick = () => {
+  const autoMode=window.AutoPdfFollow?.state();
+  if(autoMode?.enabled){if(autoMode.suspended)window.AutoPdfFollow.resume();else window.AutoPdfFollow.pause();return;}
   if (!song.cues.length) { status('First mark a section at its recording time.'); return; }
   setFollow(!following); tick();
 };
@@ -1103,16 +1216,42 @@ $('saveCue').onclick = () => operation(async () => {
   await saveSettings({ cues: next }); activeCue = null; pendingCue = null;
   closeDialog('markDialog'); renderCues(); status('Cue saved. Follow turns on when playback starts.');
 });
-$('notesButton').onclick = () => {
+let noteImageIndex=0,notesExpectedUpdated=null,notesOriginal=null;
+function notesEditing(enabled){for(const id of ['titleInput','notesInput']){const field=$(id);field.readOnly=!enabled;field.inputMode=enabled?'text':'none';field.tabIndex=enabled?0:-1;} $('saveNotes').hidden=enabled===false;$('editNotes').hidden=enabled;}
+function notesDirty(){return notesOriginal&&($('titleInput').value!==notesOriginal.title||$('notesInput').value!==notesOriginal.notes);}
+function requestNotesClose(){if(busy)return;if(notesDirty())openDialog('notesUnsavedDialog');else{notesEditing(false);dismissDialog('notesDialog');}}
+$('editNotes').onclick=()=>{notesEditing(true);$('notesInput').focus();};
+$('closeNotes').onclick=requestNotesClose;
+$('keepEditingNotes').onclick=()=>closeDialog('notesUnsavedDialog');
+$('discardNotes').onclick=()=>{closeDialog('notesUnsavedDialog');notesEditing(false);dismissDialog('notesDialog');};
+function showNotesTab(tab){
+ for(const name of ['Notes','Images']){$('notesTab'+name).setAttribute('aria-selected',String(name===tab));$('notesPanel'+name).hidden=name!==tab;}
+}
+function renderNoteImage(){
+ const images=[...(song?.images||[])].sort((a,b)=>(a.name||'').localeCompare(b.name||'',undefined,{numeric:true,sensitivity:'base'}));noteImageIndex=Math.max(0,Math.min(noteImageIndex,images.length-1));const image=images[noteImageIndex];
+ $('songNoteImage').hidden=!image;$('songNoteImageEmpty').hidden=Boolean(image);
+ if(image){$('songNoteImage').src=api+'/'+song.id+'/images/'+image.id;$('songNoteImage').alt=image.name||'Song reference image';}else $('songNoteImage').removeAttribute('src');
+ $('noteImageCount').textContent=image?(noteImageIndex+1)+' / '+images.length+' · '+image.name:'No images';
+ $('noteImagePrev').disabled=!image||noteImageIndex===0;$('noteImageNext').disabled=!image||noteImageIndex===images.length-1;
+}
+for(const name of ['Notes','Images'])$('notesTab'+name).onclick=()=>showNotesTab(name);
+$('noteImagePrev').onclick=()=>{noteImageIndex--;renderNoteImage();};$('noteImageNext').onclick=()=>{noteImageIndex++;renderNoteImage();};
+$('notesButton').onclick = () => operation(async () => {
+  const selectedId=song.id;const latest=(await request()).find(item=>item.id===selectedId);
+  if(!latest||song.id!==selectedId)throw Error('Select this song again before opening its notes.');
+  song.notes=latest.notes;song.lessonUrl=latest.lessonUrl;song.images=latest.images||[];song.title=latest.title;notesExpectedUpdated=latest.updated;
   closeDialog('toolsDialog');
-  $('titleInput').value = song.title; $('notesInput').value = song.notes; $('songLessonUrl').value = song.lessonUrl || ''; openDialog('notesDialog');
-};
-$('saveNotes').onclick = () => operation(async () => {
-  await saveSettings({ title: $('titleInput').value, notes: $('notesInput').value, lessonUrl: $('songLessonUrl').value.trim() });
-  closeDialog('notesDialog'); status('Song notes saved on this Pi.');
+  $('titleInput').value = song.title; $('notesInput').value = song.notes||'';notesOriginal={title:$('titleInput').value,notes:$('notesInput').value};notesEditing(false); $('notesWatchLesson').hidden=!song.lessonUrl;$('notesLessonEmpty').hidden=Boolean(song.lessonUrl);noteImageIndex=0;renderNoteImage();showNotesTab('Notes');openDialog('notesDialog');
+});
+$('readerNotes').onclick=()=>$('notesButton').click();
+$('readerChordMatch').onclick=()=>$('chordMatchButton').click();
+$('notesWatchLesson').onclick=()=>{if(song?.lessonUrl)LessonLinks.open(song.lessonUrl,status);};
+$('saveNotes').onclick = $('saveAndCloseNotes').onclick = () => operation(async () => {
+  await saveSettings({ title: $('titleInput').value, notes: $('notesInput').value, expectedUpdated: notesExpectedUpdated });
+  notesOriginal={title:$('titleInput').value,notes:$('notesInput').value};closeDialog('notesUnsavedDialog');notesEditing(false);dismissDialog('notesDialog'); status('Song notes saved on this Pi.');
 });
 $('play').onclick = () => {
-  if (audio.paused) audio.play().catch(message); else audio.pause();
+  if (audio.paused) startSongPlayback().catch(message); else audio.pause();
 };
 $('back').onclick = () => { audio.currentTime = Math.max(0, audio.currentTime - 5); activeCue = null; tick(); };
 $('forward').onclick = () => { audio.currentTime = Math.min(song.duration, audio.currentTime + 5); activeCue = null; tick(); };
@@ -1121,7 +1260,12 @@ function seekSong(time) {
   activeCue = null;
   tick();
 }
-$('songStart').onclick = () => seekSong(0);
+$('songStart').onclick = () => {
+  cancelSongStart();
+  audio.pause();
+  seekSong(0);
+  startSongPlayback().catch(message);
+};
 $('seek').oninput = () => seekSong(Number($('seek').value));
 $('speed').onchange = () => {
   audio.playbackRate = Number($('speed').value);
@@ -1143,7 +1287,7 @@ $('loop').onclick = () => {
   activeCue = null; update(); tick();
 };
 const rhythmBeats = {'2/4': 2, '3/4': 3, '4/4': 4, '5/4': 5, '6/8': 2, '7/4': 7, '9/8': 3, '12/8': 4};
-let rhythmDraft = null, rhythmAudioVersion = '', rhythmContext, rhythmClicks = [];
+let rhythmDraft = null, rhythmPointTime = null, rhythmAudioVersion = '', rhythmContext, rhythmClicks = [];
 let previewVersion = 0, previewing = false;
 const rhythmStatus = text => { $('rhythmStatus').textContent = text; };
 function updateBeatUnit() {
@@ -1166,6 +1310,8 @@ function stopRhythmClicks() {
 }
 $('rhythmButton').onclick = () => {
   rhythmAudioVersion = song.audioVersion;
+  rhythmPointTime = null;
+  $('rhythmTitle').textContent = 'Song rhythm';
   fillRhythm(song.rhythm);
   rhythmStatus(song.rhythm ? 'Saved for this recording.' : '');
   closeDialog('toolsDialog');
@@ -1190,7 +1336,7 @@ $('analyzeRhythm').onclick = () => operation(async () => {
       : `Estimated ${estimate.bpm} BPM. Time signature unclear. Choose or keep a time signature, then preview. Use ½ or 2× tempo if the clicks feel too fast or slow.`);
   } catch (error) { rhythmStatus(error.message); }
 });
-let rhythmTaps = [], rhythmTapDown = null, rhythmTapCount = 0;
+let rhythmTaps = [], rhythmTapIntervals = [], rhythmTapDown = null, rhythmTapCount = 0;
 $('tapRhythmTempo').onpointerdown = event => {
   if (event.isPrimary && event.button === 0) rhythmTapDown = performance.now();
 };
@@ -1207,24 +1353,37 @@ $('tapRhythmTempo').onclick = () => {
   }
   const timeout = perBar ? beatsPerTap * 2000 + 500 : 2200;
   const fresh = !rhythmTaps.length || now - rhythmTaps.at(-1) > timeout;
-  if (fresh) { rhythmTaps = []; rhythmTapCount = 0; }
+  if (fresh) { rhythmTaps = []; rhythmTapIntervals = []; rhythmTapCount = 0; }
+  const gap = rhythmTaps.length ? now-rhythmTaps.at(-1) : null;
+  if (rhythmTapIntervals.length >= 1) {
+    const sorted = rhythmTapIntervals.slice(-8).sort((a,b)=>a-b);
+    const middle = Math.floor(sorted.length/2);
+    const typical = sorted.length%2 ? sorted[middle] : (sorted[middle-1]+sorted[middle])/2;
+    if (Math.abs(gap-typical) > typical*.25) {
+      // Move the anchor for a long/missed tap, but do not average that gap.
+      // Keep the old anchor for an early extra tap so the next real beat works.
+      const skipped = Math.round(gap/typical);
+      if (skipped >= 2 && Math.abs(gap/skipped-typical) <= typical*.15)
+        rhythmTaps[rhythmTaps.length-1] = now;
+      rhythmStatus('Off-beat tap ignored. Keep tapping steadily; pause to start a new tempo.');
+      return;
+    }
+  }
+  if (gap !== null) rhythmTapIntervals.push(gap);
   rhythmTaps.push(now);
   rhythmTapCount++;
-  rhythmTaps = rhythmTaps.slice(-9);
   const button = $('tapRhythmTempo');
   if (rhythmTaps.length < 2) {
     button.textContent = 'Tap 1 · tap again';
     rhythmStatus(perBar ? 'Tap 1 received. Tap again on beat 1 of the NEXT bar.' : 'First tap received. Tap again on the next main beat.');
     return;
   }
-  const gaps = rhythmTaps.slice(1).map((value, index) => value - rhythmTaps[index]).sort((a, b) => a - b);
-  const middle = Math.floor(gaps.length / 2);
-  const interval = gaps.length % 2 ? gaps[middle] : (gaps[middle - 1] + gaps[middle]) / 2;
+  const interval = rhythmTapIntervals.reduce((sum,gap)=>sum+gap,0)/rhythmTapIntervals.length;
   const bpm = 60000 * beatsPerTap / interval;
   if (bpm < 30 || bpm > 300) {
     button.textContent = 'Tap beat again';
     rhythmStatus(perBar ? 'Tap once per bar. Choose the correct time signature first.' : 'Tap a steady beat between 30 and 300 BPM. In 6/8 tap on 1 and 4.');
-    rhythmTaps = [now];
+    rhythmTaps = [now]; rhythmTapIntervals = []; rhythmTapCount = 1;
     return;
   }
   stopRhythmClicks();
@@ -1232,17 +1391,17 @@ $('tapRhythmTempo').onclick = () => {
   $('rhythmBpm').value = rounded;
   $('rhythmBpm').dispatchEvent(new Event('input', {bubbles:true}));
   button.textContent = 'Tap ' + rhythmTapCount + ' · ' + rounded + ' BPM';
-  rhythmStatus((perBar ? 'One tap per bar' : 'One tap per beat') + ' · interval ' + (interval / 1000).toFixed(2)
+  rhythmStatus((perBar ? 'One tap per bar' : 'One tap per beat') + ' · average of ' + rhythmTapIntervals.length + ' intervals: ' + (interval / 1000).toFixed(2)
     + ' s → ' + rounded + ' BPM. Save rhythm when steady.');
 };
 $('rhythmTapUnit').onchange = () => {
-  rhythmTaps = []; rhythmTapCount = 0; rhythmTapDown = null;
+  rhythmTaps = []; rhythmTapIntervals = []; rhythmTapCount = 0; rhythmTapDown = null;
   $('tapRhythmTempo').textContent = $('rhythmTapUnit').value === 'bar' ? 'Tap beat 1' : 'Tap beat';
   rhythmStatus($('rhythmTapUnit').value === 'bar' ? 'Tap beat 1 of two consecutive bars.' : 'Tap on each main beat. In 6/8 tap on 1 and 4.');
 };
-$('rhythmMeter').addEventListener('change', () => { rhythmTaps = []; });
+$('rhythmMeter').addEventListener('change', () => { rhythmTaps = []; rhythmTapIntervals = []; rhythmTapCount = 0; rhythmTapDown = null; });
 $('rhythmDialog').addEventListener('close', () => {
-  rhythmTaps = []; rhythmTapCount = 0; rhythmTapDown = null;
+  rhythmTaps = []; rhythmTapIntervals = []; rhythmTapCount = 0; rhythmTapDown = null;
   $('tapRhythmTempo').textContent = $('rhythmTapUnit').value === 'bar' ? 'Tap beat 1' : 'Tap beat';
 });
 for (const [id, factor] of [['halfRhythmTempo', .5], ['doubleRhythmTempo', 2]]) {
@@ -1321,14 +1480,17 @@ $('rhythmForm').onsubmit = event => {
   operation(async () => {
     const bpm = $('rhythmBpm').valueAsNumber, meter = $('rhythmMeter').value;
     const firstDownbeat = bpm === rhythmDraft?.bpm && meter === rhythmDraft?.meter ? rhythmDraft.firstDownbeat : null;
+    const rhythm = rhythmPointTime === null ? {bpm,meter,firstDownbeat,points:song.rhythm?.points||[]}
+      : {...song.rhythm,points:(song.rhythm?.points||[]).map(point=>point.time===rhythmPointTime?{...point,bpm,meter}:point)};
     try {
       const result = await request(`/${song.id}/rhythm`, {
         method: 'PUT', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({audioVersion: rhythmAudioVersion, rhythm: {bpm, meter, firstDownbeat}})
+        body: JSON.stringify({audioVersion: rhythmAudioVersion, rhythm})
       });
       songs = songs.map(item => item.id === result.id ? result : item);
       song = result;
-      fillRhythm(song.rhythm);
+      fillRhythm(rhythmPointTime === null ? song.rhythm : {...song.rhythm.points.find(point=>point.time===rhythmPointTime),firstDownbeat:rhythmPointTime});
+      showPlayingChord(audio.currentTime);
       rhythmStatus('Rhythm saved for this recording.');
     } catch (error) { rhythmStatus(error.message); }
   });
@@ -1340,23 +1502,27 @@ for (let shift = -12; shift <= 12; shift++) {
 $('analyzeChordsButton').onclick = () => {
   audio.pause();
   closeDialog('toolsDialog');
-  $('chordAnalysisShift').value = song.chordAnalysis?.shift ?? 0;
-  $('chordAnalysisStatus').textContent = song.chordAnalysis
+  $('chordAnalysisShift').value = activeChordAnalysis()?.shift ?? 0;
+  $('chordAnalysisStatus').textContent = activeChordAnalysis()
     ? 'A chord estimate is saved. Analyze again to change the pitch shift.'
     : 'Ready. Analysis may take a minute on the Pi.';
   openDialog('analyzeChordsDialog');
 };
 $('runChordAnalysis').onclick = () => operation(async () => {
-  const id = song.id;
-  $('chordAnalysisStatus').textContent = 'Analyzing the original MP3…';
+  if(activeChordAnalysis()?.corrected && !confirm('Analyzing again replaces your saved chord corrections. Continue?')) return;
+  const owner = song;
+  const {id, variant, pdf} = analysisTarget();
+  $('chordAnalysisStatus').textContent = 'Analyzing the original MP3 using the displayed PDF…';
   try {
     const result = await request(`/${id}/analyze-chords`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({shift: Number($('chordAnalysisShift').value)})
+      body: JSON.stringify({shift: Number($('chordAnalysisShift').value), variant})
     });
     window.SongChordMatch?.stop();
-    song.chordAnalysis = result;
-    songs = songs.map(item => item.id === id ? song : item);
+    if (song !== owner) return;
+    if (variant === 'simple') song.simpleChordAnalysis = result;
+    else pdf.chordAnalysis = result;
+    songs = songs.map(item => item.id === id ? {...item, chordAnalysis: variant ? item.chordAnalysis : result, simpleChordAnalysis: variant ? result : item.simpleChordAnalysis} : item);
     showPlayingChord(audio.currentTime);
     const matches = result.changes.filter(change => change.name);
     const detected = [...new Set(matches.map(change => change.name))];
@@ -1398,19 +1564,22 @@ $('readerPlay').onclick = $('play').onclick;
 $('readerBack').onclick = $('back').onclick;
 $('readerForward').onclick = $('forward').onclick;
 $('readerLoop').onclick = $('loop').onclick;
-$('trackToggle').onclick = $('readerTrack').onclick = () => switchTrack(audioVariant === 'original' ? 'backing' : 'original');
+$('toolsLoopToggle').onclick=()=>$('loop').click();
+$('toolsBack').onclick=()=>$('back').click();$('toolsForward').onclick=()=>$('forward').click();
+$('stageTrack').onclick = $('trackToggle').onclick = $('readerTrack').onclick = () => switchTrack(audioVariant === 'original' ? 'backing' : 'original');
 $('originalTrack').onclick = () => switchTrack('original');
 $('backingTrack').onclick = () => switchTrack('backing');
 $('clearLoop').onclick = () => { loopA = loopB = null; looping = false; update(); };
 function syncReaderControls() {
-  const strip = $('chordStrip');
-  if (readerMode && strip.parentElement !== $('songTitle').parentElement) $('songTitle').after(strip);
-  if (!readerMode && strip.parentElement !== $('readerPageControls')) $('pageNumber').before(strip);
+  document.body.classList.toggle('clean-song', cleanSongLayout);
+  document.body.classList.toggle('controls-open',readerControlsOpen);
+  $('cleanSongLayout').checked=cleanSongLayout;
   document.body.classList.toggle('reader', readerMode);
   document.body.classList.toggle('reader-controls-collapsed', readerMode && !readerControlsOpen);
-  $('readerPageControls').hidden = $('readerControls').hidden = readerMode && !readerControlsOpen;
+  $('readerPageControls').hidden = readerMode && !readerControlsOpen;
+  $('readerControls').hidden = (readerMode || cleanSongLayout) && !readerControlsOpen;
   const toggle = $('readerControlsToggle');
-  toggle.hidden = !readerMode;
+  toggle.hidden = $('readerBottom').hidden = !(readerMode || cleanSongLayout);
   toggle.setAttribute('aria-expanded', String(readerControlsOpen));
   toggle.textContent = readerControlsOpen ? '▾ Hide controls' : '▴ Controls';
   toggle.setAttribute('aria-label', readerControlsOpen ? 'Hide controls' : 'Show controls');
@@ -1432,6 +1601,7 @@ $('readerControlsToggle').onclick = () => {
   syncReaderControls();
   restorePosition(0, point.y, point.x);
 };
+$('cleanSongLayout').onchange = () => {cleanSongLayout=$('cleanSongLayout').checked;readerMode=false;chordFocus=false;focusPdfPoint=null;$('chordFocusToggle').textContent='Chord Focus';$('chordFocusToggle').setAttribute('aria-pressed','false');readerControlsOpen=false;try{localStorage.setItem('guitar-clean-song-layout',String(cleanSongLayout));localStorage.setItem('guitar-reading-view','split');}catch{}syncReaderControls();update();};
 syncReaderControls();
 audio.addEventListener('play', () => {
   if (isRecordingFollow()) { update(); return; }
@@ -1446,7 +1616,7 @@ audio.addEventListener('pause', update);
 audio.addEventListener('loadedmetadata', () => { audio.preservesPitch = true; tick(); });
 audio.addEventListener('ended', () => {
   if (isRecordingFollow()) { stopRecordingFollow(); return; }
-  if (looping && loopA !== null) { audio.currentTime = loopA; audio.play().catch(message); }
+  if (!$('timelineEditorDialog').open && looping && loopA !== null) { audio.currentTime = loopA; audio.play().catch(message); }
   update();
 });
 audio.addEventListener('error', () => { if (!switchingTrack && audio.getAttribute('src')) status('Could not play this MP3. Try attaching another recording.'); });
@@ -1462,3 +1632,50 @@ $('watchLesson').onclick = () => {
   if (!song) return;
   if (song.lessonUrl) LessonLinks.open(song.lessonUrl, status);
 };
+
+let rhythmPointTap = null;
+async function saveRhythmPoints(rhythm) {
+  const owner = song, id = owner.id;
+  const result = await request(`/${id}/rhythm`, {method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({audioVersion:owner.audioVersion,rhythm})});
+  songs = songs.map(item=>item.id===id?result:item);
+  if (song !== owner) return;
+  song.rhythm = result.rhythm;
+  renderRhythmPoints(); showPlayingChord(audio.currentTime);
+}
+function renderRhythmPoints() {
+  const list = $('rhythmPointsList'); list.replaceChildren();
+  const points = song?.rhythm?.points || [];
+  if (!points.length) list.textContent = 'No rhythm points yet. Play the song and mark beat 1.';
+  points.forEach((point,index)=>{
+    const row = document.createElement('div'); row.className='rhythm-point-row';
+    const label = document.createElement('strong');
+    label.textContent = `#${index+1} · ${clock(point.time)} · ${point.bpm} BPM · ${point.meter}`;
+    row.append(label);
+    for (const [name,action] of [
+      ['Go',()=>{audio.currentTime=point.time;showPlayingChord(point.time);}],
+      ['Edit',()=>editRhythmPoint(index)],
+      ['Delete',()=>operation(()=>saveRhythmPoints({...song.rhythm,points:song.rhythm.points.filter(item=>item.time!==point.time)}))]
+    ]) {const button=document.createElement('button');button.textContent=name;button.onclick=action;row.append(button);}
+    list.append(row);
+  });
+}
+function editRhythmPoint(index){
+  const point=song.rhythm.points[index];
+  audio.pause();closeDialog('rhythmPointsDialog');rhythmPointTime=point.time;rhythmAudioVersion=song.audioVersion;
+  $('rhythmTitle').textContent='#'+(index+1)+' rhythm';fillRhythm({...point,firstDownbeat:point.time});
+  rhythmStatus('Tempo and meter apply from this point until the next.');openDialog('rhythmDialog');
+}
+audio.addEventListener('timeupdate',()=>{if($('rhythmPointsDialog').open)$('pointClock').textContent=clock(audio.currentTime);});
+function openRhythmPoints(){closeDialog('rhythmDialog');renderRhythmPoints();$('pointClock').textContent=clock(audio.currentTime);openDialog('rhythmPointsDialog');}
+$('rhythmPointsButton').onclick=openRhythmPoints;
+for(const id of ['addRhythmPoint','markRhythmPoint']) {
+  $(id).onpointerdown=()=>{rhythmPointTap=audio.currentTime;};
+  $(id).onpointercancel=()=>{rhythmPointTap=null;};
+  $(id).onclick=()=>{
+    const time=rhythmPointTap??audio.currentTime;rhythmPointTap=null;
+    if(!song?.rhythm){status('Set the song tempo and meter first.');return;}
+    operation(async()=>{await saveRhythmPoints(SongRhythmPoints.put(song.rhythm,time));status('Rhythm point saved at '+clock(time));});
+  };
+}
+$('pointPlay').onclick=()=>{if(audio.paused)startSongPlayback().catch(message);else audio.pause();};

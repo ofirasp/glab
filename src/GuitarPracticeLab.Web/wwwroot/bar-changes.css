@@ -1,0 +1,65 @@
+main{padding:6px 10px;display:block;height:100dvh;max-width:1000px}#chordChanges{height:100%;background:#192639;border-radius:14px}#changesTime{font-size:20px}.changeshead{gap:8px}.changeshead strong{font-size:17px}.changesbody{grid-template-columns:minmax(220px,1fr) minmax(360px,1.35fr)}.changessetup{gap:6px}.changespair select{font-size:14px;min-height:34px}.chordchoice select{font-size:13px;min-height:34px}#changesPairScores{font-size:12px;min-height:15px}#changesMessage{font-size:12px;min-height:36px;margin:0}#barBeats{display:flex;gap:6px;justify-content:center}#barBeats span{flex:1;text-align:center;background:#293950;border:1px solid #52647c;border-radius:8px;font-size:19px;padding:3px}#barBeats span.current{background:#64501f;border-color:#ffd677;color:#ffe5a6}#changesDiagram.matched{border-radius:12px;background:#205b4966;outline:2px solid #8ae2ac}#changesNext{font-size:16px}#barResultMatches{text-align:center;color:#c7d9eb;font-size:15px;margin:8px 0 0}.changes-round-score strong{font-size:56px}#changesRoundPair{font-size:15px}.changesnav button{min-height:36px}#changesCount{min-width:75px;font-size:13px}#changesResultsList small{display:block}.changes-round-head h2{font-size:20px}
+
+/* Full-width, non-interactive beat display below the chord and settings panels. */
+#chordChanges{grid-template-rows:42px minmax(0,1fr) 52px}
+.bar-timing-settings{grid-template-columns:1fr .8fr 1fr}
+.bar-beat-strip{border-top:1px solid #405168;display:flex;align-items:center;justify-content:center;min-width:0}
+#barBeats{display:flex;align-items:center;justify-content:center;gap:18px;padding:0 12px}
+#barBeats span{flex:none;border:0;border-radius:0;background:none;padding:0;min-width:18px;font:500 21px system-ui;color:#71839a;position:relative}
+#barBeats span.accent{color:#b9c8d9}
+#barBeats span.current{background:none;border:0;color:#ffdc87;font-weight:800;text-shadow:0 0 14px #ffce6370}
+#barBeats span.current:after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:#ffdc87;bottom:-9px;left:calc(50% - 2.5px)}
+
+.bar-tempo-control{font-size:12px;min-width:0}
+.bar-tempo-stepper{display:flex;height:46px;margin-top:2px;border:1px solid #536981;border-radius:8px;overflow:hidden;background:#293950}
+#barTempo,#barCount{width:0;flex:1;min-width:0;border:0;background:transparent;color:#eef3ff;font:600 22px system-ui;text-align:center;padding:0;appearance:textfield;outline-offset:-3px}
+#barTempo::-webkit-inner-spin-button,#barTempo::-webkit-outer-spin-button,#barCount::-webkit-inner-spin-button,#barCount::-webkit-outer-spin-button{appearance:none;margin:0}
+.bar-tempo-arrows{display:flex;min-width:42px;border-left:1px solid #536981}
+.bar-tempo-arrows button{min-height:0;min-width:32px;border:0;border-radius:0;padding:0 4px;background:#354a64;color:#eef3ff;font:18px system-ui;touch-action:none;user-select:none}
+.bar-tempo-arrows button+button{border-left:1px solid #536981}
+.bar-tempo-arrows button:active{background:#4675aa}
+.bar-tempo-arrows button:disabled{opacity:.4}
+
+.bar-tempo-arrows{min-width:52px;flex-shrink:0}.bar-tempo-arrows button{min-width:26px;flex:1}
+
+/* Align settings in quiet, compact groups instead of a loose stack. */
+.changessetup{gap:7px}
+.bar-settings-group{background:#142133;border:1px solid #34475e;border-radius:10px;padding:8px;min-width:0}
+.bar-chord-settings{display:grid;gap:7px}
+.bar-chord-settings .chordchoice legend{font-size:12px;font-weight:600;margin:0;padding-bottom:4px}
+.bar-chord-settings .chordchoice label{font-size:0}
+.bar-chord-settings .chordchoice select{font-size:13px;height:34px}
+.bar-recent{display:grid;grid-template-columns:73px minmax(0,1fr);align-items:center;font-size:11px;color:#a9bdd4;gap:6px}
+.bar-recent select{width:100%;min-width:0;height:32px;background:#293950;color:#edf4ff;border:1px solid #536981;border-radius:7px;font:12px system-ui;padding:3px 5px}
+.bar-timing-settings{grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:start}
+.bar-timing-settings label,.bar-tempo-control,.bar-audio-settings label{font-size:11px;color:#b8cadf}
+.bar-tempo-stepper{height:40px;margin-top:4px}
+.bar-timing-settings select{height:40px;min-height:40px;margin-top:4px}
+#barTempo,#barCount{font-size:21px}
+.bar-audio-settings select{height:34px;min-height:34px;font-size:12px;margin-top:4px}
+.changesbuttons{gap:8px;margin-top:1px}
+.changesbuttons button{min-height:40px;height:40px;font-weight:600}
+#changesPairScores{font-size:11px;min-height:14px;line-height:14px;color:#a6bbd2}
+#changesMessage{font-size:11px;min-height:27px;line-height:1.3;color:#c2d2e6}
+
+.changessetup{gap:5px}.bar-settings-group{padding:6px}.bar-chord-settings{gap:5px}.bar-recent select{height:28px}.bar-chord-settings .chordchoice select{height:32px;min-height:32px}.bar-audio-settings select{height:32px;min-height:32px}#changesMessage{min-height:25px;flex-shrink:0}#changesPairScores{flex-shrink:0}
+
+/* The round gives the chord the full stage; settings return unchanged afterward. */
+.changesbody{position:relative;overflow:hidden}
+.changessetup{transition:transform .22s ease,opacity .18s ease}
+.bar-exercise-active .changessetup{position:absolute;right:0;top:0;width:56%;transform:translateX(110%);opacity:0;pointer-events:none;visibility:hidden}
+.changesbody.bar-exercise-active{grid-template-columns:1fr}
+.bar-exercise-active #changesPreviews{width:min(100%,540px);justify-self:center}
+.bar-exercise-active #changesPreviews.running{width:min(100%,360px)}
+.bar-exercise-active .changesplay{grid-template-rows:32px minmax(0,1fr) 36px}
+#barActiveCancel{position:absolute;right:2px;top:2px;z-index:2;min-height:42px;padding:7px 18px;font:600 15px system-ui;border:1px solid #71839c;background:#293950;color:#eef3ff;border-radius:9px}
+@media(prefers-reduced-motion:reduce){.changessetup{transition:none}}
+
+.bar-exercise-active #changesPreviews.running{width:min(100%,620px)}
+#changesSecondDiagram.matched{border-radius:12px;background:#205b4966;outline:2px solid #8ae2ac}
+
+#barBeats .on-beat{color:#95e4b5;box-shadow:0 3px #95e4b5}#barBeats .off-beat{color:#efbd79;box-shadow:0 3px #efbd79}.bar-strum-result{text-align:center;background:#21394a;border-radius:10px;padding:7px;margin:5px 0}.bar-strum-result strong{font-size:25px;color:#a2e6bf}.bar-strum-result span{margin-left:10px}.bar-strum-result small{display:block;color:#bacbdd;margin-top:3px;font-size:11px}#changesRoundResult .changes-round-score{margin:3px auto;padding:5px 16px}#changesRoundResult .changes-round-comparisons{margin:4px 0}
+#changesRoundResult #changesRoundPair{margin:6px 0}#changesRoundResult .changes-round-score strong{font-size:46px}#changesRoundResult #changesRoundSave{font-size:11px;margin:5px 0;min-height:14px}#changesRoundResult .changes-round-footer{padding-top:6px}#changesCount{white-space:nowrap;font-size:12px}
+
+.bar-beat-strip{flex-direction:column;gap:7px}#barBeats span.current:after{bottom:-5px}#barTimingFeedback{display:flex;align-items:center;justify-content:center;gap:10px;line-height:16px;min-height:16px;max-width:100%;white-space:nowrap}#barTimingFeedback[hidden]{display:none}#barTimingGuide{font-size:14px;font-weight:650;color:#c9d9ec}#barTimingOffset{font-size:11px;color:#a9bed7}#barTimingFeedback[data-result=on-time] #barTimingGuide{color:#a2e6bf}#barTimingFeedback[data-result=early] #barTimingGuide,#barTimingFeedback[data-result=late] #barTimingGuide{color:#efbd79}
+#changesRoundResult{height:min(436px,calc(100dvh - 20px))}

@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 const root=path.resolve(__dirname,'../src/GuitarPracticeLab.Web/wwwroot');
 const sheet='<svg xmlns="http://www.w3.org/2000/svg" width="500" height="2000"><rect width="500" height="2000" fill="white"/></svg>';
 // A small valid WAV recording, generated locally, is served as audio for the test.
+let expectedChordNames=['G','C'],streamChord='G';
 const samples=48000*20,wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
 const make=(id,cues)=>({id,title:cues.length?'With cues':'Without cues',pages:1,hasAudio:true,hasBacking:false,audioName:'test.wav',audioVersion:'test-audio',duration:20,notes:'',cues,updated:'test'});
 const songs=[make('11111111-1111-1111-1111-111111111111',[{time:0,page:1,position:0,pageAnchor:0,label:'Intro',zoom:1}]),make('22222222-2222-2222-2222-222222222222',[])];
@@ -15,7 +16,7 @@ songs[0].cues.push({time:5,page:2,position:0,pageAnchor:0,label:'Verse',zoom:1})
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(url.pathname==='/api/song-library'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(songs));}
- if(url.pathname==='/api/song-library/'+songs[0].id+'/simple'){
+ if([songs[0],songs[3]].some(song=>url.pathname==='/api/song-library/'+song.id+'/simple')){
   res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({pages:2,updated:'simple-test'}));
  }
  if(url.pathname==='/api/song-library/'+songs[0].id&&req.method==='PUT'){
@@ -37,10 +38,10 @@ const server=http.createServer((req,res)=>{
   req.on('data',chunk=>body+=chunk);
   req.on('end',()=>{
    const {names,shift}=JSON.parse(body);
-   assert.deepEqual(names,['G','C']);assert.equal(shift,2);
+   assert.deepEqual(names,expectedChordNames);assert.equal(shift,2);
    res.setHeader('Content-Type','application/x-ndjson');
    res.write('{"chord":null}\n');
-   const timer=setTimeout(()=>res.write('{"chord":"G"}\n'),650);
+   const timer=setTimeout(()=>res.write(JSON.stringify({chord:streamChord})+'\n'),650);
    res.on('close',()=>clearTimeout(timer));
   });
   return;
@@ -75,7 +76,8 @@ const server=http.createServer((req,res)=>{
   req.on('end',()=>{
    assert.equal(JSON.parse(body).shift,2);
    res.setHeader('Content-Type','application/json');
-   res.end(JSON.stringify({shift:2,changes:[{time:0,name:'G'},{time:4,name:'C'},{time:8,name:null}]}));
+   const simple=JSON.parse(body).variant==='simple';
+   res.end(JSON.stringify({shift:2,changes:[{time:0,name:simple?'Am':'G'},{time:4,name:simple?'F':'C'},{time:8,name:null}]}));
   });
   return;
  }
@@ -108,6 +110,7 @@ const server=http.createServer((req,res)=>{
  browser=await chromium.launch({headless:true,...(process.env.GPL_TEST_CHROME?{executablePath:process.env.GPL_TEST_CHROME}:{})});
  const page=await browser.newPage({viewport:{width:800,height:480},hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
+  localStorage.setItem('guitar-clean-song-layout','false');
   window.testScreenLocks=0;
   Object.defineProperty(navigator,'wakeLock',{value:{async request(){
    window.testScreenLocks++;
@@ -117,21 +120,72 @@ const server=http.createServer((req,res)=>{
   }}});
  });
  await page.goto(`http://127.0.0.1:${server.address().port}/song-library.html`);
- const openSong=async title=>{if(!await page.locator('#libraryDialog').isVisible())await page.locator('#libraryButton').tap();await page.locator('.songrow').filter({hasText:title}).getByRole('button',{name:'Open',exact:true}).tap();await page.waitForFunction(()=>!document.querySelector('#markCue').disabled);};
+ const openSong=async title=>{if(!await page.locator('#libraryDialog').isVisible())await page.locator('#libraryButton').tap();await page.locator('.songrow').filter({hasText:title}).getByRole('button',{name:'Open',exact:true}).tap();await page.waitForFunction(()=>!document.querySelector('#markCue').disabled);await page.waitForFunction(()=>!document.querySelector('#audio').paused);};
  const isOn=()=>page.locator('#follow').getAttribute('aria-pressed').then(v=>v==='true');
+ await page.evaluate(()=>{
+  window.countInDigits=[];
+  window.countInTones=[];
+  const createOscillator=AudioContext.prototype.createOscillator;
+  AudioContext.prototype.createOscillator=function(){
+   const oscillator=createOscillator.call(this),start=oscillator.start.bind(oscillator);
+   oscillator.start=time=>{window.countInTones.push({time,frequency:oscillator.frequency.value});start(time);};
+   return oscillator;
+  };
+  new MutationObserver(()=>{
+   const digit=document.querySelector('#songCountInNumber').textContent;
+   if(window.countInDigits.at(-1)!==digit)window.countInDigits.push(digit);
+  }).observe(document.querySelector('#songCountInNumber'),{childList:true,subtree:true,characterData:true});
+ });
  await openSong('With cues');await page.waitForFunction(()=>!document.querySelector('#audio').paused);
+ check('song autoplay counts down five to one before starting',await page.evaluate(()=>window.countInDigits.join(',')==='5,4,3,2,1'));
+ check('count-in schedules soft pitched beeps at the default beat interval',await page.evaluate(()=>{
+  const tones=window.countInTones;
+  return tones.length>=4&&tones.every(tone=>tone.frequency>700)
+   &&tones.slice(1).every((tone,index)=>Math.abs(tone.time-tones[index].time-1)<.03);
+ }));
+
+ await page.locator('#audio').evaluate(a=>a.pause());
+ await page.locator('#play').tap();
+ await page.locator('#songCountIn').waitFor();
+ check('song stays paused while the countdown is displayed',await page.locator('#audio').evaluate(a=>a.paused));
+ check('count-in uses a compact centered popup',await page.locator('#songCountIn').evaluate(dialog=>{
+  const r=dialog.getBoundingClientRect();
+  return r.width<=300&&r.height<=320&&Math.abs(r.x+r.width/2-innerWidth/2)<2&&Math.abs(r.y+r.height/2-innerHeight/2)<2;
+ }));
+
+ await page.locator('#cancelSongCountIn').tap();
+ check('Cancel closes the countdown and keeps playback paused',await page.locator('#songCountIn').isHidden()&&await page.locator('#audio').evaluate(a=>a.paused));
+ await page.locator('#toolsButton').tap();await page.locator('#toolsTabPlayback').tap();
+ await page.locator('#songCountInEnabled').uncheck();
+ const beepsBeforeDisabledPlay=await page.evaluate(()=>window.countInTones.length);
+ await page.locator('#toolsDialog [data-close]').tap();
+ await page.locator('#play').tap();
+ await page.waitForFunction(()=>!document.querySelector('#audio').paused);
+ check('count-in can be switched off from Song tools Playback',await page.locator('#songCountIn').isHidden()&&await page.evaluate(()=>window.countInTones.length)===beepsBeforeDisabledPlay);
+ await page.locator('#audio').evaluate(a=>a.pause());
+ await page.locator('#toolsButton').tap();await page.locator('#toolsTabPlayback').tap();
+ await page.locator('#songCountInEnabled').check();
+ await page.locator('#toolsDialog [data-close]').tap();
+
+ await page.locator('#play').tap();
+ await page.waitForFunction(()=>!document.querySelector('#audio').paused);
+
  check('song title sits between Tools and FullScreen',await page.locator('#songTitle').evaluate(title=>
   title.previousElementSibling.id==='toolsButton'&&title.compareDocumentPosition(document.querySelector('#readerToggle'))&Node.DOCUMENT_POSITION_FOLLOWING));
  check('track switch is at least 44 pixels tall',await page.locator('#trackToggle').evaluate(button=>button.getBoundingClientRect().height>=44));
  await page.locator('#audio').evaluate(a=>{a.currentTime=3;});
  await page.getByRole('button',{name:'Go to start'}).tap();
+ await page.locator('#songCountIn').waitFor();
+ check('restart pauses at the beginning before the count-in finishes',await page.locator('#audio').evaluate(a=>a.paused&&a.currentTime<.1));
+ await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  check('the progress button returns playback to the start',await page.locator('#audio').evaluate(a=>a.currentTime<.4&&!a.paused));
  check('autoplay enables Follow for a song with cues',await isOn());
  await page.waitForFunction(()=>window.testScreenLocks===1);
  check('song playback holds a screen wake lock',await page.evaluate(()=>window.testScreenLocks===1));
- const simple=page.getByRole('switch',{name:'Simple version'});
+ const simple=page.getByRole('switch',{name:'Simple',exact:true});
  const simplePage=page.waitForResponse(r=>r.url().includes('/page/1?')&&r.url().includes('variant=simple'));
  await simple.tap();await simplePage;
+ check('Simple shares the Bar sync row',await page.locator('#simpleVersionControl').evaluate(label=>label.parentElement.contains(document.querySelector('#stageSyncBar'))));
  check('switching to simple keeps Follow on',await isOn()&&await page.locator('#follow').isEnabled());
  await page.waitForFunction(()=>document.querySelector('#pageLoading').hidden);
  await page.locator('#audio').evaluate(a=>a.pause());
@@ -163,6 +217,13 @@ const server=http.createServer((req,res)=>{
  await page.waitForFunction(()=>document.querySelector('#follow').getAttribute('aria-pressed')==='true');
  check('pause and resume enables Follow again',await isOn());
  await page.locator('#follow').tap();await page.locator('#readerToggle').tap();
+ const beforeRestart=await page.locator('#audio').evaluate(a=>a.currentTime);
+ await page.locator('#stageStart').tap();
+ await page.locator('#songCountIn').waitFor();
+ check('fullscreen restart also shows the count-in',await page.locator('#audio').evaluate(a=>a.paused&&a.currentTime<.1));
+ await page.waitForFunction(()=>!document.querySelector('#audio').paused);
+ check('fullscreen restart button returns the playing song to the start',await page.locator('#audio').evaluate(a=>a.currentTime<.5&&!a.paused));
+ await page.locator('#audio').evaluate((a,time)=>{a.currentTime=time;},beforeRestart);
  check('FullScreen starts with both control panels collapsed',await page.locator('#readerPlay').isHidden()&&await page.locator('#follow').isHidden()&&await page.locator('#readerMute').isHidden()&&await page.locator('#zoomIn').isHidden());
  await page.locator('#readerControlsToggle').tap();
  check('Controls reveals zoom, cue, playback and volume rows',await page.locator('#follow').isVisible()&&await page.locator('#readerPlay').isVisible()&&await page.locator('#readerMute').isVisible()&&await page.locator('#zoomIn').isVisible());
@@ -306,6 +367,7 @@ const server=http.createServer((req,res)=>{
  await openSong('With cues');
  await page.locator('#cuesButton').tap();
  await page.locator('#recordFollow').tap();
+ await page.waitForFunction(()=>!document.querySelector('#audio').paused);
  check('recording keeps audio playing with Follow off',!await isOn()&&await page.locator('#audio').evaluate(a=>!a.paused));
  await page.locator('#audio').evaluate(a=>{a.currentTime=2;});
  const down=page.locator('#readerFollowDown');
@@ -380,13 +442,28 @@ const server=http.createServer((req,res)=>{
  await page.locator('#toolsDialog [data-close]').tap();
  await page.locator('#audio').evaluate(a=>{a.currentTime=1;});
  await page.waitForFunction(()=>document.querySelector('#playingChord').textContent==='G');
+ await simple.tap();
+ check('simple uses the existing timeline until analyzed',await page.evaluate(()=>activeChordAnalysis()===song.chordAnalysis));
+ await page.evaluate(()=>document.querySelector('#analyzeChordsButton').click());
+ await page.locator('#runChordAnalysis').tap();
+ await page.waitForFunction(()=>document.querySelector('#chordAnalysisStatus').textContent.includes('Saved 2'));
+ check('simple analysis uses its PDF and enables matching',await page.evaluate(()=>activeChordAnalysis().changes[0].name==='Am'&&song.chordAnalysis.changes[0].name==='G'&&!document.querySelector('#chordMatchButton').disabled));
+ await page.locator('#analyzeChordsDialog [data-close]').tap();
+ await page.locator('#toolsDialog [data-close]').tap();
+ await simple.tap();
+ check('regular analysis is preserved after analyzing simple',await page.evaluate(()=>activeChordAnalysis().changes[0].name==='G'));
  await page.locator('#readerControlsToggle').tap();
- check('FullScreen shows the chord stage and song title with controls hidden',await page.locator('#fullscreenChords').isVisible()
+ check('fullscreen PDF view keeps bars and hides the large chord cards',await page.locator('#fullscreenChords').isHidden()&&await page.locator('#stageBeats').isVisible()
   &&await page.locator('#songTitle').isVisible()&&await page.locator('#pageNumber').isHidden());
  check('fullscreen includes a chord diagram and next-change countdown',await page.locator('#stageDiagram svg').count()===1&&await page.locator('#stageNext').textContent()==='C'
   &&await page.locator('#stageSeconds').textContent().then(text=>text.includes('s')));
  await page.locator('#chordFocusToggle').tap();
- check('Chord Focus enlarges the diagram and hides the PDF',await page.locator('#pdfViewport').isHidden()&&await page.locator('#stageDiagram').evaluate(el=>el.getBoundingClientRect().height>150));
+ check('Chord Focus puts playback and Controls on the same bottom row',await page.evaluate(()=>{
+  const ids=['stagePlay','stageSeek','readerControlsToggle'];
+  const centers=ids.map(id=>{const rect=document.getElementById(id).getBoundingClientRect();return rect.y+rect.height/2;});
+  return Math.max(...centers)-Math.min(...centers)<2;
+ }));
+ check('Chord Focus shows the large chord cards and hides the PDF',await page.locator('#fullscreenChords').isVisible()&&await page.locator('#pdfViewport').isHidden()&&await page.locator('#stageDiagram').evaluate(el=>el.getBoundingClientRect().height>150));
  check('beat strip groups two bars and updates completed and current beats',await page.evaluate(()=>{
   const saved=song.rhythm;
   song.rhythm={bpm:120,meter:'4/4',firstDownbeat:0};
@@ -424,8 +501,9 @@ const server=http.createServer((req,res)=>{
   song.rhythm={bpm:120,meter:'4/4',firstDownbeat:null};
   showPlayingChord(audio.currentTime);
  });
+ if(await page.locator('#stageSyncBar').isHidden())await page.locator('#readerControlsToggle').tap();
  await page.locator('#stageSyncBar').tap();
- await page.waitForFunction(()=>document.querySelector('#stageBeatCaption').textContent.includes('bar aligned'));
+ await page.waitForFunction(()=>document.querySelector('#stageSyncBar').textContent.includes('Bar synced'));
  check('bar alignment saves at the current song position',await page.evaluate(()=>Number.isFinite(song.rhythm.firstDownbeat)&&Math.abs(song.rhythm.firstDownbeat-audio.currentTime)<.5));
  check('two chords in one bar render as two half-bar segments',await page.evaluate(()=>{
   const saved=song.rhythm,analysis=song.chordAnalysis;
@@ -474,96 +552,19 @@ const server=http.createServer((req,res)=>{
  }));
  await page.screenshot({path:'/tmp/glab-chord-focus.png'});
  await page.locator('#chordFocusToggle').tap();
- check('PDF View restores the sheet',await page.locator('#pdfViewport').isVisible());
+ check('fullscreen PDF playback shares the Controls row',await page.evaluate(()=>{
+  const play=document.querySelector('#stagePlay').getBoundingClientRect(),toggle=document.querySelector('#readerControlsToggle').getBoundingClientRect();
+  return Math.abs(play.y+play.height/2-toggle.y-toggle.height/2)<2;
+ }));
+ check('PDF View restores the sheet and hides the large cards',await page.locator('#pdfViewport').isVisible()&&await page.locator('#fullscreenChords').isHidden()&&await page.locator('#stageBeats').isVisible());
  await page.screenshot({path:'/tmp/glab-pdf-chords.png'});
  await page.locator('#readerToggle').tap();
- check('the chord strip is on the same row as the zoom readout',await page.locator('#playingChord').evaluate(badge=>{
-  const chord=badge.getBoundingClientRect(),zoom=document.querySelector('#pageNumber').getBoundingClientRect();
-  return Math.abs(chord.y+chord.height/2-zoom.y-zoom.height/2)<2;
- })&&await page.locator('#chordTargets .playing-chord').count()===0);
- check('zoom readout sits beside the zoom buttons',await page.locator('#pageNumber').evaluate(readout=>readout.nextElementSibling.id==='zoomOut'));
- const centered=()=>page.locator('#playingChord').evaluate(badge=>{
-  const chord=badge.getBoundingClientRect(),strip=badge.parentElement.getBoundingClientRect();
-  return Math.abs(chord.x+chord.width/2-strip.x-strip.width/2)<2;
- });
- check('the current chord starts in the center',await centered());
- await page.locator('#audio').evaluate(a=>{a.currentTime=3;});
- await page.waitForFunction(()=>document.querySelector('#clock').textContent.startsWith('0:03'));
- check('the current chord stays centered as the song advances',await centered());
- check('the next chord moves equal distances near and far from center',await page.evaluate(()=>{
-  const center=document.querySelector('#chordStrip').clientWidth/2;
-  const positions=[1,1.5,3.4,3.9].map(time=>{
-   showPlayingChord(time);
-   return parseFloat(document.querySelector('#chordStrip .strip-chord:not(.past)').style.left);
-  });
-  return Math.abs((positions[0]-positions[1])-(positions[2]-positions[3]))<.01
-    &&positions[3]>center&&positions[3]-center<40;
- }));
- check('a distant next chord is shown immediately within the strip',await page.evaluate(()=>{
-  const previous=song.chordAnalysis;
-  song.chordAnalysis={shift:0,changes:[{time:0,name:'G'},{time:45,name:'Am'},{time:90,name:'C'}]};
-  showPlayingChord(0);
-  const strip=document.querySelector('#chordStrip'),next=strip.querySelector('.next');
-  const ready=next?.textContent==='Am'&&parseFloat(next.style.left)<strip.clientWidth;
-  song.chordAnalysis=previous;
-  showPlayingChord(audio.currentTime);
-  return ready;
- }));
- await page.locator('#audio').evaluate(a=>{a.currentTime=5;});
- await page.waitForFunction(()=>document.querySelector('#playingChord').textContent==='C');
- check('the previous chord stays visible on the left when there is room',await page.locator('#chordStrip .past').first().textContent()==='G');
- await page.evaluate(()=>{
-  const previous=song.chordAnalysis;
-  song.chordAnalysis={...previous,changes:Array.from({length:12},(_,i)=>({time:1+i*1.1,name:['G','C','D'][i%3]}))};
-  showPlayingChord(4.5);
-  const visible=document.querySelectorAll('#chordStrip .strip-chord').length;
-  song.chordAnalysis=previous;
-  if(visible<4)throw Error('Chord strip should show several nearby chords');
- });
- check('a long completed chord appears immediately on the left and moves left',await page.evaluate(()=>{
-  const original=song.chordAnalysis;
-  song.chordAnalysis={shift:0,changes:[{time:0,name:'G'},{time:40,name:'Bm'},{time:44,name:'C'},{time:44.3,name:'D'},{time:48,name:'Em'}]};
-  showPlayingChord(40.001);
-  const past=document.querySelector('#chordStrip .past');
-  const start=parseFloat(past?.style.left);
-  const correct=past?.textContent==='G';
-  showPlayingChord(40.501);
-  const moved=parseFloat(document.querySelector('#chordStrip .past')?.style.left);
-  showPlayingChord(44.301);
-  const history=[...document.querySelectorAll('#chordStrip .past')]
-    .sort((a,b)=>parseFloat(b.style.left)-parseFloat(a.style.left)).map(label=>label.textContent);
-  const ordered=history[0]==='C'&&history[1]==='Bm';
-  song.chordAnalysis=original;
-  showPlayingChord(audio.currentTime);
-  return correct&&moved<start&&ordered;
- }));
- check('closely spaced chords stay in consecutive order through the handoff',await page.evaluate(()=>{
-  const original=song.chordAnalysis;
-  song.chordAnalysis={shift:0,changes:[{time:0,name:'Am'},{time:4,name:'G'},{time:4.4,name:'D'},{time:5.2,name:'C'},{time:6.2,name:'Em'}]};
-  const previews=[0.1,2,3.9,4.1,4.5].map(time=>{
-   showPlayingChord(time);
-   return [...document.querySelectorAll('#chordStrip .strip-chord:not(.past)')]
-    .sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)).map(label=>label.textContent).join(',');
-  });
-  song.chordAnalysis=original;
-  showPlayingChord(audio.currentTime);
-  return previews.slice(0,3).every(value=>value.startsWith('G,D')&&'G,D,C,Em'.startsWith(value))&&previews[3].startsWith('D,C')&&'D,C,Em'.startsWith(previews[3])&&previews[4].startsWith('C,Em');
- }));
- check('an upcoming chord never jumps right when it becomes next',await page.evaluate(()=>{
-  const original=song.chordAnalysis;
-  song.chordAnalysis={shift:0,changes:[{time:0,name:'Asus4'},{time:4,name:'G'},{time:6,name:'D'},{time:8,name:'C'}]};
-  showPlayingChord(3.999);
-  const chord=[...document.querySelectorAll('#chordStrip .strip-chord')].find(label=>label.textContent==='D');
-  const before=parseFloat(chord.style.left);
-  showPlayingChord(4.001);
-  const next=document.querySelector('#chordStrip .next');
-  const after=parseFloat(next.style.left);
-  const smooth=next===chord&&next.textContent==='D'&&after<=before&&before-after<1;
-  song.chordAnalysis=original;
-  showPlayingChord(audio.currentTime);
-  return smooth;
- }));
- check('the strip fits multiple nearby chords',true);
+ check('Split view retains the bars without the large chord cards',await page.locator('#stageBeats').isVisible()&&await page.locator('#fullscreenChords').isHidden());
+ check('Split view uses the upper row for bars and hides the running chords',await page.locator('#stageBeats').evaluate(bars=>bars.parentElement.id==='readerPageControls')&&await page.locator('#chordStrip').isHidden());
+ await page.screenshot({path:'/tmp/glab-bars-header.png'});
+ check('zoom controls sit beside Follow without the Scroll label',await page.locator('#zoomOut').evaluate(button=>button.parentElement.classList.contains('cuebar'))
+  &&await page.locator('#pageNumber').textContent().then(text=>!text.includes('Scroll')));
+ check('chord labels above bars use the larger text size',await page.locator('#stageBeatGraphic svg text[font-weight="750"]').first().getAttribute('font-size')==='15');
  await page.locator('#audio').evaluate(a=>{a.currentTime=9;});
  await page.waitForFunction(()=>document.querySelector('#clock').textContent.startsWith('0:09'));
  check('an unclear stretch holds the last detected chord',await page.locator('#playingChord').textContent()==='C');
@@ -582,6 +583,51 @@ const server=http.createServer((req,res)=>{
  await page.locator('#toolsButton').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#chordMatchButton').tap();
  check('the song personal best is available when reopening chord match',await page.locator('#chordMatchBest').textContent()==='Personal best · 50% (1 / 2)');
  check('the latest completed score is also available',await page.locator('#chordMatchLast').textContent()==='Last score · 50% (1 / 2)');
+ await page.locator('#chordMatchDialog [data-close]').tap();
+ await page.locator('#toolsDialog [data-close]').tap();
+ if(await page.locator('#chordListButton').isHidden())await page.locator('#readerControlsToggle').tap();
+ await page.locator('#chordListButton').tap();
+ const originalPdf=await page.locator('#pdfImage').getAttribute('src');
+ await page.locator('#songChordList [data-original-chord="G"]').tap();
+ await page.locator('#chordTuning').selectOption('standard');
+ check('song chords retains the original shape view',await page.locator('#chordDiagram svg').count()===1);
+ await page.locator('#chooseAlternateChord').tap();
+ await page.locator('#alternateRoot').selectOption('A');
+ await page.locator('#alternateType').selectOption('m');
+ check('alternate picker previews its shape before applying',await page.locator('#alternatePreview svg').count()===1);
+ await page.locator('#alternateChordDialog [data-close]').tap();
+ check('cancelling alternate picker keeps the current chord',await page.evaluate(()=>playbackChord('G')==='G'));
+ await page.locator('#chooseAlternateChord').tap();
+ await page.locator('#alternateRoot').selectOption('A');
+ await page.locator('#alternateType').selectOption('m');
+ await page.locator('#applyAlternateChord').tap();
+ await page.locator('#chordDialog [data-close]').tap();
+ await page.locator('#chordsDialog [data-close]').tap();
+ await page.locator('#audio').evaluate(a=>{a.currentTime=1;});
+ await page.waitForFunction(()=>document.querySelector('#playingChord').textContent==='Am');
+ check('alternate chord updates playback and bars without replacing the PDF',await page.locator('#stageCurrent').textContent()==='Am'
+  &&await page.locator('#stageBeatGraphic [data-chord-segment="Am"]').count()>0&&await page.locator('#pdfImage').getAttribute('src')===originalPdf);
+ await page.locator('#chordListButton').tap();
+ await page.locator('#songChordList [data-original-chord="G"]').tap();
+ check('alternate chord shape is available from the song chord list',await page.locator('#chordName').textContent()==='G → Am');
+ await page.locator('#chordDialog [data-close]').tap();
+ await page.locator('#chordsDialog [data-close]').tap();
+ expectedChordNames=['Am','C'];streamChord='Am';
+ await page.locator('#toolsButton').tap();await page.locator('#toolsTabPractice').tap();await page.locator('#chordMatchButton').tap();
+ check('alternate chord configuration has its own best score',await page.locator('#chordMatchBest').textContent()==='No personal best yet.');
+ await page.locator('#startChordMatch').tap();
+ await page.waitForFunction(()=>document.querySelector('#stageBeatGraphic [data-matched="true"]'));
+ check('playing the alternate chord marks its bar section with a check',await page.locator('#stageBeatGraphic [data-match-check="0"]').textContent()==='✓'
+  &&await page.locator('#stageCurrentCard').evaluate(card=>card.classList.contains('matched')));
+ await page.reload();
+ await page.waitForFunction(()=>!document.querySelector('#markCue').disabled);
+ check('alternate chord survives reopening the song',await page.evaluate(()=>playbackChord('G')==='Am'));
+ check('an unrelated chord has its original name',await page.evaluate(()=>playbackChord('C')==='C'));
+ if(await page.locator('#chordListButton').isHidden())await page.locator('#readerControlsToggle').tap();
+ await page.locator('#chordListButton').tap();
+ await page.locator('#songChordList [data-original-chord="G"]').tap();
+ await page.locator('#restoreOriginalChord').tap();
+ check('Original removes the alternate selection',await page.evaluate(()=>playbackChord('G')==='G'));
  check('no JavaScript errors',!errors.length);
  console.log(`${checks.length} auto-follow checks passed.`);
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}

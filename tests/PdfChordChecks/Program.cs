@@ -11,3 +11,7 @@ Check(result[0].Chords[1].Name == "C/G", "slash chord recognized");
 Check(Math.Abs(result[0].Chords[0].X - .1) < .000001 && Math.Abs(result[0].Chords[0].Height - .02) < .000001, "normalized positions match image geometry");
 Check(result[1].Chords.Count == 0, "scanned PDF page has no fabricated chord targets");
 Console.WriteLine("All PDF chord checks passed.");
+
+Check(!result[0].RightToLeft, "English sheet defaults left to right");
+var hebrewXml = xml.Replace("Hello", "מילים בעברית לשיר שלנו");
+Check(PdfChords.Parse(hebrewXml)[0].RightToLeft, "Hebrew PDF detected from content, independently of filename");

@@ -6,7 +6,7 @@ using System.Xml.Linq;
 public static class PdfChords
 {
     public sealed record Hit(string Name, double X, double Y, double Width, double Height);
-    public sealed record Page(int Number, List<Hit> Chords);
+    public sealed record Page(int Number, List<Hit> Chords, bool RightToLeft = false);
     static readonly Regex Chord = new(@"^[A-G](?:#|b)?(?:(?:maj|min|m|M|dim|aug|sus|add)?(?:2|4|5|6|7|9|11|13)?(?:maj7|add9|sus2|sus4|b5|#5|b9|#9)?|ø7|°7?)(?:/[A-G](?:#|b)?)?$", RegexOptions.CultureInvariant);
     public static List<Page> Parse(string xml)
     {
@@ -22,8 +22,12 @@ public static class PdfChords
         {
             double width = Number(page, "width"), height = Number(page, "height");
             var hits = new List<Hit>();
+            var words = page.Descendants().Where(e => e.Name.LocalName == "word").ToArray();
+            var letters = string.Concat(words.Select(word => word.Value));
+            var hebrew = letters.Count(c => c >= '\u0590' && c <= '\u05ff' && char.IsLetter(c));
+            var latin = letters.Count(c => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z');
             if (width > 0 && height > 0)
-            foreach (var word in page.Descendants().Where(e => e.Name.LocalName == "word"))
+            foreach (var word in words)
             {
                 string name = word.Value.Trim().Trim('[', ']', '(', ')', ',', '|', ':').Replace('♯', '#').Replace('♭', 'b');
                 if (!Chord.IsMatch(name)) continue;
@@ -31,7 +35,7 @@ public static class PdfChords
                 if (x < 0 || y < 0 || right > width + 1 || bottom > height + 1 || right <= x || bottom <= y) continue;
                 hits.Add(new(name, x / width, y / height, Math.Min(right / width, 1) - x / width, Math.Min(bottom / height, 1) - y / height));
             }
-            pages.Add(new(pages.Count + 1, hits));
+            pages.Add(new(pages.Count + 1, hits, hebrew >= 8 && hebrew > latin));
         }
         return pages;
     }
