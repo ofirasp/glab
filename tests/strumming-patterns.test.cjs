@@ -1,0 +1,13 @@
+const assert=require('assert/strict'),patterns=require('../src/GuitarPracticeLab.Web/wwwroot/strumming-patterns.js'),Round=require('../src/GuitarPracticeLab.Web/wwwroot/bar-changes-engine.js');
+assert.deepEqual(patterns.defaults('4/4'),['D','-','D','-','D','-','D','-']);assert.equal(patterns.grid('6/8').length,6);assert.equal(patterns.grid('12/8').subdivisions,1);
+const custom=['D','-','D','U','-','U','D','-'];assert.equal(patterns.label(custom,'4/4'),'↓— ↓↑ —↑ ↓—');assert.ok(!/[DU]/.test(patterns.label(custom,'4/4')));
+let round=new Round({first:'C',second:'G',bpm:60,changes:1,pattern:custom});assert.deepEqual(round.targets.map(t=>t.time),[0,1,1.5,2.5,3,4,5,5.5,6.5,7]);for(const t of round.targets)assert.equal(round.strum(t.time+.01),true);assert.equal(round.result().strumming.expected,10);assert.equal(round.result().strumming.accuracy,100);assert.deepEqual(round.result().pattern,custom);
+round=new Round({first:'C',second:'G',bpm:60,changes:1,pattern:custom});assert.equal(round.strum(2),false);assert.equal(round.result().strumming.extra,1);assert.equal(round.result().strumming.missed,10);round=new Round({first:'C',second:'G',bpm:60,changes:1,pattern:custom});round.strum(.21);assert.equal(round.lastStrum.status,'late');round.strum(.79);assert.equal(round.lastStrum.status,'early');
+for(const meter of ['2/4','3/4','4/4','6/8','9/8','12/8'])for(const preset of patterns.presets(meter)){
+ const r=new Round({first:'C',second:'G',bpm:120,changes:2,meter,pattern:preset.slots});for(const target of r.targets)assert.equal(r.strum(target.time+.001),true,`${meter} target ${target.time}`);assert.equal(r.result().strumming.accuracy,100);assert.equal(r.result().strumming.missed,0);
+}
+assert.throws(()=>patterns.validate(Array(8).fill('-'),'4/4'));assert.throws(()=>patterns.validate(['D'],'4/4'));assert.throws(()=>patterns.validate(Array(8).fill('X'),'4/4'));
+const alternates=patterns.presets('4/4')[1].slots;round=new Round({first:'C',second:'G',bpm:180,changes:1,pattern:alternates});for(const target of round.targets)assert.equal(round.strum(target.time+.001),true);assert.equal(round.result().strumming.expected,16);assert.equal(round.result().strumming.accuracy,100);
+console.log('PASS arrow patterns, eighth-note schedules, rest handling, early/late grading, all meters, rapid adjacent strums and saved-result pattern data.');
+
+for(const bpm of [60,120,180]){const r=new Round({first:"C",second:"G",bpm,changes:1,pattern:alternates});assert.ok(r.timingWindow<r.strumStep/2);for(const target of r.targets)assert.equal(r.strum(target.time+r.timingWindow*.95),true);assert.equal(r.result().strumming.accuracy,100);}

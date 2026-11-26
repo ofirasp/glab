@@ -28,3 +28,18 @@ Audio tools and models are reused from:
   ~/Documents/Codex/GuitarPracticeLabTools/
 
 This build is for the current Mac. It uses the existing Python 3.11/3.12 and FFmpeg installation. First-time vocal-tool/model setup can download several hundred MB. No live YouTube download or real Pi transfer was performed while testing this update; the file preparation, private password channel, remote import and recovery behavior were tested with local fixtures.
+
+Backup / Restore (2.2)
+Connect normally, then choose Backup. Stop recording/playback, exit the Pi app to
+Desktop and close the lesson browser before either operation. Keep them closed.
+Back up Pi to Mac creates a new verified .tar.gz archive in your chosen folder.
+It includes GuitarPracticeLab data (songs, PDFs, audio, images, cues, analysis,
+PDF sync, loops, practice results, lessons and settings) and the Pi Chromium
+profiles, including local scores/preferences and browser sessions. Mac-browser
+local data and data stored in custom locations outside these roots are excluded.
+Caches, builds, logs, updater backups and transient command queues are excluded.
+Restore accepts these archives, checks paths, stages the files, then merges them
+into the Pi home folder. Matching files are replaced; extra Pi files are kept.
+Replaced files are retained under GuitarPracticeLab/backups/before-restore-*.
+Restart the Pi after restoring. This is a data backup, not an SD-card OS image.
+Backup files contain browser session data; keep them private.

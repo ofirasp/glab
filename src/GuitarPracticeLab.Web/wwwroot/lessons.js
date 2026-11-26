@@ -1,6 +1,9 @@
 (function(){
 'use strict';const el=id=>document.getElementById(id);let rows=[],editing=null,removing=null,removed=null,busy=false;
 let mappingSongs=[],mappingReady=false,editVersion=0;
+const lessonIcons={add:'<path d="M12 5v14M5 12h14"/>',refresh:'<path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/>',watch:'<path d="m9 5 11 7-11 7Z"/>',edit:'<path d="m15 5 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15l-1 5Z"/>',remove:'<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>'};
+function lessonIcon(button,kind,label){button.classList.add('lesson-icon');button.setAttribute('aria-label',label);button.title=label;button.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+lessonIcons[kind]+'</svg>';return button;}
+lessonIcon(el('addLesson'),'add','Add lesson');lessonIcon(el('refreshLessons'),'refresh','Refresh');
 const query=new URLSearchParams(location.search),songId=query.get('song');let song=null;
 const status=text=>el('lessonStatus').textContent=text;
 async function request(path='',options={}){const response=await fetch('/api/lessons'+path,options);const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.message||data.detail||'Lesson operation failed.');return data;}
@@ -24,8 +27,8 @@ async function updateLinked(item,body){const response=await fetch('/api/song-lib
 function render(){const list=el('lessonList');list.replaceChildren();el('lessonCount').textContent=rows.length+' saved';
  if(!rows.length){const empty=document.createElement('div');empty.className='lessonempty';const title=document.createElement('strong');title.textContent='Keep your favourite lessons here';const text=document.createElement('span');text.textContent='Browse a lesson site above, copy the lesson page address, then choose Add Lesson. You can also add links from your Mac.';empty.append(title,text);list.append(empty);}
  for(const row of rows){const card=document.createElement('article');card.className='lessonrow';const info=document.createElement('div'),title=document.createElement('strong'),url=document.createElement('small');title.textContent=row.title;url.textContent=(row.songId?'Song lesson · ':'')+new URL(row.url).hostname;info.append(title,url);const actions=document.createElement('div');actions.className='lessonactions';
-  const button=(text,action)=>{const b=document.createElement('button');b.textContent=text;b.onclick=action;actions.append(b);return b;};
-  button('Watch ↗',()=>LessonLinks.open(row.url,status)).className='primary';if(song)button('Link to song',()=>link(row.url));button('Edit',()=>edit(row));button('Remove',()=>{removing=row;el('removeTitle').textContent=row.title;open('lessonRemove');});card.append(info,actions);list.append(card);
+  const button=(text,action)=>{const b=document.createElement('button');b.textContent=text;const kind={'Watch ↗':'watch',Edit:'edit',Remove:'remove'}[text];if(kind)lessonIcon(b,kind,text==='Watch ↗'?'Watch':text);b.onclick=action;actions.append(b);return b;};
+  button('Watch ↗',()=>LessonLinks.open(row.url,status)).classList.add('primary');if(song)button('Link to song',()=>link(row.url));button('Edit',()=>edit(row));button('Remove',()=>{removing=row;el('removeTitle').textContent=row.title;open('lessonRemove');});card.append(info,actions);list.append(card);
  }
 }
 el('refreshLessons').onclick=()=>refresh().then(()=>status('Saved lessons refreshed.')).catch(e=>status(e.message));

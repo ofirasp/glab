@@ -1,9 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Change After a Bar</title>
-<link rel="stylesheet" href="/scale-practice.css"><link rel="stylesheet" href="/one-minute-changes.css?v=bar-practice"><link rel="stylesheet" href="/bar-changes.css?v=calibration-summary">
-<script src="/timing-adjustment.js?v=global" defer></script><script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/chord-shapes.js?v=minor-eleventh" defer></script><script src="/chord-diagram.js" defer></script><script src="/pi-microphone.js?v=shared-pcm" defer></script><script src="/bar-changes-engine.js?v=shared-pcm" defer></script><script src="/bar-changes.js?v=calibration-diagnostics" defer></script><link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script></head><body><main><section id="chordChanges" aria-label="Change After a Bar">
+<link rel="stylesheet" href="/scale-practice.css"><link rel="stylesheet" href="/one-minute-changes.css?v=bar-practice"><link rel="stylesheet" href="/bar-changes.css?v=fast-steppers">
+<script src="/timing-adjustment.js?v=global" defer></script><script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/chord-shapes.js?v=minor-eleventh" defer></script><script src="/chord-diagram.js" defer></script><script src="/pi-microphone.js?v=shared-pcm" defer></script><script src="/strumming-patterns.js?v=arrows" defer></script><script src="/bar-changes-engine.js?v=forgiving-timing" defer></script><script src="/bar-changes.js?v=forgiving-timing" defer></script><link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script><link rel="stylesheet" href="/navigation-controls.css?v=shared"><script src="/navigation-controls.js?v=shared" defer></script></head><body><main><section id="chordChanges" aria-label="Change After a Bar">
   <div class="changeshead"><button id="changesBack">‹ Back</button><strong>Change After a Bar</strong><span id="changesTime" role="timer">Ready</span><span id="changesCount">0 matches</span></div>
   <div class="changesbody">
     <button id="barActiveCancel" hidden type="button">Cancel</button>
+    <div id="barVisualMetronome" role="img" aria-label="Visual metronome" hidden><svg viewBox="0 0 200 72" aria-hidden="true"><path d="M72 64h56M78 62l22-54 22 54" class="metro-frame"/><path d="M70 15Q100-2 130 15" class="metro-arc"/><g id="barMetroArm"><path d="M100 64V10"/><rect x="95" y="24" width="10" height="16" rx="3"/></g><circle id="barMetroLight" cx="100" cy="64" r="6"/></svg><div class="metro-caption"><span id="barMetroTempo"></span><strong id="barMetroBeat">1</strong></div></div>
     <div id="changesPreviews" class="changespreviews">
       <div class="changesplay">
         <strong id="changesTarget">Play C</strong><div id="changesDiagram" class="changesdiagram"></div>
@@ -23,16 +24,24 @@
       </div>
 <label class="bar-recent">Recent pair<select id="changesRecent"><option value="">Recent chord pairs…</option></select></label>
       </div>
-      <div class="bar-settings-group bar-rhythm-settings">      <div class="changespair bar-timing-settings"><div class="bar-tempo-control"><span id="barTempoLabel">Tempo (BPM)</span><div class="bar-tempo-stepper"><input id="barTempo" type="number" min="20" max="180" step="1" value="60" readonly aria-labelledby="barTempoLabel"><div class="bar-tempo-arrows"><button id="barTempoUp" type="button" aria-label="Increase tempo">▴</button><button id="barTempoDown" type="button" aria-label="Decrease tempo">▾</button></div></div></div><div class="bar-tempo-control"><span id="barCountLabel">Changes</span><div class="bar-tempo-stepper"><input id="barCount" type="number" min="1" max="128" step="1" value="8" readonly aria-labelledby="barCountLabel"><div class="bar-tempo-arrows"><button id="barCountUp" type="button" aria-label="Increase changes count">▴</button><button id="barCountDown" type="button" aria-label="Decrease changes count">▾</button></div></div></div><label>Time signature<select id="barMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>9/8</option><option>12/8</option></select></label></div></div>
+      <div class="bar-settings-group bar-rhythm-settings">      <div class="changespair bar-timing-settings"><div class="bar-tempo-control"><span id="barTempoLabel">Tempo (BPM)</span><div class="bar-tempo-stepper bar-separated-stepper"><button id="barTempoDown" type="button" aria-label="Decrease tempo">▾</button><input id="barTempo" type="number" min="20" max="180" step="1" value="60" readonly inputmode="none" tabindex="-1" aria-labelledby="barTempoLabel"><button id="barTempoUp" type="button" aria-label="Increase tempo">▴</button></div></div><label>Time signature<select id="barMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>9/8</option><option>12/8</option></select></label><div class="bar-tempo-control"><span id="barCountLabel">Changes</span><div class="bar-tempo-stepper bar-separated-stepper"><button id="barCountDown" type="button" aria-label="Decrease changes count">▾</button><input id="barCount" type="number" min="1" max="128" step="1" value="8" readonly inputmode="none" tabindex="-1" aria-labelledby="barCountLabel"><button id="barCountUp" type="button" aria-label="Increase changes count">▴</button></div></div></div></div>
       <div class="bar-settings-group bar-audio-settings">      <div class="changespair"><label>Microphone<select id="changesDevice"><option>default</option></select></label><label>Metronome<select id="barMetronome"><option value="off" selected>Off · visual beats</option><option value="on">On · headphones</option></select></label></div>
 </div>
-      <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="changesHistory">Results</button></div>
+      <div class="changesbuttons"><button id="changesStart">Start</button><button id="changesCancel" disabled>Cancel</button><button id="barPatternButton">Pattern</button><button id="changesHistory">Results</button></div>
       <div id="changesPairScores" role="status"></div>
       <div id="changesMessage" role="status">Change on beat 1. Hold the shown chord clearly. Four beats per bar.</div>
     </div>
   </div>
-  <div class="bar-beat-strip"><div id="barBeats" aria-label="Beats in the bar"></div><div id="barTimingFeedback" role="status" aria-live="polite" hidden><strong id="barTimingGuide">Strum on each beat</strong><span id="barTimingOffset"></span></div></div>
+  <div class="bar-beat-strip"><div id="barBeats" aria-label="Beats in the bar"></div><div id="barTimingFeedback" role="status" aria-live="polite" hidden><strong id="barTimingGuide">Follow the arrows</strong><span id="barTimingOffset"></span></div></div>
 </section>
+<dialog id="barPatternDialog" aria-labelledby="barPatternTitle">
+ <div class="pattern-head"><h2 id="barPatternTitle">Strumming pattern</h2><button id="barPatternCancel">Cancel</button></div>
+ <p id="barPatternMeter"></p><div id="barPatternPresets" class="pattern-presets"></div>
+ <div id="barPatternGrid" aria-label="Strumming slots"></div>
+ <p class="pattern-help">Tap a slot: — rest → ↓ down → ↑ up. Timing is scored; direction is a guide.</p>
+ <div class="pattern-recent-head">Recent patterns</div><div id="barPatternRecent"></div>
+ <div class="pattern-footer"><span id="barPatternError" role="status"></span><button id="barPatternApply">Use pattern</button></div>
+</dialog>
 <dialog id="changesCountIn" aria-label="One-bar count-in">
   <span class="changes-count-caption">Get ready</span>
   <strong id="changesCountInNumber" role="timer" aria-live="assertive">4</strong>

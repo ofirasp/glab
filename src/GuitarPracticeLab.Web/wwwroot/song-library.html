@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Songs · Guitar Practice Lab</title>
-<link rel="stylesheet" href="song-library.css?v=song-tools-icons">
+<link rel="stylesheet" href="song-library.css?v=player-icons">
 <script src="chord-shapes.js?v=minor-eleventh" defer></script>
 <script src="chord-diagram.js" defer></script>
 <script src="chord-viewer.js?v=auto-pdf-pick" defer></script>
@@ -12,16 +12,16 @@
 <script src="/playback-wake-lock.js" defer></script>
 <script src="rhythm-points.js?v=bar-boundaries" defer></script>
 <script src="clean-chord-bars.js?v=1" defer></script>
-<script src="song-library.js?v=song-tools-icons" defer></script>
+<script src="song-library.js?v=player-icons" defer></script>
 <script src="/pi-microphone.js?v=chord-age" defer></script>
 <script src="/song-recording.js?v=count-in-beeps" defer></script>
 <script src="/chord-change-timing.js?v=1" defer></script>
 <script src="/timing-adjustment.js?v=count-in" defer></script>
-<script src="/song-chord-match.js?v=song-tools-icons" defer></script>
+<script src="/song-chord-match.js?v=direct-start-player-chord-match" defer></script>
 <script src="/song-timeline-editor.js?v=full-section-preview" defer></script>
 <script src="/guitar-strum-timing.js?v=shared-pcm" defer></script><script src="/song-timing-calibration.js?v=bar-calibration-scope" defer></script>
 <script src="/touch-keyboard.js?v=explicit-tap" defer></script>
-<link rel="stylesheet" href="/auto-pdf-follow.css?v=tight-chord-highlights"><script src="/pdf-chord-alignment.js?v=preserve-sync-marks" defer></script><script src="/auto-pdf-follow.js?v=tight-chord-highlights" defer></script><script src="/import-song-setup.js" defer></script></head>
+<link rel="stylesheet" href="/auto-pdf-follow.css?v=sync-error-layout"><script src="/pdf-chord-alignment.js?v=preserve-sync-marks" defer></script><script src="/auto-pdf-follow.js?v=auto-if-synced" defer></script><script src="/import-song-setup.js" defer></script><link rel="stylesheet" href="/media-controls.css?v=shared"><script src="/media-controls.js?v=shared" defer></script><link rel="stylesheet" href="/navigation-controls.css?v=shared"><script src="/navigation-controls.js?v=shared" defer></script></head>
 <body>
 <header class="top">
   <a href="/practice.html" class="button">‹ Back</a>
@@ -29,7 +29,7 @@
   <button id="libraryButton" class="song-action-icon" aria-label="Library" title="Library" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l4-1 3 15-4 1z"/></svg></button>
   <button id="toolsButton" class="song-action-icon" aria-label="Tools" title="Tools" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></button>
   <button id="notesButton" class="song-action-icon" aria-label="Notes" title="Notes" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H5v18h14v-9M9 8h3M9 12h2M9 16h4M14 9l6-6 2 2-6 6-3 1z"/></svg></button>
-  <button id="chordMatchButton" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
+
   <h1 id="songTitle" dir="auto">Choose a song</h1>
   <div id="takeRecordingBanner" hidden><span id="takeRecordingStatus" role="status"></span><button id="stopTake" class="danger">Stop</button></div>
   <button id="stopRecordFollow" class="danger" hidden>Stop recording</button>
@@ -76,15 +76,17 @@
         <button id="cuesButton" disabled>Cues <span id="cueCount">0</span></button>
       </div>
       <div class="readerbar" id="readerBar">
-        <button id="readerBack" disabled>−5s</button>
-        <button id="readerPlay" class="primary" disabled>Play</button>
-        <button id="readerForward" disabled>+5s</button>
+        <button id="readerChordMatch" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
+        <button id="readerBack" disabled aria-label="Back 5 seconds" title="Back 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 5v14L3 12l9-7Zm10 0v14l-9-7 9-7Z"/></svg></button>
+        <button id="readerPlay" class="primary" disabled aria-label="Play" title="Play"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8L7 4Z"/></svg></button>
+
+        <button id="readerForward" disabled aria-label="Forward 5 seconds" title="Forward 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2 5v14l9-7-9-7Zm10 0v14l9-7-9-7Z"/></svg></button>
         <span id="readerClock">0:00 / 0:00</span>
         <button id="readerLoop" aria-pressed="false" disabled>Loop off</button>
         <button id="readerTrack" disabled>Original</button>
         <button id="readerTools" class="song-action-icon" aria-label="Tools" title="Tools" ><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></button>
         <button id="readerNotes" class="song-action-icon" aria-label="Notes" title="Notes" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H5v18h14v-9M9 8h3M9 12h2M9 16h4M14 9l6-6 2 2-6 6-3 1z"/></svg></button>
-        <button id="readerChordMatch" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
+
       </div>
       <div class="volumecontrols reader-volume" aria-label="Song volume">
         <button id="readerMute" aria-label="Mute song" aria-pressed="false">Mute</button>
@@ -94,9 +96,11 @@
     </div>
     <div id="readerBottom" hidden>
       <div id="stageTransport" hidden>
-        <button id="stageBack" class="clean-transport-only" aria-label="Back 5 seconds" disabled>−5s</button>
-        <button id="stagePlay" aria-label="Play or pause">Play</button>
-        <button id="stageForward" class="clean-transport-only" aria-label="Forward 5 seconds" disabled>+5s</button>
+        <button id="stageChordMatch" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
+        <button id="stageBack" class="clean-transport-only" disabled aria-label="Back 5 seconds" title="Back 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 5v14L3 12l9-7Zm10 0v14l-9-7 9-7Z"/></svg></button>
+        <button id="stagePlay" aria-label="Play" title="Play"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8L7 4Z"/></svg></button>
+
+        <button id="stageForward" class="clean-transport-only" disabled aria-label="Forward 5 seconds" title="Forward 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2 5v14l9-7-9-7Zm10 0v14l9-7-9-7Z"/></svg></button>
         <span id="stageClock">0:00 / 0:00</span>
         <button id="stageStart" aria-label="Restart fullscreen song" title="Go to start">|&lt;</button>
         <input id="stageSeek" type="range" min="0" max="1" step="0.1" value="0" aria-label="Fullscreen song position">
@@ -110,9 +114,11 @@
     <button id="trackToggle" class="tracktoggle" disabled>Original · no backing</button>
     <div id="audioEmpty" class="hint">Your PDF and audio stay on this Pi. Add an MP3 to start practising.</div>
     <div class="transport">
-      <button id="back" disabled>−5s</button>
-      <button id="play" class="primary" disabled>Play</button>
-      <button id="forward" disabled>+5s</button>
+      <button id="chordMatchButton" class="song-action-icon" aria-label="Chord match" title="Chord match" aria-pressed="false" disabled><svg viewBox="0 0 26 24" width="25" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h12v17H4zM8 3v17M12 3v10M4 8h12M4 13h9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><path d="m15 17 3 3 5-6"/></svg></button>
+        <button id="back" disabled aria-label="Back 5 seconds" title="Back 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 5v14L3 12l9-7Zm10 0v14l-9-7 9-7Z"/></svg></button>
+      <button id="play" class="primary" disabled aria-label="Play" title="Play"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8L7 4Z"/></svg></button>
+
+      <button id="forward" disabled aria-label="Forward 5 seconds" title="Forward 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2 5v14l9-7-9-7Zm10 0v14l9-7-9-7Z"/></svg></button>
     </div>
     <div class="timeline">
       <div class="seek-row">
@@ -161,7 +167,7 @@
   <div class="dialogbody stack" id="toolsPlayback" role="tabpanel" aria-labelledby="toolsTabPlayback" hidden>
     <div class="playback-options"><label class="count-in-setting"><input id="cleanSongLayout" type="checkbox" checked> Clean song screen</label>
     <label class="count-in-setting"><input id="songCountInEnabled" type="checkbox" checked> 5-second count-in before playback</label></div>
-    <label class="auto-pdf-mode">PDF follow <select id="pdfFollowMode" disabled><option value="manual">Manual · recorded follow</option><option value="auto">Auto PDF · aligned chords</option></select></label><div class="playback-adjustments"><label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label><button id="toolsBack" disabled>−5s</button><button id="toolsForward" disabled>+5s</button></div>
+    <label class="auto-pdf-mode">PDF follow <select id="pdfFollowMode" disabled><option value="manual">Manual · recorded follow</option><option value="auto">Auto PDF · aligned chords</option></select></label><div class="playback-adjustments"><label>Playback speed <select id="speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label><button id="toolsBack" disabled aria-label="Back 5 seconds" title="Back 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 5v14L3 12l9-7Zm10 0v14l-9-7 9-7Z"/></svg></button><button id="toolsForward" disabled aria-label="Forward 5 seconds" title="Forward 5 seconds"><svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2 5v14l9-7-9-7Zm10 0v14l9-7-9-7Z"/></svg></button></div>
     <div class="toolactions"><button id="setA" disabled>Set A here</button><button id="setB" disabled>Set B here</button><button id="clearLoop" disabled>Clear A/B</button><button id="toolsLoopToggle" aria-pressed="false" disabled>Loop off</button></div>
     <p id="toolsLoopTimes" class="hint">A — · B —</p>
     <p class="hint">Use −5s / +5s or the song position slider to find a passage. Set A at its start, B at its end, then turn Loop on.</p>
@@ -173,15 +179,10 @@
   </div>
 </dialog>
 
+<select id="chordMatchDevice" hidden aria-hidden="true" tabindex="-1"></select>
 <dialog id="chordMatchDialog" aria-labelledby="chordMatchTitle">
   <div class="dialoghead"><h2 id="chordMatchTitle">Chord match</h2><button data-close="chordMatchDialog">Close</button></div>
   <div class="dialogbody match-body">
-    <section id="chordMatchSetup" class="match-setup">
-      <p class="hint">Use headphones so the mic hears your guitar. Play from start to finish for a personal best. Chords and change timing are scored separately.</p>
-      <div class="match-mic-row"><label>Microphone <select id="chordMatchDevice"></select></label><button id="matchTimingCalibration">Microphone timing</button></div>
-      <div class="match-history"><div><p id="chordMatchLast"></p><p id="chordMatchBest"></p></div><div><p id="chordTimingLast"></p><p id="chordTimingBest"></p></div></div>
-      <p class="hint">Timing within ±150 ms earns full credit. Missed changes score zero. Timing is estimated from your mic and the analyzed track.</p>
-    </section>
     <section id="matchResultOverview" hidden aria-label="Practice results">
       <p id="matchResultSong" dir="auto"></p>
       <div class="match-score-grid">
@@ -193,7 +194,7 @@
     </section>
     <p id="chordMatchResult" role="status"></p>
   </div>
-  <div class="dialogfoot"><button id="matchSetupButton" hidden>Settings</button><button id="startChordMatch" class="primary" disabled>Start from beginning</button></div>
+  <div class="dialogfoot"><button id="startChordMatch" class="primary" disabled>Play again</button></div>
 </dialog>
 <dialog id="analyzeChordsDialog" aria-labelledby="analyzeChordsTitle">
   <div class="dialoghead"><h2 id="analyzeChordsTitle">Analyze chords</h2><button data-close="analyzeChordsDialog">Close</button></div>
@@ -324,7 +325,11 @@
   <div class="notes-tabs" role="tablist" aria-label="Song notes sections"><button id="notesTabNotes" role="tab" aria-selected="true" aria-controls="notesPanelNotes">Notes</button><button id="notesTabImages" role="tab" aria-selected="false" aria-controls="notesPanelImages">Images</button></div>
   <div id="notesPanelNotes" class="notes-panel" role="tabpanel" aria-labelledby="notesTabNotes"><div class="notes-metadata"><label>Song title <input id="titleInput" maxlength="160" readonly inputmode="none" tabindex="-1"></label><div class="notes-lesson"><button id="notesWatchLesson" type="button">Watch lesson ↗</button><small id="notesLessonEmpty" hidden>No lesson linked</small></div></div><div class="notes-text"><div class="notes-edit-head"><label for="notesInput">Practice notes</label><button id="editNotes" type="button">Edit</button></div><textarea id="notesInput" readonly inputmode="none" tabindex="-1" maxlength="10000" placeholder="Capo, alternate tuning, fingering reminders…"></textarea></div></div>
 
-  <div id="notesPanelImages" class="notes-panel" role="tabpanel" aria-labelledby="notesTabImages" hidden><div class="notes-image-stage"><img id="songNoteImage" alt="Song reference image" hidden><p id="songNoteImageEmpty">Add reference images from Song Studio on your Mac.</p></div><div class="notes-image-nav"><button id="noteImagePrev" aria-label="Previous image">‹ Previous</button><span id="noteImageCount" role="status"></span><button id="noteImageNext" aria-label="Next image">Next ›</button></div></div>
+  <div id="notesMatchScores" class="match-history" hidden><div><p id="chordMatchBest"></p><p id="chordMatchLast"></p></div><div><p id="chordTimingBest"></p><p id="chordTimingLast"></p></div></div>
+  <div id="notesPanelImages" class="notes-panel" role="tabpanel" aria-labelledby="notesTabImages" hidden>
+    <div class="notes-image-toolbar"><div class="notes-image-nav"><button id="noteImagePrev" aria-label="Previous image" title="Previous image">‹</button><button id="noteImageNext" aria-label="Next image" title="Next image">›</button></div><span id="noteImageCount" role="status"></span><div class="notes-image-zoom"><button id="noteImageZoomOut" aria-label="Zoom image out" title="Zoom out">−</button><output id="noteImageZoomValue" aria-label="Image zoom">100%</output><button id="noteImageZoomIn" aria-label="Zoom image in" title="Zoom in">+</button><button id="noteImageFit" title="Fit entire image">Fit</button></div></div>
+    <div id="noteImageViewport" class="notes-image-stage" aria-label="Song image; pan to explore when zoomed"><div id="noteImageCanvas" class="notes-image-canvas"><img id="songNoteImage" alt="Song reference image" draggable="false" hidden></div><p id="songNoteImageEmpty">Add reference images from Song Studio on your Mac.</p></div>
+  </div>
   <div class="dialogfoot"><button id="saveNotes" class="primary" hidden>Save notes</button><span class="grow"></span><button id="closeNotes">Close</button></div>
 </dialog>
 <dialog id="notesUnsavedDialog" aria-labelledby="notesUnsavedTitle"><div class="dialoghead"><h2 id="notesUnsavedTitle">Save your changes?</h2></div><div class="dialogbody"><p>The song title or notes have changed.</p></div><div class="dialogfoot"><button id="keepEditingNotes">Keep editing</button><button id="discardNotes">Discard</button><button id="saveAndCloseNotes" class="primary">Save &amp; close</button></div></dialog>
@@ -371,7 +376,7 @@
 <dialog id="pdfSyncDialog" aria-labelledby="pdfSyncTitle">
  <div class="dialoghead"><h2 id="pdfSyncTitle">Sync PDF</h2><span class="pdf-sync-autosave">Corrections save as you tap</span><button id="pdfSyncClose">Done</button></div>
  <div class="dialogbody pdf-sync-editor-grid">
-  <aside class="pdf-sync-editor-panel">
+  <aside class="pdf-sync-editor-panel" data-dialog-errors>
    <strong id="pdfSyncSection"></strong><span id="pdfSyncOrdinal"></span><span id="pdfSyncConfidence"></span><span id="pdfSyncPrintedNext"></span>
    <div class="pdf-sync-navigation"><button id="pdfSyncPrevious" disabled>‹ Previous</button><button id="pdfSyncNext" disabled>Next ›</button></div>
    <div class="pdf-sync-navigation"><button id="pdfSyncHear" disabled>♪ Hear bar</button><button id="pdfSyncSkip" disabled>Skip detection</button></div>

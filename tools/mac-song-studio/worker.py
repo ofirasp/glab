@@ -17,7 +17,7 @@ def validate(config):
  target=config.get('target','ofiras@glab.local').strip()
  if not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9][A-Za-z0-9.-]*',target):raise ValueError('Enter the Pi login as username@hostname, for example ofiras@glab.local.')
  config['target']=target
- if config.get('action') in ('test','list'):return config
+ if config.get('action') in ('test','list','backup','restore'):return config
  if config.get('action')=='edit':
   if not re.fullmatch(r'[a-fA-F0-9-]{32,36}',str(config.get('songId',''))):raise ValueError('Select a song from the Pi library.')
   if not isinstance(config.get('notes',''),str) or len(config.get('notes',''))>10000:raise ValueError('Notes are limited to 10,000 characters.')
@@ -119,6 +119,38 @@ def run(config):
  config=validate(config);password=config.pop('password','');connection=SSH(config['target'],password);password=''
  try:
   stage('connect','Connecting to '+config['target']+'…');connection.connect()
+  if config.get('action') in ('backup','restore'):
+   code=(HERE/'pi_backup.py').read_text();base=['/usr/bin/ssh','-S',connection.socket,connection.target]
+   if config['action']=='backup':
+    folder=Path(config.get('backupFolder','')).expanduser();folder.mkdir(parents=True,exist_ok=True)
+    destination=folder/('GuitarLab-'+time.strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]+'.tar.gz');partial=destination.with_suffix('.partial')
+    stage('send','Backing up Pi data and browser profiles to this Mac…')
+    try:
+     with partial.open('xb') as output:
+      os.chmod(partial,0o600)
+      result=subprocess.run(base+['python3 -c '+shlex.quote(code)+' backup'],stdout=output,stderr=subprocess.PIPE)
+     if result.returncode:raise ValueError('Backup failed: '+result.stderr.decode(errors='replace')[-1500:])
+     import tarfile
+     with tarfile.open(partial,'r:gz') as archive:
+      for member in archive:
+       if member.isfile():
+        with archive.extractfile(member) as data:
+         while data.read(1024*1024):pass
+     partial.rename(destination)
+    finally:partial.unlink(missing_ok=True)
+    event('complete',message='Backup verified and saved on this Mac.',output=str(folder));return
+   source=Path(config.get('backupFile','')).expanduser()
+   if not source.is_file():raise ValueError('Choose a Guitar Lab backup archive.')
+   remote='/tmp/glab-restore-'+uuid.uuid4().hex+'.tar.gz'
+   try:
+    stage('send','Sending backup to the Pi…')
+    subprocess.run(['/usr/bin/scp','-o','ControlPath='+connection.socket,str(source),connection.target+':'+remote],check=True)
+    stage('import','Restoring data; keeping a safety copy of replaced files…')
+    result=subprocess.run(base+['python3 -c '+shlex.quote(code)+' restore '+shlex.quote(remote)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    if result.returncode:raise ValueError('Restore failed: '+result.stderr[-1500:])
+    restored=json.loads(result.stdout)
+    event('complete',message='Restored '+str(restored['files'])+' files. Restart the Pi before opening the app. Safety copy: '+restored['safety']);return
+   finally:subprocess.run(base+['rm -f '+shlex.quote(remote)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   if config.get('action')=='test':
    result=connection.remote({'action':'test'});event('complete',message=result['message']);return
   if config.get('action')=='list':

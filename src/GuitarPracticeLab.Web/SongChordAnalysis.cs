@@ -67,6 +67,7 @@ public sealed record SongChordAnalysis(int Shift, List<SongChordAnalysis.SongCho
             try
             {
                 // Slash voicings need reliable bass detection, so leave them out of this first pass.
+                if(name.Contains('/'))continue;
                 var chord = GuitarChord.Parse(name);
                 // Power chords have two distinct notes, even when played on three strings.
                 if (chord.Notes.Length < 2) continue;

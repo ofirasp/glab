@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const device = $('chordMatchDevice'), launch = $('startChordMatch'), toggle = $('chordMatchButton');
-  let run = null, capture = null, available = false, setupVersion = 0;
+  let run = null, capture = null, available = false, starting = false;
   const validRun = () => run && song?.id === run.id && activeChordAnalysis() === run.analysis;
 
   function key() {
@@ -17,6 +17,8 @@
     try { return JSON.parse(localStorage.getItem(key() + suffix)); } catch { return null; }
   }
   function showBest() {
+    $('notesMatchScores').hidden=!activeChordAnalysis()?.changes?.length;
+    if($('notesMatchScores').hidden)return;
     const record = savedScore();
     const last = savedScore('-last');
     const timingBest = savedScore('-timing-best-v1');
@@ -44,7 +46,7 @@
   function stop() {
     cancelCapture();
     run = null;
-    for(const button of [toggle,$('readerChordMatch')]){if(!button)continue;button.title='Chord match';button.setAttribute('aria-label','Chord match');button.setAttribute('aria-pressed','false');}
+    for(const button of [toggle,$('readerChordMatch'),$('stageChordMatch')]){if(!button)continue;button.title='Chord match';button.setAttribute('aria-label','Chord match');button.setAttribute('aria-pressed','false');}
     toggle.setAttribute('aria-pressed', 'false');
     $('chordTimingFeedback').hidden = true;
     show(-1);
@@ -66,31 +68,29 @@
     $('matchMissedChanges').textContent=numeric&&session.timing.total?`${session.timing.missed} missed changes`:'';
     $('matchResultNotice').textContent=session.notice;
   }
-  async function openSetup(result = '', session = null) {
-    const version = ++setupVersion;
+  function openSetup(result, session) {
+    if(!session)return;
     closeDialog('toolsDialog');
-    $('chordMatchResult').textContent = result;
-    $('chordMatchDialog').classList.toggle('match-results',Boolean(session));
-    $('chordMatchSetup').hidden=Boolean(session);
-    $('matchResultOverview').hidden=!session;
-    $('matchSetupButton').hidden=!session;
-    $('chordMatchTitle').textContent=session?'Practice complete':'Chord match';
-    launch.textContent=session?'Play again':'Start from beginning';
-    if(session)showSession(session);
-    showBest();
-    available = false;
-    launch.disabled = true;
-    openDialog('chordMatchDialog');
-    try {
-      const list = await PiMicrophone.load(device);
-      if (version !== setupVersion || !$('chordMatchDialog').open) return;
-      available = list.available;
-      showBest();
-      launch.disabled = !available || !device.value;
-      if (!available) $('chordMatchResult').textContent = [result, list.message].filter(Boolean).join(' ');
-    } catch (error) {
-      if (version === setupVersion) $('chordMatchResult').textContent = [result, error.message].filter(Boolean).join(' ');
-    }
+    $('chordMatchResult').textContent=result;
+    $('chordMatchDialog').classList.add('match-results');
+    $('matchResultOverview').hidden=false;
+    $('chordMatchTitle').textContent='Practice complete';
+    launch.textContent='Play again';launch.disabled=false;
+    showSession(session);showBest();openDialog('chordMatchDialog');
+  }
+  async function startDirect(){
+    if(starting)return;
+    starting=true;
+    const songId=song?.id;
+    try{
+      audio.pause();
+      const list=await PiMicrophone.load(device);
+      if(song?.id!==songId)return;
+      if(!list.available||!device.value)throw Error(list.message||'Select an available microphone in Settings → Audio.');
+      if(!activeChordAnalysis()?.changes?.some(change=>change.name))throw Error('Analyze this song’s chords first.');
+      startMatch();
+    }catch(error){status('Chord match: '+error.message);}
+    finally{starting=false;}
   }
 
   async function listen() {
@@ -120,23 +120,23 @@
         stop();
         status('Chord match: ' + error.message);
         audio.pause();
-        void openSetup(error.message);
+
       }
     } finally { if (capture === controller) capture = null; }
   }
 
-  $('matchSetupButton').onclick=()=>void openSetup();
   toggle.onclick = () => {
     if (validRun()) { stop(); status('Chord match off.'); return; }
     audio.pause();
-    void openSetup();
+    void startDirect();
   };
   device.onchange = () => {
     PiMicrophone.remember(device.value);
     showBest();
     launch.disabled = !available || !device.value;
   };
-  launch.onclick = () => {
+  launch.onclick = startDirect;
+  function startMatch() {
     const analysis = activeChordAnalysis();
     const sections = analysis.changes.filter(change => change.name);
     if (!sections.length || !device.value) return;
@@ -149,7 +149,7 @@
       received: false, initialSeek: audio.currentTime > 0};
     looping = false;
     if (run.initialSeek) audio.currentTime = 0;
-    for(const button of [toggle,$('readerChordMatch')]){if(!button)continue;button.title='Chord match on · turn off';button.setAttribute('aria-label','Chord match on · turn off');button.setAttribute('aria-pressed','true');}
+    for(const button of [toggle,$('readerChordMatch'),$('stageChordMatch')]){if(!button)continue;button.title='Chord match on · turn off';button.setAttribute('aria-label','Chord match on · turn off');button.setAttribute('aria-pressed','true');}
     toggle.setAttribute('aria-pressed', 'true');
     closeDialog('chordMatchDialog');
     status('Chord match on. Play along through headphones.');
@@ -198,5 +198,7 @@
     else void listen();
   });
   window.addEventListener('pagehide', stop);
+  $('notesPanelNotes').append($('notesMatchScores'));
+  new MutationObserver(()=>{if($('notesDialog').open){showBest();void PiMicrophone.load(device).then(()=>{if($('notesDialog').open)showBest();}).catch(()=>{});}}).observe($('notesDialog'),{attributes:true,attributeFilter:['open']});
   window.SongChordMatch = {show, stop, matched: index => Boolean(validRun() && run.matched.has(index)), progress: () => validRun() ? {hits: run.matched.size, total: run.total} : null};
 })();

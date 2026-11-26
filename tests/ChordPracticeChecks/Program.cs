@@ -1,5 +1,9 @@
 using System.Diagnostics;
 static void Check(bool ok,string name){if(!ok)throw new Exception(name);Console.WriteLine("PASS "+name);}
+Check(GuitarChord.Parse("Fmaj7/G").Notes.SequenceEqual(new[]{0,4,5,7,9}),"slash chord Fmaj7/G preserves chord tones and bass");
+Check(GuitarChord.Parse("C/G").Notes.SequenceEqual(new[]{0,4,7}),"slash inversion does not duplicate pitch classes");
+Check(GuitarChord.Parse("F#m7/E").Notes.SequenceEqual(new[]{1,4,6,9}),"accidental root and slash bass");
+try{GuitarChord.Parse("C/H");throw new Exception("Invalid bass accepted");}catch(ArgumentException){}
 var detector=new ChordDetector();
 double[] Signal(int[] midis,int seed=1,double cents=0,bool noise=false) {
  var random=new Random(seed);var phase=midis.Select(_=>random.NextDouble()*6).ToArray();var result=new double[ChordDetector.Size];

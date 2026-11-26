@@ -6,10 +6,12 @@
 <title>Looper · Guitar Practice Lab</title>
 <link rel="stylesheet" href="/scale-practice.css">
 <style>
-main{grid-template-rows:42px 48px auto minmax(0,1fr) auto;gap:8px}
+main{grid-template-rows:42px auto auto minmax(0,1fr) auto;gap:8px}
 .controls,.draft,.loop-row{display:flex;align-items:center;gap:8px;min-width:0}
-.controls label{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.controls select{min-width:0;width:100%}#recordLoop{min-width:124px}
+.controls{display:grid;justify-items:center;gap:10px;padding:0 0 4px}
+.controls label{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;font-size:13px}
+.controls select{min-width:0;width:260px;max-width:calc(100vw - 125px);min-height:36px;text-overflow:ellipsis}
+#recordLoop.media-icon-button{min-width:52px;min-height:44px;padding:10px 14px;border-radius:10px;background:#293950;border:1px solid #4c607b;box-shadow:none}
 #recordLoop.recording{background:#743740}
 .draft input{min-width:0;flex:1;padding:9px;border:1px solid #526581;border-radius:8px;background:#192639;color:#eef3ff;font:16px system-ui}
 #loops{overflow:auto;background:#192639;border-radius:12px;padding:8px}
@@ -25,7 +27,7 @@ dialog button+button{margin-left:8px}
 <script src="/playback-wake-lock.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>
 <script src="/looper.js?v=levels" defer></script>
-</head>
+<link rel="stylesheet" href="/media-controls.css?v=shared"><script src="/media-controls.js?v=shared" defer></script><link rel="stylesheet" href="/navigation-controls.css?v=shared"><script src="/navigation-controls.js?v=shared" defer></script></head>
 <body><main>
 <header><a href="/practice.html?tab=tools">‹ Back</a><h1>Looper</h1></header>
 <div class="controls">

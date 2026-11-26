@@ -19,10 +19,12 @@ for(const [meter,beats,bar] of [['3/4',3,1.5],['2/4',2,1],['6/8',6,1],['9/8',9,1
 r=make();for(let beat=0;beat<20;beat++)assert.equal(r.strum(beat*.5+.01),true);
 assert.equal(r.result().strumming.expected,20);assert.equal(r.result().strumming.detected,20);assert.equal(r.result().strumming.accuracy,100);
 assert.equal(r.strum(9.52),false);assert.equal(r.result().strumming.extra,0);assert.equal(r.strum(9.7),false);assert.equal(r.result().strumming.extra,1);
-r=make();r.strum(.01);r.strum(.65);r.strum(.85);assert.equal(r.result().strumming.onTime,1);assert.equal(r.result().strumming.late,1);assert.equal(r.result().strumming.early,1);assert.equal(r.result().strumming.missed,17);assert.equal(r.result().strumming.accuracy,5);
+r=make();r.strum(.01);r.strum(.70);r.strum(1.30);assert.equal(r.result().strumming.onTime,1);assert.equal(r.result().strumming.late,1);assert.equal(r.result().strumming.early,1);assert.equal(r.result().strumming.missed,17);assert.equal(r.result().strumming.accuracy,5);
 assert.equal(r.strum(-.1),false);assert.equal(r.strum(10),false);
 for(const meter of ['3/4','6/8','9/8','12/8']){const round=new Round({first:'C',second:'G',bpm:120,changes:2,meter});const count=round.beats*3;for(let i=0;i<count;i++)round.strum(i*round.beat+.001);assert.equal(round.result().strumming.expected,count);assert.equal(round.result().strumming.accuracy,100);}
 console.log('PASS one strum per beat, early/late/missed/extra scoring, all-bar totals and compound meters');
 
-r=make();r.strum(.11);assert.equal(r.lastStrum.status,'on-time');r.strum(.65);assert.equal(r.lastStrum.status,'late');r.strum(.85);assert.equal(r.lastStrum.status,'early');assert.equal(r.strum(.86),false);assert.equal(r.result().strumming.extra,0);
+r=make();r.strum(.11);assert.equal(r.lastStrum.status,'on-time');r.strum(.70);assert.equal(r.lastStrum.status,'late');r.strum(1.30);assert.equal(r.lastStrum.status,'early');assert.equal(r.strum(1.31),false);assert.equal(r.result().strumming.extra,0);
 console.log('PASS beginner-friendly tolerance, early/late guidance and ringing/duplicate rejection');
+
+for(const offset of [-.175,.175]){const round=make();round.strum(.5+offset);assert.equal(round.lastStrum.status,'on-time');assert.equal(round.result().strumming.toleranceMs,180);}

@@ -73,6 +73,7 @@ public static partial class SongLibrary
             return await next(context);
         });
         MapTimeline(api);
+        MapPdfSync(api);
         MapSongImages(api);
         api.MapGet("", () => Guard(async () =>
         {

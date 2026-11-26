@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Guitar Practice Lab</title>
 <script>
-if (window.parent !== window && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) {
+// Hide the pointer only on the local touchscreen, not a desktop browser or SSH tunnel.
+if (window.parent !== window && navigator.maxTouchPoints > 0 && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) {
   document.documentElement.classList.add('touch-kiosk');
 }
 </script>
@@ -181,10 +182,10 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </style>
 
 <link rel="stylesheet" href="/practice-hub.css?v=grouped">
-<link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script></head>
+<link rel="stylesheet" href="/free-practice-badge.css"><script src="/free-practice-badge.js" defer></script><link rel="stylesheet" href="/media-controls.css?v=shared"><script src="/media-controls.js?v=shared" defer></script><link rel="stylesheet" href="/navigation-controls.css?v=shared"><script src="/navigation-controls.js?v=shared" defer></script></head>
 <body>
 <main>
-<header><button id="menuBack" hidden>‹ Back</button><h1 id="pageTitle">Guitar Practice Lab</h1><span id="practiceToday" hidden>Today: 0 min · 0 sessions</span><div class="header-actions"><button id="audioSettings" aria-label="Settings" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.2-1.6.9-2.2-.6-2.5 4.3 1.6 1.6v1.8l-1.6 1.6 2.5 4.3 2.2-.6 1.6.9.6 2.2h5l.6-2.2 1.6-.9 2.2.6 2.5-4.3-1.6-1.6v-1.8l1.6-1.6L18.9 5l-2.2.6-1.6-.9-.6-2.2h-5Z"/><circle cx="12" cy="12" r="3.2"/></svg></button><div id="homeActions" class="home-actions" hidden><button id="sleepScreen" aria-label="Sleep screen" title="Sleep screen"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.1A8.6 8.6 0 0 1 10.9 3.2 8.7 8.7 0 1 0 20.8 13.1Z"/></svg></button><button id="exitDesktop" aria-label="Exit to Desktop" title="Exit to Desktop"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8m-4-5v5m-3-12h6m-2-2 2 2-2 2"/></svg></button><button id="shutdownButton" aria-label="Shut down" title="Shut down"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10m-5.7-7.3a9 9 0 1 0 11.4 0"/></svg></button></div></div></header>
+<header><button id="changesBack" hidden>‹ Back</button><button id="menuBack" hidden>‹ Back</button><h1 id="pageTitle">Guitar Practice Lab</h1><span id="practiceToday" hidden>Today: 0 min · 0 sessions</span><div class="header-actions"><button id="audioSettings" aria-label="Settings" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.2-1.6.9-2.2-.6-2.5 4.3 1.6 1.6v1.8l-1.6 1.6 2.5 4.3 2.2-.6 1.6.9.6 2.2h5l.6-2.2 1.6-.9 2.2.6 2.5-4.3-1.6-1.6v-1.8l1.6-1.6L18.9 5l-2.2.6-1.6-.9-.6-2.2h-5Z"/><circle cx="12" cy="12" r="3.2"/></svg></button><div id="homeActions" class="home-actions" hidden><button id="sleepScreen" aria-label="Sleep screen" title="Sleep screen"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.1A8.6 8.6 0 0 1 10.9 3.2 8.7 8.7 0 1 0 20.8 13.1Z"/></svg></button><button id="exitDesktop" aria-label="Exit to Desktop" title="Exit to Desktop"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8m-4-5v5m-3-12h6m-2-2 2 2-2 2"/></svg></button><button id="shutdownButton" aria-label="Shut down" title="Shut down"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10m-5.7-7.3a9 9 0 1 0 11.4 0"/></svg></button></div></div></header>
 <section id="homeMenu" class="menu-screen" aria-label="Main menu">
   <div class="menu-grid">
     <button id="songLibraryLink" onclick="location.href='/song-library.html'">Songs<small>Chord sheets and backing tracks</small></button>
@@ -307,7 +308,7 @@ main:has(#chordChanges:not([hidden])) #menuBack{visibility:hidden}
 </section>
 
 <section id="chordChanges" hidden aria-label="1 Minute Changes">
-  <div class="changeshead"><button id="changesBack">‹ Back</button><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
+  <div class="changeshead"><strong>1 Minute Changes</strong><span id="changesTime" role="timer">1:00</span><span id="changesCount">0 chords</span></div>
   <div class="changesbody">
     <button id="minuteActiveCancel" hidden type="button">Cancel</button>
     <div id="minuteLiveStatus" hidden></div>
@@ -669,7 +670,7 @@ update();
 <script src="/chord-diagram.js?v=tuning-labels" defer></script>
 <script src="/pi-microphone.js?v=tuning-presets" defer></script>
 <script src="/live-tuner.js?v=center-target" defer></script>
-<script src="/one-minute-changes.js?v=clear-match-chime" defer></script>
+<script src="/one-minute-changes.js?v=top-left-back" defer></script>
 <script src="/practice-hub.js?v=grouped" defer></script>
 <script src="/lesson-links.js" defer></script>
 <script src="/touch-keyboard.js" defer></script>

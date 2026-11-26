@@ -32,7 +32,7 @@
 <style id="outer-screen-fit">
 html,body{margin:0;height:100%;overflow:hidden}
 iframe{display:block}
-iframe.touch-kiosk{cursor:none}
+/* The embedded touchscreen page controls cursor visibility. Desktop browsers retain their pointer. */
 #screenWakeShield{position:fixed;inset:0;z-index:10000;overflow:hidden;background:#000;touch-action:none;cursor:none}
 #screenWakeShield[hidden],#saverClock[hidden]{display:none}
 #screenWakeShield[data-style="guitar"]::before{

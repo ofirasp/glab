@@ -13,11 +13,18 @@ public sealed record GuitarChord(string Name, int[] Notes, int[] Required)
     };
     public static GuitarChord Parse(string name)
     {
-        var m=Regex.Match(name ?? "", @"^([A-G])([#b]?)(.*)$");
+        var m=Regex.Match(name ?? "", @"^([A-G])([#b]?)([^/]*)(?:/([A-G])([#b]?))?$");
         if(!m.Success || !Qualities.TryGetValue(m.Groups[3].Value, out var notes)) throw new ArgumentException("Choose a supported chord name.");
         int root="C D EF G A B".IndexOf(m.Groups[1].Value, StringComparison.Ordinal);
         root=(root+(m.Groups[2].Value=="#"?1:m.Groups[2].Value=="b"?-1:0)+12)%12;
-        return new(name!,notes.Select(n=>(n+root)%12).Order().ToArray(),notes.Where(n=>notes.Length<4||n!=7).Select(n=>(n+root)%12).ToArray());
+        var pitches=notes.Select(n=>(n+root)%12).ToList();
+        var required=notes.Where(n=>notes.Length<4||n!=7).Select(n=>(n+root)%12).ToList();
+        if(m.Groups[4].Success){
+            int bass="C D EF G A B".IndexOf(m.Groups[4].Value,StringComparison.Ordinal);
+            bass=(bass+(m.Groups[5].Value=="#"?1:m.Groups[5].Value=="b"?-1:0)+12)%12;
+            pitches.Add(bass);required.Add(bass);
+        }
+        return new(name!,pitches.Distinct().Order().ToArray(),required.Distinct().ToArray());
     }
 }
 

@@ -44,3 +44,5 @@
 #pdfSyncDialog .pdf-sync-editor-panel{gap:5px;padding:9px}#pdfSyncDialog #pdfSyncStatus{line-height:1.2}#pdfSyncDialog .pdf-sync-editor-panel button{font-size:11px}
 
 .pdf-sync-sheet{grid-template-rows:34px 40px minmax(0,1fr)}.pdf-sync-transport{display:grid;grid-template-columns:42px minmax(0,1fr) 87px;gap:7px;align-items:center;padding:2px 5px;background:#1b2c42;color:#d4e3f4;border-top:1px solid #42566f}.pdf-sync-transport button{min-height:34px;padding:2px;font-size:18px}.pdf-sync-transport input[type=range]{width:100%;min-width:0;height:34px;min-height:34px;margin:0;padding:0;accent-color:#94bdf2;touch-action:none}.pdf-sync-transport span{white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;text-align:right}
+
+.pdf-sync-editor-panel>.dialogerror{flex:0 0 auto;min-width:0;max-width:100%;margin:0;padding:7px;font-size:11px;overflow-wrap:anywhere}

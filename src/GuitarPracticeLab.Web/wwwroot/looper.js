@@ -45,8 +45,10 @@
       const play = document.createElement('button'), remove = document.createElement('button');
       play.textContent = playing === loop.id ? 'Stop' : 'Play loop';
       play.setAttribute('aria-label', (playing === loop.id ? 'Stop ' : 'Play ') + loop.name);
+      play.dataset.mediaControl='playback';
       play.onclick = () => playLoop(loop.id, api + '/' + loop.id + '/audio');
       remove.textContent = 'Delete';
+      remove.dataset.mediaControl = 'delete';
       remove.setAttribute('aria-label', 'Delete ' + loop.name);
       remove.onclick = () => {
         pendingDelete = loop;

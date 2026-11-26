@@ -75,11 +75,16 @@ function message(error) {
     if (!alert) {
       alert = document.createElement('p'); alert.className = 'dialogerror'; alert.setAttribute('role', 'alert');
     }
-    const panel = dialog.querySelector('.dialogbody:not([hidden])');
+    const panel = dialog.querySelector('[data-dialog-errors]') || dialog.querySelector('.dialogbody:not([hidden])');
     if (panel && alert.parentElement !== panel) panel.prepend(alert);
     alert.textContent = text;
     alert.scrollIntoView({ block: 'nearest' });
   }
+}
+function setPlayIcon(button,paused){
+ const label=paused?'Play':'Pause';if(button.dataset.playState===label)return;button.dataset.playState=label;
+ button.innerHTML='<svg class="player-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">'+(paused?'<path d="M7 4v16l13-8L7 4Z"/>':'<rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/>')+'</svg>';
+ button.setAttribute('aria-label',label);button.title=label;
 }
 function openDialog(id) { if (!$(id).open) $(id).showModal(); }
 function closeDialog(id) { $(id).close(); }
@@ -101,7 +106,7 @@ async function operation(action) {
   finally {
     busy = false;
     buttons.forEach((button, i) => { if (button.isConnected) button.disabled = prior[i]; });
-    update();
+    update();if($('notesDialog').open)layoutNoteImage();
   }
 }
 function pdfStem(item) {
@@ -171,7 +176,7 @@ function update() {
   $('analyzeChordsButton').disabled = busy || !hasAudio;
   $('editChordTimeline').disabled = busy || takingSongRecording || isRecordingFollow() || !hasAudio || !activeChordAnalysis()?.changes.length;
   $('timingCalibrationButton').disabled = busy || takingSongRecording || isRecordingFollow();
-  $('chordMatchButton').disabled = busy || !hasAudio || !activeChordAnalysis()?.changes.some(change => change.name);$('readerChordMatch').disabled=$('chordMatchButton').disabled;
+  $('chordMatchButton').disabled = busy || !hasAudio || !activeChordAnalysis()?.changes.some(change => change.name);$('readerChordMatch').disabled=$('stageChordMatch').disabled=$('chordMatchButton').disabled;
   $('recordReviewButton').disabled = busy || switchingTrack || !hasAudio;
   $('rhythmSummary').textContent = song?.rhythm ? `${song.rhythm.meter} · ${song.rhythm.bpm} BPM` : '';
   $('addBacking').disabled = busy || switchingTrack || !hasAudio;
@@ -193,8 +198,7 @@ function update() {
   $('songTitle').title = song?.title || '';
   $('pageNumber').textContent = song ? `${pdf.pages === 1 ? '' : `${page} / ${pdf.pages} · `}${Math.round(zoom * 100)}%` : 'No PDF selected';
   $('cueCount').textContent = song?.cues.length || 0;
-  $('play').textContent = audio.paused ? 'Play' : 'Pause';
-  $('readerPlay').textContent = $('play').textContent;
+  setPlayIcon($('play'),audio.paused);setPlayIcon($('readerPlay'),audio.paused);
   window.AutoPdfFollow?.refreshUI();
   const autoPdfState=window.AutoPdfFollow?.state();
   $('follow').textContent = autoPdfState?.enabled ? (autoPdfState.suspended?'Follow paused':'Follow on') : following ? 'Follow on' : 'Follow off';
@@ -821,7 +825,7 @@ function showFullscreenChords(time, changes, index) {
 }
 function syncStageTransport(time) {
   const player = takePlayback ?? audio;
-  $('stagePlay').textContent = player.paused ? 'Play' : 'Pause';
+  setPlayIcon($('stagePlay'),player.paused);
   $('stagePlay').disabled = !song?.hasAudio || Boolean(takingSongRecording);
   $('stageStart').disabled = $('songStart').disabled || Boolean(takePlayback) || Boolean(takingSongRecording);
   $('stageClock').textContent = clock(time) + ' / ' + clock(song?.duration || 0);
@@ -1035,7 +1039,7 @@ function tick() {
   }
 }
 const songToolDialogs = new Set([
-  'pdfSyncDialog', 'analyzeChordsDialog', 'rhythmDialog', 'rhythmPointsDialog', 'chordMatchDialog', 'recordReviewDialog',
+  'pdfSyncDialog', 'analyzeChordsDialog', 'rhythmDialog', 'rhythmPointsDialog', 'recordReviewDialog',
   'replacePdfDialog', 'deleteSongDialog', 'timelineEditorDialog', 'timingCalibrationDialog'
 ]);
 function dismissDialog(id) {
@@ -1216,7 +1220,7 @@ $('saveCue').onclick = () => operation(async () => {
   await saveSettings({ cues: next }); activeCue = null; pendingCue = null;
   closeDialog('markDialog'); renderCues(); status('Cue saved. Follow turns on when playback starts.');
 });
-let noteImageIndex=0,notesExpectedUpdated=null,notesOriginal=null;
+let noteImageIndex=0,noteImageZoom=1,notesExpectedUpdated=null,notesOriginal=null;
 function notesEditing(enabled){for(const id of ['titleInput','notesInput']){const field=$(id);field.readOnly=!enabled;field.inputMode=enabled?'text':'none';field.tabIndex=enabled?0:-1;} $('saveNotes').hidden=enabled===false;$('editNotes').hidden=enabled;}
 function notesDirty(){return notesOriginal&&($('titleInput').value!==notesOriginal.title||$('notesInput').value!==notesOriginal.notes);}
 function requestNotesClose(){if(busy)return;if(notesDirty())openDialog('notesUnsavedDialog');else{notesEditing(false);dismissDialog('notesDialog');}}
@@ -1226,14 +1230,33 @@ $('keepEditingNotes').onclick=()=>closeDialog('notesUnsavedDialog');
 $('discardNotes').onclick=()=>{closeDialog('notesUnsavedDialog');notesEditing(false);dismissDialog('notesDialog');};
 function showNotesTab(tab){
  for(const name of ['Notes','Images']){$('notesTab'+name).setAttribute('aria-selected',String(name===tab));$('notesPanel'+name).hidden=name!==tab;}
+ if(tab==='Images')requestAnimationFrame(()=>layoutNoteImage());
 }
 function renderNoteImage(){
  const images=[...(song?.images||[])].sort((a,b)=>(a.name||'').localeCompare(b.name||'',undefined,{numeric:true,sensitivity:'base'}));noteImageIndex=Math.max(0,Math.min(noteImageIndex,images.length-1));const image=images[noteImageIndex];
+ noteImageZoom=1;$('noteImageViewport').scrollTo(0,0);$('noteImageCanvas').hidden=!image;
  $('songNoteImage').hidden=!image;$('songNoteImageEmpty').hidden=Boolean(image);
  if(image){$('songNoteImage').src=api+'/'+song.id+'/images/'+image.id;$('songNoteImage').alt=image.name||'Song reference image';}else $('songNoteImage').removeAttribute('src');
  $('noteImageCount').textContent=image?(noteImageIndex+1)+' / '+images.length+' · '+image.name:'No images';
  $('noteImagePrev').disabled=!image||noteImageIndex===0;$('noteImageNext').disabled=!image||noteImageIndex===images.length-1;
+ layoutNoteImage();
 }
+function layoutNoteImage(){
+ const view=$('noteImageViewport'),canvas=$('noteImageCanvas'),image=$('songNoteImage'),available=!image.hidden;
+ $('noteImageZoomValue').textContent=Math.round(noteImageZoom*100)+'%';$('noteImageZoomOut').disabled=!available||noteImageZoom<=1;$('noteImageZoomIn').disabled=!available||noteImageZoom>=3;$('noteImageFit').disabled=!available;$('noteImagePrev').disabled=!available||noteImageIndex===0;$('noteImageNext').disabled=!available||noteImageIndex>=(song?.images||[]).length-1;
+ view.classList.toggle('image-zoomed',noteImageZoom>1);
+ if(!available||!image.naturalWidth||!view.clientWidth||!view.clientHeight)return;
+ const scale=Math.min(view.clientWidth/image.naturalWidth,view.clientHeight/image.naturalHeight)*noteImageZoom;
+ const width=image.naturalWidth*scale,height=image.naturalHeight*scale;
+ image.style.width=width+'px';image.style.height=height+'px';canvas.style.width=Math.max(view.clientWidth,width)+'px';canvas.style.height=Math.max(view.clientHeight,height)+'px';
+}
+function zoomNoteImage(amount){
+ const view=$('noteImageViewport'),canvas=$('noteImageCanvas');const x=(view.scrollLeft+view.clientWidth/2)/Math.max(1,canvas.clientWidth),y=(view.scrollTop+view.clientHeight/2)/Math.max(1,canvas.clientHeight);
+ noteImageZoom=amount===null?1:Math.max(1,Math.min(3,noteImageZoom+amount));layoutNoteImage();view.scrollLeft=x*canvas.clientWidth-view.clientWidth/2;view.scrollTop=y*canvas.clientHeight-view.clientHeight/2;
+}
+$('songNoteImage').onload=()=>layoutNoteImage();
+$('noteImageZoomOut').onclick=()=>zoomNoteImage(-.25);$('noteImageZoomIn').onclick=()=>zoomNoteImage(.25);$('noteImageFit').onclick=()=>{zoomNoteImage(null);$('noteImageViewport').scrollTo(0,0);};
+window.addEventListener('resize',()=>{if($('notesDialog').open)layoutNoteImage();});
 for(const name of ['Notes','Images'])$('notesTab'+name).onclick=()=>showNotesTab(name);
 $('noteImagePrev').onclick=()=>{noteImageIndex--;renderNoteImage();};$('noteImageNext').onclick=()=>{noteImageIndex++;renderNoteImage();};
 $('notesButton').onclick = () => operation(async () => {
@@ -1244,7 +1267,7 @@ $('notesButton').onclick = () => operation(async () => {
   $('titleInput').value = song.title; $('notesInput').value = song.notes||'';notesOriginal={title:$('titleInput').value,notes:$('notesInput').value};notesEditing(false); $('notesWatchLesson').hidden=!song.lessonUrl;$('notesLessonEmpty').hidden=Boolean(song.lessonUrl);noteImageIndex=0;renderNoteImage();showNotesTab('Notes');openDialog('notesDialog');
 });
 $('readerNotes').onclick=()=>$('notesButton').click();
-$('readerChordMatch').onclick=()=>$('chordMatchButton').click();
+$('readerChordMatch').onclick=$('stageChordMatch').onclick=()=>$('chordMatchButton').click();
 $('notesWatchLesson').onclick=()=>{if(song?.lessonUrl)LessonLinks.open(song.lessonUrl,status);};
 $('saveNotes').onclick = $('saveAndCloseNotes').onclick = () => operation(async () => {
   await saveSettings({ title: $('titleInput').value, notes: $('notesInput').value, expectedUpdated: notesExpectedUpdated });

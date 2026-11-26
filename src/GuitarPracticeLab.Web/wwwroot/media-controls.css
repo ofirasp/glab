@@ -1,0 +1,7 @@
+button.media-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:40px}button.media-icon-button svg{display:block;flex-shrink:0;pointer-events:none}.media-icon-label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}
+
+button.media-context-button{gap:6px}button.media-context-button svg{width:18px;height:18px}.media-context-label{min-width:0}
+button.media-icon-button svg{width:22px;height:22px;max-width:22px;max-height:22px}button.media-context-button svg{width:18px;height:18px}
+button.media-icon-button[hidden]{display:none!important}
+
+button.media-icon-button svg[data-media-icon="record"]{color:#ff525e;fill:#ff525e}

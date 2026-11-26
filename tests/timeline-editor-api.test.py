@@ -90,6 +90,13 @@ with tempfile.TemporaryDirectory(prefix='glab-simple-analysis-') as temporary:
             assert len(wave['bins'])==160 and max(wave['bins'])>0 and all(0<=value<=1 for value in wave['bins'])
             call('/'+identity+'/waveform?start=0&end=30',expected=400)
             print('PASS real MP3 waveform supplies bounded peaks and rejects invalid ranges')
+            slash=edit(result,{'shift':0,'changes':[{'time':0,'name':'Fmaj7/G'},{'time':1,'name':'C/G'}]})
+            assert slash['changes'][0]['name']=='Fmaj7/G' and call()[0]['chordAnalysis']==slash
+            assert call()[0]['cues']==cues and call('/'+identity+'/pdf')==standard
+            edit(slash,{'shift':0,'changes':[{'time':0,'name':'Funknown/G'}]},expected=400)
+            assert call()[0]['chordAnalysis']==slash
+            print('PASS slash chords save exactly, preserve sync inputs, and invalid qualities remain rejected')
+
         except Exception:
             log.flush();print((folder/'server.log').read_text());raise
         finally:
